@@ -1,0 +1,687 @@
+/* ==========================================================================
+   app-sync.css — стили для годового графика, splash-экрана и редактора дня
+   Подключается ко всем языковым версиям (RU/UA/DE).
+   ========================================================================== */
+
+/* ---------- Splash Screen (экран загрузки при запуске) ---------- */
+.splash-screen {
+    position: fixed;
+    inset: 0;
+    z-index: 5000;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 20px;
+    background-color: var(--bg, #f8fafc);
+    color: var(--text, #1e293b);
+    transition: opacity 0.4s ease, visibility 0.4s ease;
+}
+.splash-screen.hidden {
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+}
+
+/* Тележка на splash: плавно парит вверх-вниз */
+.splash-trolley-wrap {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    animation: trolleyFloat 2.4s ease-in-out infinite;
+    will-change: transform;
+}
+@keyframes trolleyFloat {
+    0%,  100% { transform: translateY(0px);   }
+    25%        { transform: translateY(-7px) rotate(-1deg); }
+    50%        { transform: translateY(-12px);  }
+    75%        { transform: translateY(-7px) rotate(1deg); }
+}
+
+/* Старые классы splash (splash-logo, splash-spinner) остаются для обратной совместимости, но скрыты */
+.splash-logo { display: none; }
+.splash-spinner { display: none; }
+
+.splash-text {
+    font-size: 0.88rem;
+    font-weight: 600;
+    color: var(--text-muted, #64748b);
+    letter-spacing: 0.01em;
+}
+.splash-offline {
+    font-size: 0.78rem;
+    color: var(--error, #dc2626);
+    max-width: 280px;
+    text-align: center;
+    line-height: 1.4;
+}
+
+/* ---------- Year view (годовой график) ---------- */
+.year-toolbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    margin-bottom: 12px;
+    flex-wrap: wrap;
+}
+.year-title {
+    font-size: 0.95rem;
+    font-weight: 700;
+    color: var(--text, #1e293b);
+}
+.year-legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-bottom: 14px;
+}
+.legend-item {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 0.7rem;
+    color: var(--text-muted, #64748b);
+    font-weight: 500;
+}
+.legend-dot {
+    width: 11px;
+    height: 11px;
+    border-radius: 50%;
+    flex-shrink: 0;
+    border: 1px solid rgba(0, 0, 0, 0.08);
+}
+
+.year-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+    gap: 12px;
+}
+.month-block {
+    background-color: var(--card-bg, #fff);
+    border: 1px solid var(--border, #e2e8f0);
+    border-radius: var(--radius-md, 12px);
+    padding: 8px;
+    box-shadow: var(--shadow, 0 4px 6px -1px rgba(0,0,0,0.05));
+}
+.month-title {
+    font-size: 0.8rem;
+    font-weight: 700;
+    text-align: center;
+    margin-bottom: 6px;
+    color: var(--primary, #2563eb);
+}
+.month-weekdays,
+.month-days {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 2px;
+}
+.month-weekdays span {
+    font-size: 0.55rem;
+    text-align: center;
+    color: var(--text-muted, #64748b);
+    font-weight: 700;
+    padding-bottom: 2px;
+}
+.day-cell {
+    position: relative;
+    aspect-ratio: 1 / 1;
+    min-height: 18px;
+    border-radius: 5px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.62rem;
+    font-weight: 600;
+    color: var(--text, #1e293b);
+    background-color: rgba(120, 120, 120, 0.06);
+    cursor: pointer;
+    user-select: none;
+    transition: transform 0.12s ease, box-shadow 0.12s ease;
+    border: 1px solid transparent;
+}
+.day-cell:hover {
+    transform: translateY(-1px);
+    box-shadow: var(--shadow, 0 2px 4px rgba(0,0,0,0.1));
+}
+.day-cell.empty {
+    background: transparent;
+    cursor: default;
+    box-shadow: none;
+}
+.day-cell.empty:hover {
+    transform: none;
+}
+.day-cell.today {
+    border-color: var(--primary, #2563eb);
+    box-shadow: 0 0 0 2px var(--primary-container, rgba(37,99,235,0.15));
+}
+.day-cell.past {
+    opacity: 0.55;
+}
+.day-cell.has-event::after {
+    content: "";
+    position: absolute;
+    top: 2px;
+    right: 2px;
+    width: 4px;
+    height: 4px;
+    border-radius: 50%;
+    background: var(--text-muted, #64748b);
+}
+.day-cell .day-num { line-height: 1; }
+.day-cell .day-trolley {
+    position: absolute;
+    bottom: 1px;
+    right: 2px;
+    font-size: 0.5rem;
+    font-weight: 800;
+    line-height: 1;
+    opacity: 0.9;
+    color: currentColor;
+}
+
+/* Индикаторы языков тележек внутри ячейки дня (цветные точки/полоски) */
+.day-cell .day-lang-dots {
+    position: absolute;
+    bottom: 2px;
+    right: 2px;
+    left: 2px;
+    display: flex;
+    gap: 3px;
+    align-items: center;
+    justify-content: center;
+    flex-wrap: wrap;
+}
+/* Цветная точка (маркер) — цвет строго по группе, как в верхнем фильтре */
+.day-cell .day-lang-dot {
+    position: relative;
+    width: 9px;
+    height: 9px;
+    border-radius: 50%;
+    border: 1px solid rgba(0, 0, 0, 0.12);
+    flex: 0 0 auto;
+}
+.day-cell .day-lang-dot.dot-ru { background-color: #dc2626; }  /* Русская — красная */
+.day-cell .day-lang-dot.dot-ua { background-color: #2563eb; }  /* Украинская — голубая */
+.day-cell .day-lang-dot.dot-de { background-color: #16a34a; }  /* Немецкая — зелёная */
+/* Скрываем мини-иконку внутри точки (оставляем саму точку как маркер) */
+.day-cell .day-lang-dot .day-trolley-icon { display: none; }
+
+/* Яркая подсветка дня, когда выбрана конкретная группа в фильтре */
+.day-cell.day-highlight-ru { box-shadow: inset 0 0 0 2px #dc2626; background-color: rgba(220, 38, 38, 0.12) !important; }
+.day-cell.day-highlight-ua { box-shadow: inset 0 0 0 2px #2563eb; background-color: rgba(37, 99, 235, 0.12) !important; }
+.day-cell.day-highlight-de { box-shadow: inset 0 0 0 2px #16a34a; background-color: rgba(22, 163, 74, 0.12) !important; }
+
+/* Затемнённые (отфильтрованные) дни в годовом графике */
+.day-cell.day-dimmed {
+    opacity: 0.3;
+    filter: saturate(0.5);
+}
+.day-cell.day-dimmed .day-lang-dot { display: none; }
+
+.day-cell.status-available { background-color: hsl(142, 70%, 92%); color: hsl(142, 70%, 25%); }
+.day-cell.status-closed    { background-color: hsl(210, 16%, 92%); color: hsl(210, 12%, 45%); }
+.day-cell.status-event     { background-color: hsl(217, 89%, 92%); color: hsl(217, 89%, 35%); }
+.day-cell.status-holiday   { background-color: hsl(0, 72%, 94%); color: hsl(0, 72%, 40%); }
+.day-cell.status-special   { background-color: hsl(38, 92%, 92%); color: hsl(38, 90%, 35%); }
+
+.legend-dot.status-available { background-color: hsl(142, 70%, 92%); border-color: hsl(142, 70%, 70%); }
+.legend-dot.status-closed    { background-color: hsl(210, 16%, 92%); border-color: hsl(210, 16%, 75%); }
+.legend-dot.status-event     { background-color: hsl(217, 89%, 92%); border-color: hsl(217, 89%, 70%); }
+.legend-dot.status-holiday   { background-color: hsl(0, 72%, 94%); border-color: hsl(0, 72%, 75%); }
+.legend-dot.status-special   { background-color: hsl(38, 92%, 92%); border-color: hsl(38, 90%, 70%); }
+
+/* ---------- Day editor modal ---------- */
+#dayEditorModal .editor-date {
+    font-size: 1rem;
+    font-weight: 700;
+    color: var(--primary, #2563eb);
+    text-align: center;
+    margin-bottom: 12px;
+}
+.status-options {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(90px, 1fr));
+    gap: 6px;
+    margin-bottom: 12px;
+}
+.status-option {
+    padding: 8px 6px;
+    border: 1px solid var(--border, #e2e8f0);
+    border-radius: var(--radius-sm, 8px);
+    background: var(--card-bg, #fff);
+    color: var(--text, #1e293b);
+    font-size: 0.72rem;
+    font-weight: 600;
+    cursor: pointer;
+    text-align: center;
+    transition: all 0.15s ease;
+}
+.status-option.active {
+    border-color: var(--primary, #2563eb);
+    background-color: var(--primary-container, rgba(37,99,235,0.1));
+    color: var(--primary, #2563eb);
+}
+.editor-field {
+    margin-bottom: 10px;
+}
+.editor-field label {
+    display: block;
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: var(--text-muted, #64748b);
+    margin-bottom: 4px;
+}
+.editor-field textarea {
+    width: 100%;
+    min-height: 56px;
+    resize: vertical;
+    padding: 8px 10px;
+    border: 1px solid var(--border, #e2e8f0);
+    border-radius: var(--radius-sm, 8px);
+    font-family: var(--font-sans, system-ui, sans-serif);
+    font-size: 0.85rem;
+    background-color: var(--card-bg, #fff);
+    color: var(--text, #1e293b);
+    outline: none;
+}
+.editor-field textarea:focus {
+    border-color: var(--primary, #2563eb);
+    box-shadow: 0 0 0 3px var(--primary-container, rgba(37,99,235,0.15));
+}
+.editor-select {
+    width: 100%;
+    padding: 9px 10px;
+    border: 1px solid var(--border, #e2e8f0);
+    border-radius: var(--radius-sm, 8px);
+    font-family: var(--font-sans, system-ui, sans-serif);
+    font-size: 0.85rem;
+    background-color: var(--card-bg, #fff);
+    color: var(--text, #1e293b);
+    outline: none;
+    cursor: pointer;
+}
+.editor-select:focus {
+    border-color: var(--primary, #2563eb);
+    box-shadow: 0 0 0 3px var(--primary-container, rgba(37,99,235,0.15));
+}
+.editor-actions {
+    display: flex;
+    gap: 8px;
+    justify-content: flex-end;
+    margin-top: 6px;
+}
+.btn-editor-edit {
+    background-color: var(--primary, #2563eb);
+    color: #fff;
+    border: none;
+    padding: 9px 16px;
+    border-radius: var(--radius-sm, 8px);
+    font-size: 0.82rem;
+    font-weight: 700;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    transition: background-color 0.2s ease, transform 0.15s ease;
+}
+.btn-editor-edit:hover { background-color: var(--primary-hover, #1d4ed8); transform: translateY(-1px); }
+.btn-editor-save {
+    background-color: var(--success, #16a34a);
+    color: #fff;
+    border: none;
+    padding: 9px 16px;
+    border-radius: var(--radius-sm, 8px);
+    font-size: 0.82rem;
+    font-weight: 700;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    transition: background-color 0.2s ease, transform 0.15s ease;
+}
+.btn-editor-save:hover:not(:disabled) { background-color: #15803d; transform: translateY(-1px); }
+.btn-editor-save:disabled { opacity: 0.6; cursor: not-allowed; }
+.btn-editor-cancel {
+    background-color: rgba(120, 120, 120, 0.18);
+    color: var(--text, #1e293b);
+    border: none;
+    padding: 9px 16px;
+    border-radius: var(--radius-sm, 8px);
+    font-size: 0.82rem;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+/* Year sync indicator */
+.year-sync-badge {
+    font-size: 0.68rem;
+    font-weight: 600;
+    padding: 3px 8px;
+    border-radius: 999px;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+}
+.year-sync-badge.online,
+.year-sync-badge.status-online,
+.year-sync-badge.bg-green,
+.year-sync-badge.text-green {
+    background-color: rgba(34, 197, 94, 0.1);
+    color: #22c55e;
+    border: 1px solid #22c55e;
+}
+.year-sync-badge.offline,
+.year-sync-badge.status-offline,
+.year-sync-badge.bg-red,
+.year-sync-badge.text-red {
+    background-color: rgba(220, 38, 38, 0.1);
+    color: #dc2626;
+    border: 1px solid #dc2626;
+}
+.year-sync-badge .dot {
+    width: 7px; height: 7px; border-radius: 50%; background: currentColor;
+}
+@media (prefers-color-scheme: dark) {
+    .day-cell.status-available { background-color: hsl(142, 40%, 22%); color: hsl(142, 70%, 75%); }
+    .day-cell.status-closed    { background-color: hsl(210, 14%, 22%); color: hsl(210, 12%, 70%); }
+    .day-cell.status-event     { background-color: hsl(217, 50%, 25%); color: hsl(217, 80%, 78%); }
+    .day-cell.status-holiday   { background-color: hsl(0, 45%, 25%); color: hsl(0, 75%, 78%); }
+    .day-cell.status-special   { background-color: hsl(38, 50%, 25%); color: hsl(38, 85%, 75%); }
+    .legend-dot.status-available { background-color: hsl(142, 40%, 30%); }
+    .legend-dot.status-closed    { background-color: hsl(210, 14%, 30%); }
+    .legend-dot.status-event     { background-color: hsl(217, 50%, 32%); }
+    .legend-dot.status-holiday   { background-color: hsl(0, 45%, 32%); }
+    .legend-dot.status-special   { background-color: hsl(38, 50%, 32%); }
+}
+
+/* ---------- Guide Tab (Руководство для возвещателей / S-148-U) ---------- */
+.guide-head {
+    margin-bottom: 14px;
+}
+.guide-title {
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: var(--text, #1e293b);
+    margin: 0 0 4px 0;
+}
+.guide-subtitle {
+    font-size: 0.82rem;
+    line-height: 1.4;
+    color: var(--text-muted, #64748b);
+    margin: 0;
+}
+
+/* Аккордеон (details/summary) с мягкой анимацией раскрытия */
+.guide-acc {
+    background-color: var(--card-bg, #fff);
+    border: 1px solid var(--border, #e2e8f0);
+    border-radius: var(--radius-md, 12px);
+    margin-bottom: 12px;
+    box-shadow: var(--shadow, 0 2px 4px rgba(0,0,0,0.04));
+    overflow: hidden;
+    transition: box-shadow 0.22s ease, border-color 0.22s ease;
+}
+.guide-acc:last-child { margin-bottom: 0; }
+.guide-acc[open] {
+    box-shadow: var(--shadow-lg, 0 4px 12px rgba(0,0,0,0.08));
+    border-color: var(--primary, #2563eb);
+}
+
+.guide-acc-summary {
+    list-style: none;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 14px 16px;
+    user-select: none;
+    -webkit-tap-highlight-color: transparent;
+}
+.guide-acc-summary::-webkit-details-marker { display: none; }
+.guide-acc-summary:focus-visible {
+    outline: 2px solid var(--primary, #2563eb);
+    outline-offset: -2px;
+    border-radius: var(--radius-md, 12px);
+}
+.guide-acc-icon {
+    font-size: 1.35rem;
+    line-height: 1;
+    flex-shrink: 0;
+}
+.guide-acc-title {
+    flex: 1;
+    font-size: 0.92rem;
+    font-weight: 700;
+    color: var(--text, #1e293b);
+    line-height: 1.25;
+}
+.guide-acc-chevron {
+    flex-shrink: 0;
+    color: var(--primary, #2563eb);
+    transition: transform 0.3s ease;
+}
+.guide-acc[open] .guide-acc-chevron {
+    transform: rotate(180deg);
+}
+
+/* Плавная анимация высоты через grid-template-rows (работает там, где
+   нативное скрытие <details> переопределяется через display) */
+.guide-acc-body {
+    display: grid;
+    grid-template-rows: 0fr;
+    transition: grid-template-rows 0.32s ease;
+}
+.guide-acc[open] .guide-acc-body {
+    grid-template-rows: 1fr;
+}
+.guide-acc-inner {
+    overflow: hidden;
+    padding: 0 16px 16px 16px;
+}
+.guide-acc-inner:first-child { padding-top: 0; }
+
+/* Универсальная анимация появления контента при раскрытии (работает везде) */
+.guide-acc[open] .guide-acc-body {
+    animation: guideReveal 0.32s ease;
+}
+@keyframes guideReveal {
+    from { opacity: 0; transform: translateY(-6px); }
+    to   { opacity: 1; transform: translateY(0); }
+}
+@media (prefers-reduced-motion: reduce) {
+    .guide-acc-body,
+    .guide-acc[open] .guide-acc-body,
+    .guide-acc-chevron { transition: none; animation: none; }
+}
+
+.guide-para {
+    font-size: 0.84rem;
+    line-height: 1.5;
+    color: var(--text, #1e293b);
+    margin: 0 0 10px 0;
+}
+.guide-para:last-child { margin-bottom: 0; }
+
+/* Библейские ссылки — аккуратные встроенные метки */
+.bible-ref {
+    display: inline;
+    font-weight: 700;
+    font-size: 0.78em;
+    color: var(--primary, #2563eb);
+    background: var(--primary-container, rgba(37,99,235,0.1));
+    padding: 1px 6px;
+    border-radius: 6px;
+    white-space: nowrap;
+    font-variant-numeric: tabular-nums;
+}
+
+/* ---------- Trolley filter (segmented control над годовым графиком) ---------- */
+.trolley-filter {
+    display: flex;
+    gap: 6px;
+    padding: 6px;
+    margin-bottom: 14px;
+    background: var(--card-bg, #fff);
+    border: 1px solid var(--border, #e2e8f0);
+    border-radius: 14px;
+    box-shadow: var(--shadow, 0 2px 6px rgba(0,0,0,0.05));
+    position: sticky;
+    top: 0;
+    z-index: 6;
+}
+.trolley-filter-btn {
+    flex: 1 1 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 3px;
+    padding: 8px 4px;
+    border: none;
+    border-radius: 10px;
+    background: transparent;
+    color: var(--text-muted, #64748b);
+    font-family: inherit;
+    font-size: 0.72rem;
+    font-weight: 700;
+    line-height: 1.1;
+    cursor: pointer;
+    transition: background 0.18s ease, color 0.18s ease, box-shadow 0.18s ease, transform 0.12s ease;
+    -webkit-tap-highlight-color: transparent;
+}
+.trolley-filter-btn:hover { background: rgba(120,120,120,0.08); }
+.trolley-filter-btn:active { transform: scale(0.97); }
+.trolley-filter-btn.active {
+    background: var(--primary-container, rgba(37,99,235,0.12));
+    color: var(--primary, #2563eb);
+    box-shadow: 0 0 0 2px var(--primary, #2563eb) inset;
+}
+.trolley-filter-btn:focus-visible {
+    outline: 2px solid var(--primary, #2563eb);
+    outline-offset: 2px;
+}
+.trolley-filter-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 22px;
+    height: 32px;
+}
+.trolley-filter-icon .trolley-mini-svg { width: 22px; height: 34px; }
+.trolley-filter-icon.tf-all { width: 22px; height: 22px; }
+.trolley-filter-icon.tf-all svg { width: 20px; height: 20px; }
+/* Цвет постера мини-тележки по языковой группе */
+.trolley-filter-icon[data-group="ru"] .trolley-poster { fill: #dc2626; }
+.trolley-filter-icon[data-group="ua"] .trolley-poster { fill: #2563eb; }
+.trolley-filter-icon[data-group="de"] .trolley-poster { fill: #16a34a; }
+.trolley-filter-badge {
+    font-size: 0.56rem;
+    font-weight: 800;
+    letter-spacing: 0.03em;
+    padding: 1px 4px;
+    border-radius: 4px;
+    color: #fff;
+    line-height: 1.1;
+}
+.trolley-filter-btn[data-group="ru"] .trolley-filter-badge { background: #dc2626; }
+.trolley-filter-btn[data-group="ua"] .trolley-filter-badge { background: #2563eb; }
+.trolley-filter-btn[data-group="de"] .trolley-filter-badge { background: #16a34a; }
+.trolley-filter-label { text-align: center; }
+
+/* ===== Цветовая подсветка ячейки по группе тележки (связь «График» → «Год») ===== */
+/* Видна даже если мини-иконка скрыта фильтром или недоступен TrolleyUI. */
+.day-cell.has-booking-ru { box-shadow: inset 0 0 0 2px #dc2626; }
+.day-cell.has-booking-ua { box-shadow: inset 0 0 0 2px #2563eb; }
+.day-cell.has-booking-de { box-shadow: inset 0 0 0 2px #16a34a; }
+@media (prefers-color-scheme: dark) {
+  .day-cell.has-booking-ru { box-shadow: inset 0 0 0 2px #f87171; }
+  .day-cell.has-booking-ua { box-shadow: inset 0 0 0 2px #60a5fa; }
+  .day-cell.has-booking-de { box-shadow: inset 0 0 0 2px #4ade80; }
+}
+
+@media (prefers-color-scheme: dark) {
+    .trolley-filter { background: var(--card-bg); }
+}
+
+/* ===== Цветовая кодировка карточек тележек в Графике (по языку КОНКРЕТНОЙ тележки) ===== */
+.board-cart-info.has-lang-ru {
+    background-color: rgba(220, 38, 38, 0.10);
+    border: 1px solid rgba(220, 38, 38, 0.28);
+}
+.board-cart-info.has-lang-ua {
+    background-color: rgba(37, 99, 235, 0.10);
+    border: 1px solid rgba(37, 99, 235, 0.28);
+}
+.board-cart-info.has-lang-de {
+    background-color: rgba(22, 163, 74, 0.10);
+    border: 1px solid rgba(22, 163, 74, 0.28);
+}
+.board-cart-info.has-lang-none {
+    background-color: rgba(120, 120, 120, 0.04);
+}
+.board-cart-info .day-trolley-icon { width: 16px; height: 26px; margin-right: 4px; vertical-align: middle; }
+.board-cart-info .day-trolley-icon[data-group="ru"] .trolley-poster { fill: #dc2626; }
+.board-cart-info .day-trolley-icon[data-group="ua"] .trolley-poster { fill: #2563eb; }
+.board-cart-info .day-trolley-icon[data-group="de"] .trolley-poster { fill: #16a34a; }
+.board-cart-title { display: inline-flex; align-items: center; }
+
+/* ===== ?????? ?????? ?? ??????? "???" (??????????????) ===== */
+.day-cell { position: relative; }
+.editor-field.is-locked { opacity: 0.85; }
+
+/* ????????? ??????? ??????? */
+.quick-presets-container {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-top: 8px;
+    margin-bottom: 12px;
+}
+/* ?????? ??????? ??????? */
+.quick-preset-btn {
+    background-color: rgba(120, 120, 120, 0.06);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    padding: 4px 10px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: var(--text);
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+.quick-preset-btn:hover:not(:disabled) {
+    background-color: var(--primary-container);
+    border-color: var(--primary);
+    color: var(--primary);
+}
+.quick-preset-btn:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+    pointer-events: none;
+}
+/* ???????????? ??????? ?????? ! ? ???? ?????? */
+.attention-badge {
+    position: absolute;
+    top: 3px;
+    right: 3px;
+    background-color: #ef4444; /* ????? ??????? */
+    color: white;
+    font-size: 0.7rem;
+    font-weight: 900;
+    width: 15px;
+    height: 15px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.3);
+    z-index: 10;
+    animation: pulseAttention 2s infinite ease-in-out;
+}
+@keyframes pulseAttention {
+    0% { transform: scale(1); }
+    50% { transform: scale(1.18); box-shadow: 0 0 8px #ef4444; }
+    100% { transform: scale(1); }
+}

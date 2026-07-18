@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>🔥 Стресс-тест Google Apps Script</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: system-ui, -apple-system, 'Segoe UI', sans-serif;
+      background: #0f172a;
+      color: #e2e8f0;
+      min-height: 100vh;
+      padding: 24px 16px;
+    }
+    h1 { font-size: 1.5rem; font-weight: 800; color: #f8fafc; margin-bottom: 4px; }
+    .subtitle { font-size: 0.82rem; color: #94a3b8; margin-bottom: 24px; }
+    .card {
+      background: #1e293b;
+      border: 1px solid #334155;
+      border-radius: 16px;
+      padding: 20px;
+      margin-bottom: 16px;
+    }
+    .card h2 { font-size: 0.9rem; font-weight: 700; color: #94a3b8; text-transform: uppercase; letter-spacing: .06em; margin-bottom: 14px; }
+    label { display: block; font-size: 0.78rem; color: #94a3b8; font-weight: 600; margin-bottom: 5px; }
+    input[type="text"], input[type="number"] {
+      width: 100%; padding: 10px 12px;
+      background: #0f172a; border: 1px solid #334155; border-radius: 10px;
+      color: #f1f5f9; font-size: 0.85rem; outline: none; transition: border-color .2s; margin-bottom: 12px;
+    }
+    input:focus { border-color: #6366f1; }
+    .row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    .btn { width: 100%; padding: 12px; border: none; border-radius: 12px; font-size: 0.9rem; font-weight: 700; cursor: pointer; transition: all .2s; }
+    .btn-run { background: #6366f1; color: #fff; }
+    .btn-run:hover { background: #4f46e5; }
+    .btn-run:disabled { background: #334155; color: #64748b; cursor: not-allowed; }
+    .btn-clear { background: #1e293b; border: 1px solid #334155; color: #94a3b8; margin-top: 8px; }
+    .btn-clear:hover { background: #334155; }
+    .progress-wrap { background: #0f172a; border-radius: 99px; height: 10px; margin: 12px 0 6px; overflow: hidden; }
+    .progress-bar { height: 100%; background: linear-gradient(90deg, #6366f1, #a78bfa); border-radius: 99px; width: 0%; transition: width .15s ease; }
+    .progress-label { font-size: 0.75rem; color: #64748b; text-align: right; }
+    .stats-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(110px, 1fr)); gap: 10px; margin-top: 4px; }
+    .stat-box { background: #0f172a; border-radius: 10px; padding: 12px 10px; text-align: center; border: 1px solid #1e293b; }
+    .stat-value { font-size: 1.5rem; font-weight: 800; }
+    .stat-label { font-size: 0.68rem; color: #64748b; font-weight: 600; text-transform: uppercase; letter-spacing: .05em; margin-top: 2px; }
+    .stat-ok { color: #4ade80; } .stat-err { color: #f87171; } .stat-warn { color: #fbbf24; } .stat-info { color: #60a5fa; }
+    .hist { margin-top: 12px; }
+    .hist-bar-row { display: flex; align-items: center; gap: 8px; margin-bottom: 5px; font-size: 0.74rem; }
+    .hist-label { width: 70px; color: #94a3b8; flex-shrink: 0; text-align: right; }
+    .hist-track { flex: 1; background: #0f172a; border-radius: 99px; height: 8px; overflow: hidden; }
+    .hist-fill { height: 100%; border-radius: 99px; background: #6366f1; transition: width .3s ease; }
+    .hist-count { width: 36px; color: #64748b; text-align: right; flex-shrink: 0; }
+    #errLog {
+      background: #0f172a; border-radius: 10px; padding: 12px;
+      max-height: 200px; overflow-y: auto;
+      font-size: 0.72rem; font-family: 'Courier New', monospace; color: #f87171; margin-top: 8px;
+      white-space: pre-wrap;
+    }
+    #errLog .ok { color: #4ade80; } #errLog .warn { color: #fbbf24; }
+  </style>
+</head>
+<body>
+
+<h1>🔥 Стресс-тест Web App</h1>
+<p class="subtitle">Симуляция параллельных GET-запросов к Google Apps Script. Проверяет устойчивость при 200+ пользователях.</p>
+
+<div class="card">
+  <h2>⚙️ Настройки</h2>
+  <label>URL Google Apps Script (с ?key=jw_144000)</label>
+  <input type="text" id="scriptUrl"
+    value="https://script.google.com/macros/s/AKfycbwsBLJvAwCZCc2IGZ2M6XBOODm_YsXxgnKl2RllYOMg0Vi-eDq4AKspqIUtZJbbdj7Y/exec?key=jw_144000">
+  <div class="row">
+    <div>
+      <label>Параллельных запросов</label>
+      <input type="number" id="numRequests" value="50" min="1" max="500">
+    </div>
+    <div>
+      <label>Таймаут (сек)</label>
+      <input type="number" id="timeout" value="30" min="5" max="120">
+    </div>
+  </div>
+  <button class="btn btn-run" id="runBtn" onclick="runTest()">▶ Запустить тест</button>
+  <button class="btn btn-clear" onclick="clearResults()">✖ Очистить</button>
+</div>
+
+<div class="card" id="progressCard" style="display:none">
+  <h2>⏳ Выполняется...</h2>
+  <div class="progress-wrap"><div class="progress-bar" id="progressBar"></div></div>
+  <div class="progress-label" id="progressLabel">0 / 0</div>
+</div>
+
+<div class="card" id="resultsCard" style="display:none">
+  <h2>📊 Результаты</h2>
+  <div class="stats-grid">
+    <div class="stat-box"><div class="stat-value stat-info" id="sTotal">—</div><div class="stat-label">Запросов</div></div>
+    <div class="stat-box"><div class="stat-value stat-ok"   id="sOk">—</div><div class="stat-label">Успешно</div></div>
+    <div class="stat-box"><div class="stat-value stat-err"  id="sErr">—</div><div class="stat-label">Ошибок</div></div>
+    <div class="stat-box"><div class="stat-value stat-warn" id="sRate">—</div><div class="stat-label">Успех %</div></div>
+    <div class="stat-box"><div class="stat-value stat-info" id="sP50">—</div><div class="stat-label">P50 (мс)</div></div>
+    <div class="stat-box"><div class="stat-value stat-info" id="sP95">—</div><div class="stat-label">P95 (мс)</div></div>
+    <div class="stat-box"><div class="stat-value stat-warn" id="sP99">—</div><div class="stat-label">P99 (мс)</div></div>
+    <div class="stat-box"><div class="stat-value stat-info" id="sDur">—</div><div class="stat-label">Общее (с)</div></div>
+  </div>
+  <div class="hist">
+    <div style="margin:14px 0 8px; font-size:0.78rem; color:#94a3b8; font-weight:600;">Распределение времени ответа</div>
+    <div id="histBars"></div>
+  </div>
+  <div style="margin-top:14px; font-size:0.78rem; color:#94a3b8; font-weight:600;">Лог</div>
+  <div id="errLog"></div>
+</div>
+
+<script>
+let running = false;
+
+async function runTest() {
+  if (running) return;
+  running = true;
+
+  const url     = document.getElementById('scriptUrl').value.trim();
+  const n       = parseInt(document.getElementById('numRequests').value) || 50;
+  const timeout = parseInt(document.getElementById('timeout').value) || 30;
+
+  if (!url) { alert('Укажите URL'); running = false; return; }
+
+  document.getElementById('runBtn').disabled = true;
+  document.getElementById('progressCard').style.display = 'block';
+  document.getElementById('resultsCard').style.display  = 'none';
+
+  const bar   = document.getElementById('progressBar');
+  const label = document.getElementById('progressLabel');
+  bar.style.width = '0%';
+  label.textContent = '0 / ' + n;
+
+  const results = [];
+  let done = 0;
+  const startAll = performance.now();
+
+  const promises = Array.from({ length: n }, function(_, i) {
+    var start = performance.now();
+    var ctrl  = new AbortController();
+    var tid   = setTimeout(function() { ctrl.abort(); }, timeout * 1000);
+
+    return fetch(url, { signal: ctrl.signal, cache: 'no-store' })
+      .then(function(res) {
+        clearTimeout(tid);
+        var ms = Math.round(performance.now() - start);
+        results.push({ ok: res.ok, status: res.status, ms: ms, idx: i + 1 });
+      })
+      .catch(function(err) {
+        clearTimeout(tid);
+        var ms = Math.round(performance.now() - start);
+        var isTimeout = err.name === 'AbortError';
+        results.push({ ok: false, status: isTimeout ? 'timeout' : 'network', ms: ms, idx: i + 1, err: err.message });
+      })
+      .finally(function() {
+        done++;
+        bar.style.width = Math.round(done / n * 100) + '%';
+        label.textContent = done + ' / ' + n;
+      });
+  });
+
+  await Promise.all(promises);
+  var totalMs = Math.round(performance.now() - startAll);
+
+  showResults(results, n, totalMs);
+  document.getElementById('progressCard').style.display = 'none';
+  document.getElementById('resultsCard').style.display  = 'block';
+  document.getElementById('runBtn').disabled = false;
+  running = false;
+}
+
+function pct(times, p) {
+  return times[Math.max(0, Math.ceil(times.length * p / 100) - 1)] || 0;
+}
+
+function showResults(results, n, totalMs) {
+  var ok   = results.filter(function(r) { return r.ok; }).length;
+  var err  = results.filter(function(r) { return !r.ok; }).length;
+  var rate = Math.round(ok / n * 100);
+  var times = results.map(function(r) { return r.ms; }).sort(function(a,b) { return a - b; });
+
+  document.getElementById('sTotal').textContent = n;
+  document.getElementById('sOk').textContent    = ok;
+  document.getElementById('sErr').textContent   = err;
+  document.getElementById('sRate').textContent  = rate + '%';
+  document.getElementById('sP50').textContent   = pct(times, 50);
+  document.getElementById('sP95').textContent   = pct(times, 95);
+  document.getElementById('sP99').textContent   = pct(times, 99);
+  document.getElementById('sDur').textContent   = (totalMs / 1000).toFixed(1);
+
+  // Histogram
+  var buckets = [
+    { label: '< 500ms',  max: 500 },
+    { label: '< 1с',     max: 1000 },
+    { label: '< 3с',     max: 3000 },
+    { label: '< 5с',     max: 5000 },
+    { label: '< 10с',    max: 10000 },
+    { label: '≥ 10с',    max: Infinity }
+  ];
+  var counts = buckets.map(function() { return 0; });
+  times.forEach(function(ms) {
+    for (var i = 0; i < buckets.length; i++) {
+      if (ms < buckets[i].max) { counts[i]++; break; }
+    }
+  });
+  var maxCount = Math.max.apply(null, counts.concat([1]));
+  var barsEl = document.getElementById('histBars');
+  barsEl.innerHTML = '';
+  buckets.forEach(function(b, i) {
+    var row = document.createElement('div');
+    row.className = 'hist-bar-row';
+    row.innerHTML =
+      '<span class="hist-label">' + b.label + '</span>' +
+      '<div class="hist-track"><div class="hist-fill" style="width:' + Math.round(counts[i]/maxCount*100) + '%"></div></div>' +
+      '<span class="hist-count">' + counts[i] + '</span>';
+    barsEl.appendChild(row);
+  });
+
+  // Status breakdown
+  var statusMap = {};
+  results.forEach(function(r) {
+    var k = String(r.status);
+    statusMap[k] = (statusMap[k] || 0) + 1;
+  });
+
+  var log = document.getElementById('errLog');
+  var html = '<span class="ok">✅ Успешно: ' + ok + '/' + n + ' (' + rate + '%) | P50=' + pct(times,50) + 'мс P95=' + pct(times,95) + 'мс P99=' + pct(times,99) + 'мс\n</span>';
+  html += '⏱ Общее время: ' + (totalMs/1000).toFixed(2) + 'с\n';
+  html += '📊 Статусы: ' + Object.keys(statusMap).map(function(k) { return k + '×' + statusMap[k]; }).join(', ') + '\n\n';
+
+  var errors = results.filter(function(r) { return !r.ok; });
+  if (errors.length) {
+    errors.slice(0, 30).forEach(function(r) {
+      html += '<span class="' + (r.status === 'timeout' ? 'warn' : '') + '">❌ #' + r.idx + ' status=' + r.status + ' ' + r.ms + 'мс' + (r.err ? ' – ' + r.err : '') + '\n</span>';
+    });
+    if (errors.length > 30) html += '... и ещё ' + (errors.length - 30) + ' ошибок\n';
+  } else {
+    html += '<span class="ok">🎉 Все запросы успешны! Сервер выдержал нагрузку.\n</span>';
+  }
+  log.innerHTML = html;
+}
+
+function clearResults() {
+  document.getElementById('progressCard').style.display = 'none';
+  document.getElementById('resultsCard').style.display  = 'none';
+}
+</script>
+</body>
+</html>
