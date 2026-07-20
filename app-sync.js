@@ -450,8 +450,8 @@
     });
     var c1 = "", c2 = "";
     remaining.forEach(function (b) {
-      if (b.cart1Lang && b.name1) c1 = b.cart1Lang.toLowerCase();
-      if (b.cart2Lang && b.name3) c2 = b.cart2Lang.toLowerCase();
+      if (b.cart1Lang && (b.name1 || b.name2)) c1 = b.cart1Lang.toLowerCase();
+      if (b.cart2Lang && (b.name3 || b.name4)) c2 = b.cart2Lang.toLowerCase();
     });
     setYearCart(date, 1, c1);
     setYearCart(date, 2, c2);

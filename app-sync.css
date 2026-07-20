@@ -195,19 +195,7 @@
     flex-wrap: wrap;
 }
 /* Цветная точка (маркер) — цвет строго по группе, как в верхнем фильтре */
-.day-cell .day-lang-dot {
-    position: relative;
-    width: 9px;
-    height: 9px;
-    border-radius: 50%;
-    border: 1px solid rgba(0, 0, 0, 0.12);
-    flex: 0 0 auto;
-}
-.day-cell .day-lang-dot.dot-ru { background-color: #dc2626; }  /* Русская — красная */
-.day-cell .day-lang-dot.dot-ua { background-color: #2563eb; }  /* Украинская — голубая */
-.day-cell .day-lang-dot.dot-de { background-color: #16a34a; }  /* Немецкая — зелёная */
-/* Скрываем мини-иконку внутри точки (оставляем саму точку как маркер) */
-.day-cell .day-lang-dot .day-trolley-icon { display: none; }
+
 
 /* Яркая подсветка дня, когда выбрана конкретная группа в фильтре */
 .day-cell.day-highlight-ru { box-shadow: inset 0 0 0 2px #dc2626; background-color: rgba(220, 38, 38, 0.12) !important; }

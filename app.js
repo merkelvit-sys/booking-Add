@@ -110,6 +110,13 @@ const I18N = {
     addLocationTitle: "Добавить место",
     addLocationName: "Название локации",
     addLocationMarkMap: "Отметить на карте",
+    addTimeSlotBtn: "+ Время",
+    enterTimePrompt: "Введите время для нового интервала (например, 15:00 - 17:00):",
+    addTimeSlotTitle: "Добавить интервал времени",
+    atsFromLabel: "С (начало)",
+    atsToLabel: "До (конец)",
+    atsPresetsLabel: "Быстрый выбор",
+    atsBtnText: "Добавить",
 
     groupLabel_RU: "RU (Русская)",
     groupLabel_UA: "UA (Украинская)",
@@ -263,6 +270,13 @@ const I18N = {
     addLocationTitle: "Додати місце",
     addLocationName: "Назва локації",
     addLocationMarkMap: "Позначити на карті",
+    addTimeSlotBtn: "+ Час",
+    enterTimePrompt: "Введіть час для нового інтервалу (наприклад, 15:00 - 17:00):",
+    addTimeSlotTitle: "Додати інтервал часу",
+    atsFromLabel: "З (початок)",
+    atsToLabel: "До (кінець)",
+    atsPresetsLabel: "Швидкий вибір",
+    atsBtnText: "Додати",
 
     groupLabel_RU: "RU (Російська)",
     groupLabel_UA: "UA (Українська)",
@@ -416,6 +430,13 @@ const I18N = {
     addLocationTitle: "Ort hinzufügen",
     addLocationName: "Standortname",
     addLocationMarkMap: "Auf Karte markieren",
+    addTimeSlotBtn: "+ Uhrzeit",
+    enterTimePrompt: "Geben Sie die Uhrzeit für das neue Intervall ein (z.B. 15:00 - 17:00):",
+    addTimeSlotTitle: "Zeitintervall hinzufügen",
+    atsFromLabel: "Von (Anfang)",
+    atsToLabel: "Bis (Ende)",
+    atsPresetsLabel: "Schnellauswahl",
+    atsBtnText: "Hinzufügen",
 
     groupLabel_RU: "RU (Russisch)",
     groupLabel_UA: "UA (Ukrainisch)",
@@ -527,6 +548,9 @@ function bookingMatchesGroup(b, g) {
 // Константы и состояние
 // ----------------------------------------------------------------------------
 const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwsBLJvAwCZCc2IGZ2M6XBOODm_YsXxgnKl2RllYOMg0Vi-eDq4AKspqIUtZJbbdj7Y/exec";
+// Вы можете указать прямую постоянную ссылку на ваше приложение ниже, чтобы кнопка «Поделиться» отправляла именно её.
+// Если оставить пустым "", ссылка будет определяться автоматически на основе текущего адреса страницы с очисткой preview-адресов.
+const SHARE_APP_URL = "";
 
 let selectedDateISO = "";
 let justAddedSlot = null;
@@ -937,10 +961,31 @@ function renderBookingTab() { onLocationOrDateChange(); }
 function renderScheduleTab() { renderScheduleBoard(); }
 
 function shareApp() {
+  let shareUrl = SHARE_APP_URL;
+  if (!shareUrl) {
+    shareUrl = window.location.origin + window.location.pathname;
+    
+    // Если это preview-ссылка Vercel (например, project-git-branch.vercel.app),
+    // пробуем очистить её до главного продакшн-домена (например, project.vercel.app)
+    if (window.location.hostname.endsWith('.vercel.app')) {
+      const parts = window.location.hostname.split('.');
+      const sub = parts[0];
+      const gitIdx = sub.indexOf('-git-');
+      if (gitIdx !== -1) {
+        shareUrl = 'https://' + sub.substring(0, gitIdx) + '.vercel.app' + window.location.pathname;
+      } else {
+        const lastDash = sub.lastIndexOf('-');
+        if (lastDash !== -1 && sub.substring(lastDash + 1).length >= 8) {
+          shareUrl = 'https://' + sub.substring(0, lastDash) + '.vercel.app' + window.location.pathname;
+        }
+      }
+    }
+  }
+
   const shareData = {
     title: S('shareTitle'),
     text: S('shareText'),
-    url: window.location.origin + window.location.pathname
+    url: shareUrl
   };
 
   if (navigator.share) {
@@ -949,7 +994,6 @@ function shareApp() {
         console.log('Error sharing:', err);
       });
   } else {
-    const shareUrl = window.location.origin + window.location.pathname;
     navigator.clipboard.writeText(shareUrl).then(() => {
       showToast(S('shareCopied'), 'success');
     }).catch(err => {
@@ -2266,6 +2310,157 @@ async function fetchDataFromSpreadsheet() {
 //   справа — Тележка №2 (её язык/цвет/иконка/имена)
 // Цвет и иконка строго соответствуют языку КОНКРЕТНОЙ тележки из базы.
 // ----------------------------------------------------------------------------
+function getCustomSlotsFor(date, location) {
+  const all = JSON.parse(localStorage.getItem('customEmptySlots')) || [];
+  return all.filter(x => x.date === date && x.location === location).map(x => x.time);
+}
+
+function addCustomSlotFor(date, location, time) {
+  const all = JSON.parse(localStorage.getItem('customEmptySlots')) || [];
+  if (!all.some(x => x.date === date && x.location === location && x.time === time)) {
+    all.push({ date, location, time });
+    localStorage.setItem('customEmptySlots', JSON.stringify(all));
+  }
+}
+
+function addCustomTimeSlotPrompt(location) {
+  openAddTimeSlotModal(location);
+}
+
+function openAddTimeSlotModal(locationName) {
+  const modal = document.getElementById('addTimeSlotModal');
+  if (!modal) return;
+  
+  modal.dataset.location = locationName;
+  
+  // Localize text elements
+  document.getElementById('atsModalTitle').textContent = S('addTimeSlotTitle', 'Добавить интервал времени');
+  document.getElementById('atsFromLabel').textContent = S('atsFromLabel', 'С (начало)');
+  document.getElementById('atsToLabel').textContent = S('atsToLabel', 'До (конец)');
+  document.getElementById('atsPresetsLabel').textContent = S('atsPresetsLabel', 'Быстрый выбор');
+  document.getElementById('atsBtnText').textContent = S('atsBtnText', 'Добавить');
+  
+  // Populate From and To selects
+  const fromSelect = document.getElementById('atsFromTime');
+  const toSelect = document.getElementById('atsToTime');
+  fromSelect.innerHTML = "";
+  toSelect.innerHTML = "";
+  
+  const timeOptions = [];
+  for (let h = 7; h <= 21; h++) {
+    const hr = String(h).padStart(2, '0');
+    timeOptions.push(`${hr}:00`);
+    if (h < 21) {
+      timeOptions.push(`${hr}:30`);
+    }
+  }
+  
+  timeOptions.forEach(t => {
+    const optFrom = document.createElement('option');
+    optFrom.value = t;
+    optFrom.textContent = t;
+    fromSelect.appendChild(optFrom);
+    
+    const optTo = document.createElement('option');
+    optTo.value = t;
+    optTo.textContent = t;
+    toSelect.appendChild(optTo);
+  });
+  
+  // Set default selection
+  fromSelect.value = "10:00";
+  toSelect.value = "12:00";
+  
+  // Generate presets list
+  const presetsList = document.getElementById('atsPresetsList');
+  presetsList.innerHTML = "";
+  
+  const presets = [
+    "08:00 - 10:00",
+    "10:00 - 12:00",
+    "12:00 - 14:00",
+    "14:00 - 16:00",
+    "16:00 - 18:00",
+    "18:00 - 20:00"
+  ];
+  
+  presets.forEach(p => {
+    const btn = document.createElement('button');
+    btn.type = "button";
+    btn.className = "week-btn";
+    btn.style.padding = "6px 8px";
+    btn.style.fontSize = "0.75rem";
+    btn.style.width = "100%";
+    btn.style.textAlign = "center";
+    btn.textContent = p;
+    btn.onclick = () => {
+      const parts = p.split(" - ");
+      fromSelect.value = parts[0];
+      toSelect.value = parts[1];
+      
+      Array.from(presetsList.children).forEach(child => child.classList.remove('active'));
+      btn.classList.add('active');
+    };
+    presetsList.appendChild(btn);
+  });
+  
+  modal.style.display = 'flex';
+  document.body.style.overflow = 'hidden';
+}
+
+function closeAddTimeSlotModal() {
+  const modal = document.getElementById('addTimeSlotModal');
+  if (!modal) return;
+  modal.style.display = 'none';
+  modal.removeAttribute('data-location');
+  document.body.style.overflow = '';
+}
+
+function onAddTimeSlotBackdropClick(e) {
+  if (e.target.id === 'addTimeSlotModal') {
+    closeAddTimeSlotModal();
+  }
+}
+
+function submitCustomTimeSlot(e) {
+  e.preventDefault();
+  const modal = document.getElementById('addTimeSlotModal');
+  if (!modal) return;
+  
+  const location = modal.dataset.location;
+  const fromTime = document.getElementById('atsFromTime').value;
+  const toTime = document.getElementById('atsToTime').value;
+  
+  if (!location || !fromTime || !toTime) return;
+  
+  const parseMin = (s) => {
+    const parts = s.split(":");
+    return parseInt(parts[0], 10) * 60 + parseInt(parts[1], 10);
+  };
+  
+  if (parseMin(toTime) <= parseMin(fromTime)) {
+    showToast("Время окончания должно быть позже времени начала", "error");
+    return;
+  }
+  
+  const timeFormatted = `${fromTime} - ${toTime}`;
+  addCustomSlotFor(selectedDateISO, location, timeFormatted);
+  renderScheduleBoard();
+  closeAddTimeSlotModal();
+  showToast(S('shiftSaved', 'Сохранено'), "success");
+}
+
+function sortTimes(timeArray) {
+  return timeArray.sort((a, b) => {
+    const getVal = (str) => {
+      const match = str.match(/(\d{1,2})[.:](\d{2})/);
+      if (!match) return 0;
+      return parseInt(match[1], 10) * 60 + parseInt(match[2], 10);
+    };
+    return getVal(a) - getVal(b);
+  });
+}
+
 function renderScheduleBoard() {
   const board = document.getElementById('scheduleBoard');
   board.innerHTML = "";
@@ -2286,25 +2481,78 @@ function renderScheduleBoard() {
     return "";
   }
 
+  function findMatchingTimeSlot(customTime) {
+    if (!customTime) return null;
+    if (timeslotsList.indexOf(customTime) !== -1) return customTime;
+    
+    const match = customTime.match(/(\d{1,2})[.:](\d{2})/);
+    if (!match) return timeslotsList[0] || "10:00 - 12:00";
+    
+    const customHour = parseInt(match[1], 10);
+    const customMin = parseInt(match[2], 10);
+    const customTimeVal = customHour * 60 + customMin;
+
+    let closestSlot = timeslotsList[0] || "10:00 - 12:00";
+    let minDiff = Infinity;
+
+    timeslotsList.forEach(slot => {
+      const slotMatch = slot.match(/(\d{1,2})[.:](\d{2})/);
+      if (slotMatch) {
+        const slotHour = parseInt(slotMatch[1], 10);
+        const slotMin = parseInt(slotMatch[2], 10);
+        const slotTimeVal = slotHour * 60 + slotMin;
+        const diff = Math.abs(slotTimeVal - customTimeVal);
+        if (diff < minDiff) {
+          minDiff = diff;
+          closestSlot = slot;
+        }
+      }
+    });
+
+    return closestSlot;
+  }
+
   // Собираем слоты: один слот = локация + время. Объединяем все строки
   // этого слота в одну логическую запись (у каждой тележки свой язык).
   const slotMap = {};
   dayBookings.forEach(b => {
-    const key = `${b.location}|${b.time}`;
+    const matchedSlotTime = findMatchingTimeSlot(b.time);
+    if (!matchedSlotTime) return;
+
+    const key = `${b.location}|${matchedSlotTime}`;
     if (!slotMap[key]) {
       slotMap[key] = {
-        location: b.location, time: b.time,
-        cart1Lang: "", name1: "", name2: "",
-        cart2Lang: "", name3: "", name4: ""
+        location: b.location, time: matchedSlotTime,
+        cart1Lang: "", name1: "", name2: "", cart1ActualTime: "",
+        cart2Lang: "", name3: "", name4: "", cart2ActualTime: ""
       };
     }
     const s = slotMap[key];
-    if (b.cart1Lang) s.cart1Lang = normLang(b.cart1Lang);
-    if (b.name1) s.name1 = b.name1;
-    if (b.name2) s.name2 = b.name2;
-    if (b.cart2Lang) s.cart2Lang = normLang(b.cart2Lang);
-    if (b.name3) s.name3 = b.name3;
-    if (b.name4) s.name4 = b.name4;
+    const cNum = parseInt(b.cartNumber, 10);
+    if (cNum === 1) {
+      if (b.cart1Lang) s.cart1Lang = normLang(b.cart1Lang);
+      if (b.name1) s.name1 = b.name1;
+      if (b.name2) s.name2 = b.name2;
+      s.cart1ActualTime = b.time;
+    } else if (cNum === 2) {
+      if (b.cart2Lang) s.cart2Lang = normLang(b.cart2Lang);
+      if (b.name3) s.name3 = b.name3;
+      if (b.name4) s.name4 = b.name4;
+      s.cart2ActualTime = b.time;
+    } else {
+      if (b.cart1Lang) {
+        s.cart1Lang = normLang(b.cart1Lang);
+        s.name1 = b.name1 || (b.names && b.names[0]) || "";
+        s.name2 = b.name2 || (b.names && b.names[1]) || "";
+        s.cart1ActualTime = b.time;
+      }
+      if (b.cart2Lang) {
+        s.cart2Lang = normLang(b.cart2Lang);
+        s.name3 = b.name3 || (b.names && b.names[0]) || "";
+        s.name4 = b.name4 || (b.names && b.names[1]) || "";
+        s.cart2ActualTime = b.time;
+      }
+    }
   });
 
   const LANG_BADGE = { ru: "RU", ua: "UA", de: "DE" };
@@ -2315,11 +2563,13 @@ function renderScheduleBoard() {
   };
   const langLabel = LANG_LABEL[getLang()] || LANG_LABEL.ru;
 
-  function cartCardHTML(cartNum, lang, n1, n2, locName, time, hasNames) {
+  function cartCardHTML(cartNum, lang, n1, n2, locName, time, hasNames, actualTime) {
     const cls = lang || "none";
     const icon = (window.TrolleyUI) ? window.TrolleyUI.getMiniSVG() : '';
     const badge = lang ? LANG_BADGE[lang] : "";
-    const title = lang ? langLabel[lang.toUpperCase()] : S('free');
+    
+    const timeDisplay = (actualTime && actualTime !== time) ? ` (${actualTime})` : "";
+    const title = lang ? `${langLabel[lang.toUpperCase()]}${timeDisplay}` : S('free');
 
     const isJustAdded = justAddedSlot &&
                         justAddedSlot.location === locName &&
@@ -2336,7 +2586,7 @@ function renderScheduleBoard() {
               <span class="day-trolley-icon" data-group="${cls}" aria-hidden="true">${icon}</span>
               📦 ${title}
             </span>
-            <button type="button" class="btn-delete-booking" onclick="deleteBooking('${locName.replace(/'/g, "\\'")}', '${selectedDateISO}', '${time}', ${cartNum})" title="${S('deleteBooking')}" aria-label="${S('deleteBooking')}">🗑️</button>
+            <button type="button" class="btn-delete-booking" onclick="deleteBooking('${locName.replace(/'/g, "\\'")}', '${selectedDateISO}', '${(actualTime || time).replace(/'/g, "\\'")}', ${cartNum})" title="${S('deleteBooking')}" aria-label="${S('deleteBooking')}">🗑️</button>
           </div>
           <span class="board-names" title="${n1}, ${n2}">${n1}${n2 ? ' • ' + n2 : ''}</span>
         </div>`;
@@ -2367,13 +2617,34 @@ function renderScheduleBoard() {
     titleDiv.className = 'board-location-title';
     titleDiv.innerHTML = `
       <span>${locName}</span>
-      <button type="button" class="btn-show-map" onclick="showMapForLocationName('${locName}')">
-        🗺 ${S('onMap')}
-      </button>
+      <div style="display: flex; gap: 6px; align-items: center;">
+        <button type="button" class="btn-show-map" style="padding: 6px 10px; font-size: 0.75rem; font-weight: bold; background-color: var(--primary-container); color: var(--primary);" onclick="addCustomTimeSlotPrompt('${locName.replace(/'/g, "\\'")}')">
+          ➕ ${S('addTimeSlotBtn', '+ Время')}
+        </button>
+        <button type="button" class="btn-show-map" style="padding: 6px 10px; font-size: 0.75rem;" onclick="showMapForLocationName('${locName.replace(/'/g, "\\'")}')">
+          🗺 ${S('onMap')}
+        </button>
+      </div>
     `;
     card.appendChild(titleDiv);
 
-    timeslotsList.forEach(time => {
+    // Build chronological times array for this location
+    let locTimes = [...timeslotsList];
+    dayBookings.forEach(b => {
+      const matched = findMatchingTimeSlot(b.time);
+      if (b.location === locName && matched && locTimes.indexOf(matched) === -1) {
+        locTimes.push(matched);
+      }
+    });
+    const addedSlots = getCustomSlotsFor(selectedDateISO, locName);
+    addedSlots.forEach(t => {
+      if (locTimes.indexOf(t) === -1) {
+        locTimes.push(t);
+      }
+    });
+    locTimes = sortTimes(locTimes);
+
+    locTimes.forEach(time => {
       const slotDiv = document.createElement('div');
       slotDiv.className = 'board-slot';
 
@@ -2391,16 +2662,16 @@ function renderScheduleBoard() {
         const c1Names = !!(slot.name1 || slot.name2);
         const c2Names = !!(slot.name3 || slot.name4);
         const c1 = document.createElement('div');
-        c1.innerHTML = cartCardHTML(1, slot.cart1Lang, slot.name1, slot.name2, locName, time, c1Names);
+        c1.innerHTML = cartCardHTML(1, slot.cart1Lang, slot.name1, slot.name2, locName, time, c1Names, slot.cart1ActualTime);
         const c2 = document.createElement('div');
-        c2.innerHTML = cartCardHTML(2, slot.cart2Lang, slot.name3, slot.name4, locName, time, c2Names);
+        c2.innerHTML = cartCardHTML(2, slot.cart2Lang, slot.name3, slot.name4, locName, time, c2Names, slot.cart2ActualTime);
         cartsWrap.appendChild(c1.firstElementChild);
         cartsWrap.appendChild(c2.firstElementChild);
       } else {
         const c1 = document.createElement('div');
-        c1.innerHTML = cartCardHTML(1, "", "", "", locName, time, false);
+        c1.innerHTML = cartCardHTML(1, "", "", "", locName, time, false, "");
         const c2 = document.createElement('div');
-        c2.innerHTML = cartCardHTML(2, "", "", "", locName, time, false);
+        c2.innerHTML = cartCardHTML(2, "", "", "", locName, time, false, "");
         cartsWrap.appendChild(c1.firstElementChild);
         cartsWrap.appendChild(c2.firstElementChild);
       }
@@ -2610,6 +2881,7 @@ function onQuickBookingBackdropClick(e) {
 function handleQuickBookingKeydown(e) {
   const modal = document.getElementById('quickBookingModal');
   const addLocModal = document.getElementById('addLocationForm');
+  const addTimeModal = document.getElementById('addTimeSlotModal');
 
   if (e.key === 'Escape') {
     if (modal && modal.style.display !== 'none') {
@@ -2618,6 +2890,10 @@ function handleQuickBookingKeydown(e) {
     }
     if (addLocModal && addLocModal.style.display !== 'none') {
       hideAddLocationForm();
+      return;
+    }
+    if (addTimeModal && addTimeModal.style.display !== 'none') {
+      closeAddTimeSlotModal();
       return;
     }
   }
@@ -2673,7 +2949,8 @@ async function submitQuickBooking(e) {
 
   const locName = modal.dataset.location;
   const dateISO = modal.dataset.date;
-  const timeSlot = modal.dataset.time;
+  const originalTimeSlot = modal.dataset.time;
+  const timeSlot = document.getElementById('qbTime').value.trim();
   const cartNum = parseInt(modal.dataset.cartNum, 10);
 
   if (!locName || !dateISO || !timeSlot || !cartNum) {
@@ -2728,7 +3005,7 @@ async function submitQuickBooking(e) {
 
   if (isDemo) {
     setTimeout(() => {
-      justAddedSlot = { location: locName, date: dateISO, time: timeSlot, cartNum: cartNum };
+      justAddedSlot = { location: locName, date: dateISO, time: originalTimeSlot, cartNum: cartNum };
 
       SyncCore.addBookingRecord(record);
       showToast(S('shiftSaved'), "success");
@@ -2770,7 +3047,7 @@ async function submitQuickBooking(e) {
       }).then(res => res.json().catch(() => ({})));
     };
 
-    justAddedSlot = { location: locName, date: dateISO, time: timeSlot, cartNum: cartNum };
+    justAddedSlot = { location: locName, date: dateISO, time: originalTimeSlot, cartNum: cartNum };
 
     const result = await SyncCore.addBookingRecordSafe(record, promiseFactory);
     console.log('quick create response:', result);
@@ -2818,7 +3095,8 @@ async function submitQuickBooking(e) {
 
   } catch (err) {
     console.error(err);
-    showToast(S('networkSendError'), "error");
+    const isConflict = err && err.message && err.message !== "SERVER_ERROR";
+    showToast(isConflict ? err.message : S('networkSendError'), "error");
     justAddedSlot = null;
     if (btn) btn.disabled = false;
     if (spinner) spinner.style.display = 'none';

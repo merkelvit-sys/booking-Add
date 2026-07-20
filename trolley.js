@@ -507,7 +507,7 @@
    * @returns {string|null}
    */
   function getPickerValue() {
-    var active = document.querySelector('#trolleyPicker .trolley-card.active');
+    var active = document.querySelector('.trolley-picker-container .trolley-card.active');
     return active ? (active.dataset.group || null) : null;
   }
 
@@ -516,11 +516,12 @@
    * @param {string|null} group
    */
   function setPickerValue(group) {
-    var picker = document.getElementById('trolleyPicker');
-    if (!picker) return;
-    var cards = picker.querySelectorAll('.trolley-card');
-    for (var i = 0; i < cards.length; i++) {
-      cards[i].classList.toggle('active', cards[i].dataset.group === group);
+    var pickers = document.querySelectorAll('.trolley-picker-container');
+    for (var j = 0; j < pickers.length; j++) {
+      var cards = pickers[j].querySelectorAll('.trolley-card');
+      for (var i = 0; i < cards.length; i++) {
+        cards[i].classList.toggle('active', cards[i].dataset.group === group);
+      }
     }
   }
 

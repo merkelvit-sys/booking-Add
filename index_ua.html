@@ -1628,7 +1628,7 @@
                     </div>
                     <div>
                         <label class="compact-label" id="qbTimeLabel">Час</label>
-                        <input type="text" id="qbTime" class="input-field" disabled style="background-color: var(--primary-container); border-color: var(--border); opacity: 0.85; cursor: not-allowed;">
+                        <input type="text" id="qbTime" class="input-field" placeholder="наприклад, 10:00 - 12:00" autocomplete="off">
                     </div>
                 </div>
                 <div class="form-section-compact" style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px;">
@@ -1656,6 +1656,41 @@
                 <button type="submit" id="qbSubmitBtn" class="btn-submit">
                     <span class="spinner" id="qbBtnSpinner" style="display: none; margin-right: 6px;"></span>
                     <span id="qbBtnText">Зберегти зміну</span>
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Add Time Slot Modal -->
+    <div class="modal-backdrop" id="addTimeSlotModal" style="display: none;" onclick="onAddTimeSlotBackdropClick(event)">
+        <div class="modal-content" style="max-width: 380px; width: 90%;">
+            <div class="modal-header">
+                <h3 class="modal-title" id="atsModalTitle">Додати інтервал часу</h3>
+                <button type="button" class="btn-close-modal" onclick="closeAddTimeSlotModal()" aria-label="Закрити">✖</button>
+            </div>
+            <form id="addTimeSlotForm" onsubmit="submitCustomTimeSlot(event)">
+                <!-- Вибір "С" и "До" -->
+                <div class="form-section-compact" style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 16px;">
+                    <div>
+                        <label class="compact-label" id="atsFromLabel">З (початок)</label>
+                        <select id="atsFromTime" class="input-field" style="cursor: pointer;"></select>
+                    </div>
+                    <div>
+                        <label class="compact-label" id="atsToLabel">До (кінець)</label>
+                        <select id="atsToTime" class="input-field" style="cursor: pointer;"></select>
+                    </div>
+                </div>
+                
+                <!-- Быстрый выбор (пресеты) -->
+                <div class="form-section-compact" style="margin-top: 16px;">
+                    <label class="compact-label" id="atsPresetsLabel">Швидкий вибір</label>
+                    <div id="atsPresetsList" style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 6px;">
+                        <!-- Пресеты будут сгенерированы динамически -->
+                    </div>
+                </div>
+                
+                <button type="submit" class="btn-primary" style="width: 100%; margin-top: 20px; border: none; border-radius: 12px; padding: 12px; font-weight: bold; background: var(--primary); color: #fff; cursor: pointer;" id="atsSubmitBtn">
+                    <span id="atsBtnText">Додати</span>
                 </button>
             </form>
         </div>
