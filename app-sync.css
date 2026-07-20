@@ -615,12 +615,53 @@
     border: 1px solid rgba(37, 99, 235, 0.28);
 }
 .board-cart-info.has-lang-de {
-    background-color: rgba(22, 163, 74, 0.10);
-    border: 1px solid rgba(22, 163, 74, 0.28);
+    background-color: rgba(234, 179, 8, 0.10); /* Pastel yellow */
+    border: 1px solid rgba(234, 179, 8, 0.28);
 }
 .board-cart-info.has-lang-none {
     background-color: rgba(120, 120, 120, 0.04);
 }
+
+.board-cart-info.empty {
+    cursor: pointer;
+    touch-action: manipulation;
+    transition: background-color 0.2s ease, border-color 0.2s ease, transform 0.1s ease, box-shadow 0.2s ease;
+}
+.board-cart-info.empty:hover {
+    background-color: rgba(22, 163, 74, 0.12);
+    border-color: #15803d;
+    transform: translateY(-1.5px);
+    box-shadow: 0 4px 8px rgba(22, 163, 74, 0.08);
+}
+.board-cart-info.empty:focus-visible {
+    outline: 2px solid var(--success);
+    outline-offset: 1px;
+}
+.board-cart-info.empty:active {
+    transform: scale(0.98);
+}
+
+@keyframes slotPulse {
+    0% { box-shadow: 0 0 0 0px var(--primary); transform: scale(1); }
+    50% { box-shadow: 0 0 0 6px rgba(37, 99, 235, 0.25); transform: scale(1.02); }
+    100% { box-shadow: 0 0 0 0px var(--primary); transform: scale(1); }
+}
+.board-cart-info.slot-just-added {
+    animation: slotPulse 1.2s ease-out 1;
+    will-change: transform, box-shadow;
+}
+
+.compact-label {
+    display: block;
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: var(--text-muted);
+    margin-bottom: 4px;
+}
+.form-section-compact {
+    margin-bottom: 12px;
+}
+
 .board-cart-info .day-trolley-icon { width: 16px; height: 26px; margin-right: 4px; vertical-align: middle; }
 .board-cart-info .day-trolley-icon[data-group="ru"] .trolley-poster { fill: #dc2626; }
 .board-cart-info .day-trolley-icon[data-group="ua"] .trolley-poster { fill: #2563eb; }
@@ -684,4 +725,233 @@
     0% { transform: scale(1); }
     50% { transform: scale(1.18); box-shadow: 0 0 8px #ef4444; }
     100% { transform: scale(1); }
+}
+
+/* Анимация подсвечивания новой локации */
+.board-card.location-highlight {
+    animation: locationPulse 2s ease;
+}
+
+@keyframes locationPulse {
+    0% {
+        box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.4);
+        background-color: rgba(16, 185, 129, 0.05);
+        border-color: var(--success);
+    }
+    50% {
+        box-shadow: 0 0 15px 4px rgba(16, 185, 129, 0.2);
+        background-color: rgba(16, 185, 129, 0.15);
+        border-color: var(--success);
+    }
+    100% {
+        box-shadow: 0 0 0 0 rgba(16, 185, 129, 0);
+        background-color: transparent;
+        border-color: var(--border);
+    }
+}
+
+/* Уровни слоев для модальных окон */
+#mapModal {
+    z-index: 2000 !important;
+}
+#addLocationForm, #quickBookingModal {
+    z-index: 1000 !important;
+}
+
+/* Годовой график (Раздел «Год»): Тулбар и Легенда */
+.year-selector {
+    display: inline-flex;
+    background-color: var(--primary-container);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    padding: 2px;
+    gap: 2px;
+    margin-right: 12px;
+}
+.year-btn {
+    background: none;
+    border: none;
+    padding: 4px 10px;
+    font-size: 0.8rem;
+    font-weight: 700;
+    color: var(--text-muted);
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+.year-btn.active {
+    background-color: var(--primary);
+    color: white;
+}
+.year-btn:hover:not(.active) {
+    background-color: rgba(0, 0, 0, 0.05);
+}
+
+.legend-item.status-filter-btn {
+    background: none;
+    border: 1px solid transparent;
+    border-radius: var(--radius-sm);
+    padding: 3px 6px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+.legend-item.status-filter-btn:hover {
+    background-color: var(--primary-container);
+    border-color: var(--border);
+}
+.legend-item.status-filter-btn.active {
+    background-color: var(--primary);
+    color: white !important;
+    border-color: var(--primary);
+}
+.legend-item.status-filter-btn.active .legend-dot {
+    border-color: white !important;
+}
+
+/* Цветные бейджи тележек с иконками внутри ячейки дня */
+.day-cell .day-lang-dot {
+    position: relative;
+    width: 14px;
+    height: 16px;
+    border-radius: 3px;
+    border: 1px solid rgba(0, 0, 0, 0.08);
+    flex: 0 0 auto;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    transition: transform 0.2s ease;
+}
+.day-cell .day-lang-dot.dot-ru { background-color: rgba(244, 63, 94, 0.15); }
+.day-cell .day-lang-dot.dot-ua { background-color: rgba(14, 165, 233, 0.15); }
+.day-cell .day-lang-dot.dot-de { background-color: rgba(234, 179, 8, 0.15); }
+
+.day-cell .day-lang-dot .day-trolley-icon {
+    display: block !important;
+    width: 10px;
+    height: 12px;
+}
+
+/* Фильтры и подсветка дней */
+.day-cell.day-status-dimmed,
+.day-cell.day-trolley-dimmed {
+    opacity: 0.25;
+    filter: saturate(0.4);
+}
+.day-cell.day-trolley-highlight {
+    box-shadow: 0 0 0 2px var(--border) inset;
+}
+.day-cell.day-trolley-highlight-ru {
+    border: 2px solid #ef4444 !important;
+}
+.day-cell.day-trolley-highlight-ua {
+    border: 2px solid #3b82f6 !important;
+}
+.day-cell.day-trolley-highlight-de {
+    border: 2px solid #eab308 !important;
+}
+
+/* Rich Tooltip / Popover */
+.year-tooltip {
+    position: absolute;
+    display: none;
+    z-index: 3000;
+    background-color: var(--card-bg, #fff);
+    border: 1px solid var(--border, #e2e8f0);
+    border-radius: var(--radius-md, 12px);
+    box-shadow: var(--shadow-lg, 0 10px 15px -3px rgba(0, 0, 0, 0.1));
+    padding: 12px;
+    max-width: 280px;
+    font-size: 0.8rem;
+    color: var(--text, #1e293b);
+    pointer-events: none;
+    transition: opacity 0.15s ease, transform 0.15s ease;
+    transform: translateY(8px);
+    opacity: 0;
+}
+.year-tooltip.visible {
+    display: block;
+    opacity: 1;
+    transform: translateY(0);
+}
+.year-tooltip-date {
+    font-weight: 700;
+    margin-bottom: 6px;
+    border-bottom: 1px solid var(--border);
+    padding-bottom: 4px;
+    color: var(--primary);
+}
+.year-tooltip-status {
+    font-weight: 600;
+    margin-bottom: 8px;
+}
+.year-tooltip-bookings {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    margin-bottom: 6px;
+}
+.year-tooltip-booking-row {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 0.75rem;
+}
+.year-tooltip-note {
+    font-style: italic;
+    color: var(--text-muted);
+    border-top: 1px dashed var(--border);
+    padding-top: 6px;
+    margin-top: 6px;
+}
+
+/* Адаптивность для мобильных экранов */
+@media (max-width: 600px) {
+    .year-grid {
+        grid-template-columns: 1fr !important;
+    }
+    .day-cell {
+        min-height: 28px !important;
+        font-size: 0.85rem !important;
+    }
+    .day-cell .day-lang-dots {
+        bottom: 1px !important;
+    }
+    .day-cell .day-lang-dot {
+        width: 11px !important;
+        height: 12px !important;
+    }
+    .day-cell .day-lang-dot .day-trolley-icon {
+        width: 8px !important;
+        height: 10px !important;
+    }
+    .year-toolbar {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 8px;
+    }
+    .year-selector {
+        justify-content: center;
+        margin-right: 0;
+    }
+}
+
+/* Анимация подсвечивания обновлённого дня */
+.day-cell.day-just-updated {
+    animation: dayPulse 2s ease;
+    z-index: 10;
+}
+
+@keyframes dayPulse {
+    0% {
+        transform: scale(1);
+        box-shadow: 0 0 0 0 rgba(22, 163, 74, 0.5);
+    }
+    30% {
+        transform: scale(1.08);
+        box-shadow: 0 0 0 6px rgba(22, 163, 74, 0.3);
+    }
+    100% {
+        transform: scale(1);
+        box-shadow: 0 0 0 0 rgba(22, 163, 74, 0);
+    }
 }

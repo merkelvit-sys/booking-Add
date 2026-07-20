@@ -97,6 +97,19 @@ const I18N = {
     deleteBooking: "Удалить запись",
     cartLabel: "Тележка",
     backToToday: "Возвращено к сегодняшней дате",
+    quickBookBtn: "+ Записаться",
+    quickBookTitle: "Быстрая запись на смену",
+    quickBookDate: "Дата",
+    quickBookTime: "Время",
+    quickBookPlace: "Место",
+    quickBookCart: "Тележка",
+    quickBookLang: "Выберите язык тележки",
+    quickBookNames: "Участники смены",
+    quickBookSave: "Сохранить смену",
+    addLocationBtn: "+ Добавить место",
+    addLocationTitle: "Добавить место",
+    addLocationName: "Название локации",
+    addLocationMarkMap: "Отметить на карте",
 
     groupLabel_RU: "RU (Русская)",
     groupLabel_UA: "UA (Украинская)",
@@ -237,6 +250,19 @@ const I18N = {
     deleteBooking: "Видалити запис",
     cartLabel: "Тележка",
     backToToday: "Повернуто до сьогоднішньої дати",
+    quickBookBtn: "+ Записатися",
+    quickBookTitle: "Швидкий запис на зміну",
+    quickBookDate: "Дата",
+    quickBookTime: "Час",
+    quickBookPlace: "Місце",
+    quickBookCart: "Тележка",
+    quickBookLang: "Виберіть мову тележки",
+    quickBookNames: "Учасники зміни",
+    quickBookSave: "Зберегти зміну",
+    addLocationBtn: "+ Додати місце",
+    addLocationTitle: "Додати місце",
+    addLocationName: "Назва локації",
+    addLocationMarkMap: "Позначити на карті",
 
     groupLabel_RU: "RU (Російська)",
     groupLabel_UA: "UA (Українська)",
@@ -377,6 +403,19 @@ const I18N = {
     deleteBooking: "Eintrag löschen",
     cartLabel: "Trolley",
     backToToday: "Zurück zum heutigen Datum",
+    quickBookBtn: "+ Buchen",
+    quickBookTitle: "Schnelle Schichtbuchung",
+    quickBookDate: "Datum",
+    quickBookTime: "Uhrzeit",
+    quickBookPlace: "Standort",
+    quickBookCart: "Trolley",
+    quickBookLang: "Sprache des Trolleys wählen",
+    quickBookNames: "Teilnehmer der Schicht",
+    quickBookSave: "Schicht eintragen",
+    addLocationBtn: "+ Ort hinzufügen",
+    addLocationTitle: "Ort hinzufügen",
+    addLocationName: "Standortname",
+    addLocationMarkMap: "Auf Karte markieren",
 
     groupLabel_RU: "RU (Russisch)",
     groupLabel_UA: "UA (Ukrainisch)",
@@ -490,6 +529,9 @@ function bookingMatchesGroup(b, g) {
 const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwsBLJvAwCZCc2IGZ2M6XBOODm_YsXxgnKl2RllYOMg0Vi-eDq4AKspqIUtZJbbdj7Y/exec";
 
 let selectedDateISO = "";
+let justAddedSlot = null;
+let previousActiveElement = null;
+let selectedQBLang = "";
 let databaseBookings = [];
 let currentWeekOffset = 0;
 
@@ -638,10 +680,21 @@ window.addEventListener('DOMContentLoaded', () => {
   renderTimeGrid();
   initCartLangPickers();
 
+  const btnTopAddLocation = document.getElementById('btnTopAddLocation');
+  if (btnTopAddLocation) {
+    btnTopAddLocation.querySelector('span').textContent = S('addLocationBtn');
+  }
+
   // Примечание: запуск SyncCore.runAppLaunch() и startAutoSync() вынесен в
   // ensureAutoSyncStarts() ниже — он срабатывает гарантированно, даже если
   // DOMContentLoaded уже прошёл до загрузки app-sync.js. Здесь НЕ дублируем.
   document.getElementById('bookingForm').addEventListener('submit', handleFormSubmit);
+
+  const qbForm = document.getElementById('quickBookingForm');
+  if (qbForm) {
+    qbForm.addEventListener('submit', submitQuickBooking);
+  }
+  document.addEventListener('keydown', handleQuickBookingKeydown);
 
   // Проверить установку PWA через небольшой промежуток времени
   setTimeout(checkPWAInstallation, 1500);
@@ -686,9 +739,22 @@ window.addEventListener('DOMContentLoaded', () => {
 // Неделя / даты
 // ----------------------------------------------------------------------------
 function switchWeek(weekType) {
-  currentWeekOffset = weekType === 'this' ? 0 : 1;
-  document.getElementById('btnThisWeek').classList.toggle('active', weekType === 'this');
-  document.getElementById('btnNextWeek').classList.toggle('active', weekType === 'next');
+  if (weekType === 'this') {
+    currentWeekOffset = 0;
+  } else if (weekType === 'next') {
+    currentWeekOffset = 1;
+  } else if (weekType === 'afterNext') {
+    currentWeekOffset = 2;
+  }
+  
+  const bThis = document.getElementById('btnThisWeek');
+  const bNext = document.getElementById('btnNextWeek');
+  const bAfter = document.getElementById('btnWeekAfterNext');
+  
+  if (bThis) bThis.classList.toggle('active', currentWeekOffset === 0);
+  if (bNext) bNext.classList.toggle('active', currentWeekOffset === 1);
+  if (bAfter) bAfter.classList.toggle('active', currentWeekOffset === 2);
+  
   generateWeekStrip();
 }
 
@@ -781,15 +847,12 @@ function goToDate(dateISO) {
   const weekOffset = Math.floor(diffDays / 7);
 
   currentWeekOffset = weekOffset;
-  document.getElementById('btnThisWeek').classList.toggle('active', weekOffset === 0);
-  document.getElementById('btnNextWeek').classList.toggle('active', weekOffset === 1);
-  // Сбросить прочие кнопки недель, если появятся
   const wb = document.getElementById('btnThisWeek');
   const nb = document.getElementById('btnNextWeek');
-  if (wb && nb) {
-    wb.classList.toggle('active', weekOffset === 0);
-    nb.classList.toggle('active', weekOffset === 1);
-  }
+  const ab = document.getElementById('btnWeekAfterNext');
+  if (wb) wb.classList.toggle('active', weekOffset === 0);
+  if (nb) nb.classList.toggle('active', weekOffset === 1);
+  if (ab) ab.classList.toggle('active', weekOffset === 2);
 
   // Перерисовываем ленту с нужной неделей и выбираем дату
   generateWeekStripFor(weekOffset, dateISO);
@@ -1121,19 +1184,53 @@ function toggleFormState(disabled) {
 // Добавление / удаление локаций
 // ----------------------------------------------------------------------------
 function showAddLocationForm() {
-  document.getElementById('addLocationForm').style.display = 'block';
-  document.getElementById('customLocationInput').focus();
+  document.body.style.overflow = 'hidden';
+
+  const modal = document.getElementById('addLocationForm');
+  if (modal) {
+    modal.style.display = 'flex';
+    
+    const titleEl = document.getElementById('addLocModalTitle');
+    const labelEl = document.getElementById('addLocNameLabel');
+    const inputEl = document.getElementById('customLocationInput');
+    const mapBtnTextEl = document.getElementById('addLocMapBtnText');
+    
+    if (titleEl) titleEl.textContent = S('addLocationTitle');
+    if (labelEl) labelEl.textContent = S('addLocationName');
+    if (inputEl) {
+      inputEl.placeholder = S('addLocationName');
+      inputEl.focus();
+    }
+    if (mapBtnTextEl) mapBtnTextEl.textContent = S('addLocationMarkMap');
+  }
+
   tempSelectedCoords = null;
   currentGeocodedAddress = "";
-  document.getElementById('tempCoordsLabel').textContent = S('coordsNotSelected');
-  document.getElementById('tempCoordsLabel').style.color = "var(--text-muted)";
+  const coordsLabel = document.getElementById('tempCoordsLabel');
+  if (coordsLabel) {
+    coordsLabel.textContent = S('coordsNotSelected');
+    coordsLabel.style.color = "var(--text-muted)";
+  }
 }
 
 function hideAddLocationForm() {
-  document.getElementById('addLocationForm').style.display = 'none';
-  document.getElementById('customLocationInput').value = '';
+  document.body.style.overflow = '';
+
+  const modal = document.getElementById('addLocationForm');
+  if (modal) {
+    modal.style.display = 'none';
+  }
+  const inputEl = document.getElementById('customLocationInput');
+  if (inputEl) inputEl.value = '';
+  
   tempSelectedCoords = null;
   currentGeocodedAddress = "";
+}
+
+function onAddLocationModalBackdropClick(e) {
+  if (e.target.id === 'addLocationForm') {
+    hideAddLocationForm();
+  }
 }
 
 function addNewLocation() {
@@ -1150,22 +1247,21 @@ function addNewLocation() {
 
 function addNewLocationWithCoords(name, coords) {
   let isDuplicate = false;
-  document.querySelectorAll('input[name="location"]').forEach(radio => {
-    if (radio.value.toLowerCase() === name.toLowerCase()) isDuplicate = true;
+  let savedLocations = JSON.parse(localStorage.getItem('customLocations')) || [];
+  isDuplicate = savedLocations.some(loc => {
+    const n = typeof loc === 'string' ? loc : loc.name;
+    return n.toLowerCase() === name.toLowerCase();
   });
 
   if (isDuplicate) {
-    const existingRadio = document.querySelector(`input[name="location"][value="${name}"]`);
-    if (existingRadio) {
-      existingRadio.checked = true;
-      onLocationOrDateChange();
-    }
+    state.location = name;
+    onLocationOrDateChange();
     showToast(S('existingLocation', { name: name }), "success");
     hideAddLocationForm();
+    
+    scrollToLocationCard(name);
     return;
   }
-
-  let savedLocations = JSON.parse(localStorage.getItem('customLocations')) || [];
 
   const newLoc = {
     name: name,
@@ -1180,13 +1276,25 @@ function addNewLocationWithCoords(name, coords) {
   hideAddLocationForm();
   loadCustomLocations();
 
-  const newRadio = document.querySelector(`input[name="location"][value="${name}"]`);
-  if (newRadio) {
-    newRadio.checked = true;
-    state.location = name;
-    onLocationOrDateChange();
-  }
+  state.location = name;
+  onLocationOrDateChange();
   renderScheduleBoard();
+
+  scrollToLocationCard(name);
+}
+
+function scrollToLocationCard(name) {
+  setTimeout(() => {
+    const cardId = 'board-card-' + name.replace(/\s+/g, '-').replace(/[^a-zA-Z0-9а-яА-ЯёЁіІїЇєЄґҐ-]/g, '');
+    const cardEl = document.getElementById(cardId);
+    if (cardEl) {
+      cardEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      cardEl.classList.add('location-highlight');
+      setTimeout(() => {
+        cardEl.classList.remove('location-highlight');
+      }, 2000);
+    }
+  }, 100);
 }
 
 function insertLocationCardUI(locName) {
@@ -1521,6 +1629,7 @@ function showCurrentLocationOnMap() {
 function showMapForLocationName(locName) {
   const coords = getCoordsForLocation(locName);
 
+  document.body.style.overflow = 'hidden';
   document.getElementById('mapModal').style.display = 'flex';
   document.getElementById('mapModalTitle').textContent = S('mapTitle', { name: locName });
   document.getElementById('mapModalFooter').style.display = 'none';
@@ -1553,6 +1662,15 @@ function showMapForLocationName(locName) {
 }
 
 function openMapInSelectionMode() {
+  document.body.style.overflow = 'hidden';
+
+  // Temporarily hide addLocationForm if visible to avoid modal overlay stacking
+  const addLocationForm = document.getElementById('addLocationForm');
+  if (addLocationForm && addLocationForm.style.display !== 'none') {
+    addLocationForm.dataset.wasVisible = "true";
+    addLocationForm.style.display = 'none';
+  }
+
   document.getElementById('mapModal').style.display = 'flex';
   document.getElementById('mapModalTitle').textContent = S('selectPointMap');
   document.getElementById('mapModalFooter').style.display = 'flex';
@@ -1665,6 +1783,19 @@ function confirmMapSelection() {
 
 function closeMapModal() {
   document.getElementById('mapModal').style.display = 'none';
+
+  // Restore Add Location modal if it was hidden
+  const addLocationForm = document.getElementById('addLocationForm');
+  if (addLocationForm && addLocationForm.dataset.wasVisible === "true") {
+    addLocationForm.removeAttribute('data-was-visible');
+    addLocationForm.style.display = 'flex';
+    // Refocus on input
+    const inputEl = document.getElementById('customLocationInput');
+    if (inputEl) inputEl.focus();
+  } else {
+    // Only unlock scroll if we are not returning to another modal
+    document.body.style.overflow = '';
+  }
 }
 
 function onModalBackdropClick(e) {
@@ -2189,26 +2320,39 @@ function renderScheduleBoard() {
     const icon = (window.TrolleyUI) ? window.TrolleyUI.getMiniSVG() : '';
     const badge = lang ? LANG_BADGE[lang] : "";
     const title = lang ? langLabel[lang.toUpperCase()] : S('free');
+
+    const isJustAdded = justAddedSlot &&
+                        justAddedSlot.location === locName &&
+                        justAddedSlot.date === selectedDateISO &&
+                        justAddedSlot.time === time &&
+                        justAddedSlot.cartNum === cartNum;
+    const pulseClass = isJustAdded ? " slot-just-added" : "";
+
     if (hasNames) {
       return `
-        <div class="board-cart-info has-lang-${cls}">
+        <div class="board-cart-info has-lang-${cls}${pulseClass}">
           <div class="cart-info-header">
             <span class="board-cart-title">
               <span class="day-trolley-icon" data-group="${cls}" aria-hidden="true">${icon}</span>
               📦 ${title}
             </span>
-            <button type="button" class="btn-delete-booking" onclick="deleteBooking('${locName}', '${selectedDateISO}', '${time}', ${cartNum})" title="${S('deleteBooking')}" aria-label="${S('deleteBooking')}">🗑️</button>
+            <button type="button" class="btn-delete-booking" onclick="deleteBooking('${locName.replace(/'/g, "\\'")}', '${selectedDateISO}', '${time}', ${cartNum})" title="${S('deleteBooking')}" aria-label="${S('deleteBooking')}">🗑️</button>
           </div>
           <span class="board-names" title="${n1}, ${n2}">${n1}${n2 ? ' • ' + n2 : ''}</span>
         </div>`;
     }
     return `
-      <div class="board-cart-info empty has-lang-${cls}">
+      <div class="board-cart-info empty has-lang-${cls}" 
+           tabindex="0" 
+           role="button" 
+           aria-label="${S('cartLabel')} №${cartNum}: ${S('free')}"
+           onclick="openQuickBookingModal('${locName.replace(/'/g, "\\'")}', '${selectedDateISO}', '${time}', ${cartNum})" 
+           onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault(); openQuickBookingModal('${locName.replace(/'/g, "\\'")}', '${selectedDateISO}', '${time}', ${cartNum});}">
         <span class="board-cart-title">
           <span class="day-trolley-icon" data-group="${cls}" aria-hidden="true">${icon}</span>
           📦 ${S('cartLabel')} №${cartNum}
         </span>
-        <span class="board-names">${S('free')}</span>
+        <span class="board-names">+ ${S('quickBookBtn')}</span>
       </div>`;
   }
 
@@ -2217,6 +2361,7 @@ function renderScheduleBoard() {
 
     const card = document.createElement('div');
     card.className = 'board-card';
+    card.id = 'board-card-' + locName.replace(/\s+/g, '-').replace(/[^a-zA-Z0-9а-яА-ЯёЁіІїЇєЄґҐ-]/g, '');
 
     const titleDiv = document.createElement('div');
     titleDiv.className = 'board-location-title';
@@ -2309,8 +2454,12 @@ function toggleInfo(infoId) {
 
 function jumpToToday() {
   currentWeekOffset = 0;
-  document.getElementById('btnThisWeek').classList.add('active');
-  document.getElementById('btnNextWeek').classList.remove('active');
+  const wb = document.getElementById('btnThisWeek');
+  const nb = document.getElementById('btnNextWeek');
+  const ab = document.getElementById('btnWeekAfterNext');
+  if (wb) wb.classList.add('active');
+  if (nb) nb.classList.remove('active');
+  if (ab) ab.classList.remove('active');
   generateWeekStrip();
   showToast(S('backToToday'), "success");
 }
@@ -2343,6 +2492,339 @@ document.addEventListener("visibilitychange", () => {
     fetchSilentlyInBackground();
   }
 });
+
+// ----------------------------------------------------------------------------
+// Функции для Быстрой Записи (Quick Booking Modal)
+// ----------------------------------------------------------------------------
+function formatDateReadable(isoString) {
+  if (!isoString) return "";
+  const parts = isoString.split("-");
+  if (parts.length === 3) {
+    return `${parts[2]}.${parts[1]}.${parts[0]}`;
+  }
+  return isoString;
+}
+
+function openQuickBookingModal(locName, dateISO, timeSlot, cartNum) {
+  try {
+    if (navigator.vibrate) {
+      navigator.vibrate(15);
+    }
+  } catch (err) {
+    console.warn("Haptic feedback error:", err);
+  }
+
+  previousActiveElement = document.activeElement;
+
+  const modal = document.getElementById('quickBookingModal');
+  if (!modal) return;
+
+  modal.dataset.location = locName;
+  modal.dataset.date = dateISO;
+  modal.dataset.time = timeSlot;
+  modal.dataset.cartNum = cartNum;
+
+  document.getElementById('qbModalTitle').textContent = S('quickBookTitle');
+  document.getElementById('qbDateLabel').textContent = S('quickBookDate');
+  document.getElementById('qbTimeLabel').textContent = S('quickBookTime');
+  document.getElementById('qbLocationLabel').textContent = S('quickBookPlace');
+  document.getElementById('qbCartLabel').textContent = S('quickBookCart');
+  document.getElementById('qbLangLabel').textContent = S('quickBookLang');
+  document.getElementById('qbNamesLabel').textContent = S('quickBookNames');
+  document.getElementById('qbBtnText').textContent = S('quickBookSave');
+
+  document.getElementById('qbDate').value = formatDateReadable(dateISO);
+  document.getElementById('qbTime').value = timeSlot;
+  document.getElementById('qbLocation').value = locName;
+  document.getElementById('qbCart').value = `${S('cartLabel')} №${cartNum}`;
+
+  let defaultName1 = "";
+  let defaultName2 = "";
+  if (cartNum === 1) {
+    defaultName1 = localStorage.getItem('pwaName1') || localStorage.getItem('pwaName3') || '';
+    defaultName2 = localStorage.getItem('pwaName2') || localStorage.getItem('pwaName4') || '';
+  } else {
+    defaultName1 = localStorage.getItem('pwaName3') || localStorage.getItem('pwaName1') || '';
+    defaultName2 = localStorage.getItem('pwaName4') || localStorage.getItem('pwaName2') || '';
+  }
+
+  const name1Input = document.getElementById('qbName1');
+  const name2Input = document.getElementById('qbName2');
+
+  name1Input.value = defaultName1;
+  name2Input.value = defaultName2;
+
+  name1Input.placeholder = getLang() === 'uk' ? 'Вісник 1 (ПІБ)' : (getLang() === 'de' ? 'Verkündiger 1 (Name)' : 'Возвещатель 1 (ФИО)');
+  name2Input.placeholder = getLang() === 'uk' ? 'Вісник 2 (ПІБ)' : (getLang() === 'de' ? 'Verkündiger 2 (Name)' : 'Возвещатель 2 (ФИО)');
+
+  selectedQBLang = getGroup().toLowerCase();
+  const labels = getTrolleyLabels();
+  const qbLangPicker = document.getElementById("qbLangPicker");
+  if (qbLangPicker && window.TrolleyUI) {
+    qbLangPicker.innerHTML = "";
+    qbLangPicker.appendChild(window.TrolleyUI.createGroupPicker(labels, selectedQBLang, function (g) {
+      selectedQBLang = g;
+    }));
+  }
+
+  modal.style.display = 'flex';
+  document.body.style.overflow = 'hidden';
+
+  setTimeout(() => {
+    name1Input.focus();
+  }, 50);
+}
+
+function closeQuickBookingModal() {
+  const modal = document.getElementById('quickBookingModal');
+  if (!modal) return;
+
+  modal.style.display = 'none';
+
+  modal.removeAttribute('data-location');
+  modal.removeAttribute('data-date');
+  modal.removeAttribute('data-time');
+  modal.removeAttribute('data-cart-num');
+
+  const form = document.getElementById('quickBookingForm');
+  if (form) form.reset();
+
+  const qbLangPicker = document.getElementById("qbLangPicker");
+  if (qbLangPicker) qbLangPicker.innerHTML = "";
+  selectedQBLang = "";
+
+  document.body.style.overflow = '';
+
+  if (previousActiveElement && typeof previousActiveElement.focus === 'function') {
+    previousActiveElement.focus();
+  }
+  previousActiveElement = null;
+}
+
+function onQuickBookingBackdropClick(e) {
+  if (e.target.id === 'quickBookingModal') {
+    closeQuickBookingModal();
+  }
+}
+
+function handleQuickBookingKeydown(e) {
+  const modal = document.getElementById('quickBookingModal');
+  const addLocModal = document.getElementById('addLocationForm');
+
+  if (e.key === 'Escape') {
+    if (modal && modal.style.display !== 'none') {
+      closeQuickBookingModal();
+      return;
+    }
+    if (addLocModal && addLocModal.style.display !== 'none') {
+      hideAddLocationForm();
+      return;
+    }
+  }
+
+  if (modal && modal.style.display !== 'none' && e.key === 'Tab') {
+    const focusableSelectors = 'input:not([disabled]), button:not([disabled]), [tabindex="0"]:not([disabled])';
+    const focusables = Array.from(modal.querySelectorAll(focusableSelectors));
+    if (focusables.length === 0) return;
+
+    const first = focusables[0];
+    const last = focusables[focusables.length - 1];
+
+    if (e.shiftKey) {
+      if (document.activeElement === first) {
+        last.focus();
+        e.preventDefault();
+      }
+    } else {
+      if (document.activeElement === last) {
+        first.focus();
+        e.preventDefault();
+      }
+    }
+  }
+
+  if (addLocModal && addLocModal.style.display !== 'none' && e.key === 'Tab') {
+    const focusableSelectors = 'input:not([disabled]), button:not([disabled]), [tabindex="0"]:not([disabled])';
+    const focusables = Array.from(addLocModal.querySelectorAll(focusableSelectors));
+    if (focusables.length === 0) return;
+
+    const first = focusables[0];
+    const last = focusables[focusables.length - 1];
+
+    if (e.shiftKey) {
+      if (document.activeElement === first) {
+        last.focus();
+        e.preventDefault();
+      }
+    } else {
+      if (document.activeElement === last) {
+        first.focus();
+        e.preventDefault();
+      }
+    }
+  }
+}
+
+async function submitQuickBooking(e) {
+  e.preventDefault();
+
+  const modal = document.getElementById('quickBookingModal');
+  if (!modal) return;
+
+  const locName = modal.dataset.location;
+  const dateISO = modal.dataset.date;
+  const timeSlot = modal.dataset.time;
+  const cartNum = parseInt(modal.dataset.cartNum, 10);
+
+  if (!locName || !dateISO || !timeSlot || !cartNum) {
+    showToast(S('selectPlaceTime'), "error");
+    return;
+  }
+
+  const name1 = document.getElementById('qbName1').value.trim();
+  const name2 = document.getElementById('qbName2').value.trim();
+
+  if (!name1 || !name2) {
+    showToast(S(cartNum === 1 ? 'fillCart1' : 'fillCart2Names'), "error");
+    return;
+  }
+
+  if (!selectedQBLang) {
+    showToast(S(cartNum === 1 ? 'selectCart1Lang' : 'selectCart2Lang'), "error");
+    return;
+  }
+
+  if (cartNum === 1) {
+    localStorage.setItem('pwaName1', name1);
+    localStorage.setItem('pwaName2', name2);
+  } else {
+    localStorage.setItem('pwaName3', name1);
+    localStorage.setItem('pwaName4', name2);
+  }
+
+  document.getElementById('name1').value = localStorage.getItem('pwaName1') || '';
+  document.getElementById('name2').value = localStorage.getItem('pwaName2') || '';
+  document.getElementById('name3').value = localStorage.getItem('pwaName3') || '';
+  document.getElementById('name4').value = localStorage.getItem('pwaName4') || '';
+
+  const btn = document.getElementById('qbSubmitBtn');
+  const spinner = document.getElementById('qbBtnSpinner');
+  const btnText = document.getElementById('qbBtnText');
+
+  if (btn) btn.disabled = true;
+  if (spinner) spinner.style.display = 'inline-block';
+  if (btnText) btnText.textContent = S('btnSaving');
+
+  const record = {
+    date: dateISO,
+    time: timeSlot,
+    location: locName,
+    cartNumber: cartNum,
+    language: selectedQBLang,
+    names: [name1, name2]
+  };
+
+  const isDemo = !isValidScriptUrl(GOOGLE_SCRIPT_URL);
+
+  if (isDemo) {
+    setTimeout(() => {
+      justAddedSlot = { location: locName, date: dateISO, time: timeSlot, cartNum: cartNum };
+
+      SyncCore.addBookingRecord(record);
+      showToast(S('shiftSaved'), "success");
+
+      if (btn) btn.classList.add('success');
+      if (spinner) spinner.style.display = 'none';
+      if (btnText) btnText.textContent = S('btnSuccess');
+
+      setTimeout(() => {
+        if (btn) {
+          btn.classList.remove('success');
+          btn.disabled = false;
+        }
+        if (btnText) btnText.textContent = S('quickBookSave');
+
+        closeQuickBookingModal();
+
+        setTimeout(() => {
+          justAddedSlot = null;
+          renderScheduleBoard();
+        }, 1500);
+      }, 1500);
+    }, 1000);
+    return;
+  }
+
+  try {
+    const promiseFactory = function () {
+      const _fetchPost = (window.SyncCore && SyncCore.fetchWithRetry) ? SyncCore.fetchWithRetry : fetch;
+      return _fetchPost(GOOGLE_SCRIPT_URL + '?key=jw_144000', {
+        method: 'POST',
+        mode: 'cors',
+        body: JSON.stringify({
+          action: 'create',
+          key: 'jw_144000',
+          language: (window.SyncCore && SyncCore.getLang) ? SyncCore.getLang() : (document.documentElement.lang || 'ru'),
+          bookings: [record]
+        })
+      }).then(res => res.json().catch(() => ({})));
+    };
+
+    justAddedSlot = { location: locName, date: dateISO, time: timeSlot, cartNum: cartNum };
+
+    const result = await SyncCore.addBookingRecordSafe(record, promiseFactory);
+    console.log('quick create response:', result);
+
+    if (result && result.status === 'conflict') {
+      showToast(result.message || S('bookingConflict'), "error");
+      justAddedSlot = null;
+      if (btn) btn.disabled = false;
+      if (spinner) spinner.style.display = 'none';
+      if (btnText) btnText.textContent = S('quickBookSave');
+      SyncCore.refreshAll();
+      return;
+    }
+    if (result && result.status === 'error') {
+      console.error('Server rejected booking:', result);
+      showToast((result.message || S('networkSendError')), "error");
+      justAddedSlot = null;
+      if (btn) btn.disabled = false;
+      if (spinner) spinner.style.display = 'none';
+      if (btnText) btnText.textContent = S('quickBookSave');
+      return;
+    }
+
+    showToast(S('shiftSaved'), "success");
+    if (btn) btn.classList.add('success');
+    if (spinner) spinner.style.display = 'none';
+    if (btnText) btnText.textContent = S('btnSuccess');
+
+    setTimeout(() => {
+      if (btn) {
+        btn.classList.remove('success');
+        btn.disabled = false;
+      }
+      if (btnText) btnText.textContent = S('quickBookSave');
+
+      closeQuickBookingModal();
+
+      setTimeout(() => {
+        justAddedSlot = null;
+        renderScheduleBoard();
+      }, 1500);
+
+      SyncCore.refreshSilently();
+    }, 1500);
+
+  } catch (err) {
+    console.error(err);
+    showToast(S('networkSendError'), "error");
+    justAddedSlot = null;
+    if (btn) btn.disabled = false;
+    if (spinner) spinner.style.display = 'none';
+    if (btnText) btnText.textContent = S('quickBookSave');
+  }
+}
 
 // ----------------------------------------------------------------------------
 // Глобальная обработка ошибок (silent logging — без alert в продакшне)

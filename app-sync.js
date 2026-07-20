@@ -61,8 +61,11 @@
   var lastSyncOnline = false;
   var lastSyncTime   = 0;    // timestamp последней успешной синхронизации (мс)
   var autoTimer = null;
+  var isSyncLocked = false;  // Блокировка фонового автообновления при отправке/удалении записи
   var editorState = { date: null, status: "available" };
   var yearTrolleyFilter = "all"; // 'all' | 'ru' | 'ua' | 'de' — фильтр тележек на главной
+  var selectedYear = null;
+  var selectedStatusFilter = null;
 
   // ----- Единый источник данных (Global State Manager) -----
   // Все вкладки (Запись / График / Год) читают и пишут сюда.
@@ -329,6 +332,7 @@
 
   // Фоновое тихое обновление (без лишних уведомлений)
   function refreshSilently() {
+    if (isSyncLocked) return Promise.resolve(true);
     return fetchCombined().then(function (data) {
       var bookings = (data.bookings || []).map(normalizeBooking);
       var sched = (data.schedule && data.schedule.length) ? dedupeSchedule(data.schedule) : generateYearSchedule();
@@ -478,6 +482,7 @@
   // Безопасное удаление с откатом локального кэша при сетевой ошибке.
   // offline=true -> не трогаем сервер, просто убираем локально (приложение остаётся рабочим).
   function removeBookingSafe(b, serverDeletePromiseFactory) {
+    isSyncLocked = true;
     var cn = parseInt(b.cartNumber, 10);
     if (!(cn === 1 || cn === 2)) cn = 1;
     // Сохраняем снимок затронутых слотов до изменения (для отката)
@@ -485,16 +490,24 @@
 
     removeBooking(b); // мгновенная перерисовка всех вкладок
 
-    if (typeof serverDeletePromiseFactory !== "function") return Promise.resolve(true);
+    if (typeof serverDeletePromiseFactory !== "function") {
+      isSyncLocked = false;
+      return Promise.resolve(true);
+    }
 
     var p = serverDeletePromiseFactory();
-    if (!p || typeof p.then !== "function") return Promise.resolve(true);
+    if (!p || typeof p.then !== "function") {
+      isSyncLocked = false;
+      return Promise.resolve(true);
+    }
 
     return p.then(function (result) {
+      isSyncLocked = false;
       // Сервер подтвердил удаление (или вернул ошибку поиска — трактуем как уже удалено)
       if (result && result.status === "error") throw new Error(result.message || "SERVER_ERROR");
       return true;
     }).catch(function (err) {
+      isSyncLocked = false;
       // Откат: возвращаем кэш в исходное состояние, перерисовываем.
       AppState.bookings = snapshot;
       try { databaseBookings = snapshot; } catch (e) {}
@@ -518,13 +531,58 @@
       AppState.bookings.push(slot);
     }
     if (rec.cartNumber === 1) {
-      slot.cart1Lang = rec.language; slot.name1 = rec.name1 || ""; slot.name2 = rec.name2 || "";
+      slot.cart1Lang = rec.language;
+      slot.name1 = rec.name1 || (rec.names && rec.names[0]) || "";
+      slot.name2 = rec.name2 || (rec.names && rec.names[1]) || "";
     } else {
-      slot.cart2Lang = rec.language; slot.name3 = rec.name3 || ""; slot.name4 = rec.name4 || "";
+      slot.cart2Lang = rec.language;
+      slot.name3 = rec.name3 || (rec.names && rec.names[0]) || "";
+      slot.name4 = rec.name4 || (rec.names && rec.names[1]) || "";
     }
     try { databaseBookings = AppState.bookings; } catch (e) {}
     saveCachedBookings(AppState.bookings);
     linkBookingToYear(rec.date, slot.cart1Lang, slot.cart2Lang);
+  }
+
+  // Безопасное добавление с откатом локального кэша при сетевой ошибке.
+  function addBookingRecordSafe(rec, serverCreatePromiseFactory) {
+    isSyncLocked = true;
+    var snapshot = (AppState.bookings || []).map(function (x) { return Object.assign({}, x); });
+
+    addBookingRecord(rec);
+    renderAllTabs();
+
+    if (typeof serverCreatePromiseFactory !== "function") {
+      isSyncLocked = false;
+      return Promise.resolve(true);
+    }
+
+    var p = serverCreatePromiseFactory();
+    if (!p || typeof p.then !== "function") {
+      isSyncLocked = false;
+      return Promise.resolve(true);
+    }
+
+    return p.then(function (result) {
+      isSyncLocked = false;
+      if (result && (result.status === "error" || result.status === "conflict")) {
+        throw new Error(result.message || "SERVER_ERROR");
+      }
+      return result;
+    }).catch(function (err) {
+      isSyncLocked = false;
+      AppState.bookings = snapshot;
+      try { databaseBookings = snapshot; } catch (e) {}
+      saveCachedBookings(snapshot);
+      var originalSlot = snapshot.find(function (x) {
+        return x.location === rec.location && x.date === rec.date && x.time === rec.time;
+      });
+      var c1Lang = originalSlot ? originalSlot.cart1Lang : "";
+      var c2Lang = originalSlot ? originalSlot.cart2Lang : "";
+      linkBookingToYear(rec.date, c1Lang, c2Lang);
+      renderAllTabs();
+      throw err;
+    });
   }
 
   // Тонкая обёртка для обратной совместимости (демо-режим app.js):
@@ -586,26 +644,74 @@
   }
 
   // ----- Эффективный рендеринг годовой сетки -----
+  function getDayLangSetForDate(iso) {
+    var set = {};
+    var rows = scheduleIndex[iso] || [];
+    rows.forEach(function (r) {
+      addLangToSet(set, r.trolley);
+    });
+    (AppState.bookings || []).forEach(function (b) {
+      if (b.date !== iso) return;
+      if (b.cart1Lang && (b.name1 || b.name2)) addLangToSet(set, b.cart1Lang);
+      if (b.cart2Lang && (b.name3 || b.name4)) addLangToSet(set, b.cart2Lang);
+    });
+    return set;
+  }
+
+  function addLangToSet(set, l) {
+    var code = (l || "").toLowerCase();
+    if (code === "ru" || code === "ua" || code === "de") set[code] = true;
+  }
+
   function renderYearGrid() {
     var root = document.getElementById("yearGridRoot");
     if (!root) return;
 
     var dict = I18N[getLang()];
-    var year = currentScheduleYear();
+    
+    // Determine active year
+    var year = selectedYear || currentScheduleYear();
     root.innerHTML = "";
 
-    // Панель: заголовок + индикатор + кнопка обновления
+    // Tooltip initialization
+    var yearTooltip = document.getElementById("yearTooltip");
+    if (!yearTooltip) {
+      yearTooltip = document.createElement("div");
+      yearTooltip.id = "yearTooltip";
+      yearTooltip.className = "year-tooltip";
+      document.body.appendChild(yearTooltip);
+    }
+
+    // Тулбар и Управление
     var toolbar = document.createElement("div");
     toolbar.className = "year-toolbar";
-    var title = document.createElement("span");
-    title.className = "year-title";
-    title.textContent = year;
-    toolbar.appendChild(title);
 
+    // Переключатель годов
+    var yearSelector = document.createElement("div");
+    yearSelector.className = "year-selector";
+    
+    var currentYearNum = new Date().getFullYear();
+    var years = [currentYearNum - 1, currentYearNum, currentYearNum + 1];
+
+    years.forEach(function (y) {
+      var btn = document.createElement("button");
+      btn.type = "button";
+      btn.className = "year-btn" + (year === y ? " active" : "");
+      btn.textContent = y;
+      btn.onclick = function () {
+        selectedYear = y;
+        renderYearGrid();
+      };
+      yearSelector.appendChild(btn);
+    });
+    toolbar.appendChild(yearSelector);
+
+    // Sync badge status
     var badge = document.createElement("span");
     badge.id = "yearSyncBadge";
     toolbar.appendChild(badge);
 
+    // Refresh button
     var refreshBtn = document.createElement("button");
     refreshBtn.type = "button";
     refreshBtn.className = "btn-refresh";
@@ -614,29 +720,31 @@
     toolbar.appendChild(refreshBtn);
     root.appendChild(toolbar);
 
-    // Легенда
+    // Легенда (интерактивные фильтры статусов)
     var legend = document.createElement("div");
     legend.className = "year-legend";
     ALLOWED.forEach(function (st) {
-      var item = document.createElement("span");
-      item.className = "legend-item";
+      var item = document.createElement("button");
+      item.type = "button";
+      item.className = "legend-item status-filter-btn" + (selectedStatusFilter === st ? " active" : "");
       item.innerHTML = '<span class="legend-dot status-' + st + '"></span>' + dict.statuses[st];
+      item.onclick = function () {
+        if (selectedStatusFilter === st) {
+          selectedStatusFilter = null;
+        } else {
+          selectedStatusFilter = st;
+        }
+        renderYearGrid();
+      };
       legend.appendChild(item);
     });
     root.appendChild(legend);
 
-    // Сетка месяцев (один проход, DocumentFragment — без зависаний)
+    // Сетка месяцев (DocumentFragment)
     var grid = document.createElement("div");
     grid.className = "year-grid";
     var frag = document.createDocumentFragment();
     var tIso = todayIso();
-
-    // Вспомогательная функция добавления языка в накопитель (объявлена ПЕРЕД циклом,
-    // чтобы не нарушать правило 'use strict' об объявлениях функций внутри блоков).
-    function addLangToSet(set, l) {
-      var code = (l || "").toLowerCase();
-      if (code === "ru" || code === "ua" || code === "de") set[code] = true;
-    }
 
     for (var m = 0; m < 12; m++) {
       var block = document.createElement("div");
@@ -660,7 +768,7 @@
       days.className = "month-days";
 
       var first = new Date(year, m, 1);
-      var offset = (first.getDay() + 6) % 7; // понедельник = 0
+      var offset = (first.getDay() + 6) % 7; // Понедельник = 0
       for (var e = 0; e < offset; e++) {
         var empty = document.createElement("div");
         empty.className = "day-cell empty";
@@ -669,76 +777,72 @@
 
       var dim = new Date(year, m + 1, 0).getDate();
       for (var d = 1; d <= dim; d++) {
-          var iso = year + "-" + pad(m + 1) + "-" + pad(d);
+        (function (currentDay) {
+          var iso = year + "-" + pad(m + 1) + "-" + pad(currentDay);
           iso = (iso || "").trim();
           var rows = scheduleIndex[iso] || [];
-          // Собираем статус (берём «не доступно» приоритетнее) и ВСЕ уникальные языки дня
+          
           var status = "available";
-          var dayLangSet = {}; // накопитель уникальных языков (RU/UA/DE) за весь день
+          var dayLangSet = {};
           rows.forEach(function (r) {
             if (r.status && r.status !== "available") status = r.status;
             addLangToSet(dayLangSet, r.trolley);
           });
-          // Дополняем языки из фактических записей (Запись → Год всегда актуально).
-          // Учитываем ВСЕ слоты: одна тележка в разных слотах может быть разных языков.
+          
           (AppState.bookings || []).forEach(function (b) {
             if (b.date !== iso) return;
             if (b.cart1Lang && (b.name1 || b.name2)) addLangToSet(dayLangSet, b.cart1Lang);
             if (b.cart2Lang && (b.name3 || b.name4)) addLangToSet(dayLangSet, b.cart2Lang);
           });
-          var langs = { c1: "", c2: "" };
-          var keys = Object.keys(dayLangSet);
-          if (keys[0]) langs.c1 = keys[0];
-          if (keys[1]) langs.c2 = keys[1];
 
-         var cell = document.createElement("div");
-         cell.className = "day-cell status-" + status;
-         var anyNote = rows.some(function (r) { return r.description || r.note; });
-         if (anyNote) cell.classList.add("has-event");
-         if (iso === tIso) cell.classList.add("today");
-         if (iso < tIso) cell.classList.add("past");
-         cell.dataset.date = iso;
-
-          // Уникальные языки дня (все занятые группы за день, до 3)
           var dayLangs = Object.keys(dayLangSet);
 
-         // Явная привязка групп к ячейке (для цветовой подсветки + фильтра)
-         dayLangs.forEach(function (lg) {
-           cell.classList.add("has-trolley", "has-booking-" + lg);
-         });
-         if (dayLangs.length) cell.dataset.groups = dayLangs.join(",");
+          var cell = document.createElement("div");
+          cell.className = "day-cell status-" + status;
+          cell.dataset.date = iso;
+          cell.dataset.status = status;
+          cell.setAttribute("tabindex", "0");
+          cell.setAttribute("role", "gridcell");
 
-         // Фильтр по тележке: показываем только выбранную группу, остальное — затемняем
-         var showTrolley = false;
-         if (yearTrolleyFilter === "all") {
-           showTrolley = dayLangs.length > 0;
-         } else if (dayLangs.indexOf(yearTrolleyFilter) !== -1) {
-           showTrolley = true;
-         } else {
-           cell.classList.add("day-dimmed");
-         }
+          var anyNote = rows.some(function (r) { return r.description || r.note; });
+          var noteText = "";
+          var eventRow = rows.find(function (r) { return r.description || r.note; });
+          if (eventRow) {
+            noteText = eventRow.description || eventRow.note;
+          }
 
-         var title = dict.statuses[status];
-         if (dayLangs.length) {
-           title += " · " + dayLangs.map(function (lg) { return dict.trolleys[lg]; }).join(" + ");
-         }
-         var noted = rows.filter(function (r) { return r.description; })[0];
-         if (noted) title += ": " + noted.description;
-         cell.title = title;
+          if (anyNote) cell.classList.add("has-event");
+          if (iso === tIso) cell.classList.add("today");
+          if (iso < tIso) cell.classList.add("past");
 
-          // Контент: номер дня + цветные маркеры языков (точки/полоски).
-          // Цвета строго соответствуют верхнему фильтру: RU=красный, UA=голубой, DE=зелёный.
-          var LANG_DOT = { ru: "ru", ua: "ua", de: "de" };
-          var inner = '<span class="day-num">' + d + '</span>';
-          if (dayLangs.length) {
-            // Яркая подсветка фона, если выбрана конкретная группа и она есть в этом дне
-            if (yearTrolleyFilter !== "all" && dayLangs.indexOf(yearTrolleyFilter) !== -1) {
-              cell.classList.add("day-highlight-" + yearTrolleyFilter);
+          // Специфические классы для A11y и фильтрации
+          dayLangs.forEach(function (lg) {
+            cell.classList.add("has-trolley", "has-booking-" + lg);
+          });
+          if (dayLangs.length) cell.dataset.groups = dayLangs.join(",");
+
+          // 1. Фильтр статусов легенды
+          if (selectedStatusFilter !== null) {
+            if (status !== selectedStatusFilter) {
+              cell.classList.add("day-status-dimmed");
             }
+          }
+
+          // 2. Фильтр языковых групп тележек
+          if (yearTrolleyFilter !== "all") {
+            if (dayLangs.indexOf(yearTrolleyFilter) !== -1) {
+              cell.classList.add("day-trolley-highlight", "day-trolley-highlight-" + yearTrolleyFilter);
+            } else {
+              cell.classList.add("day-trolley-dimmed");
+            }
+          }
+
+          // Построение контента ячейки дня
+          var inner = '<span class="day-num">' + currentDay + '</span>';
+          if (dayLangs.length) {
             inner += '<span class="day-lang-dots">';
             dayLangs.forEach(function (lg) {
-              // Маркер: цветная точка + (опционально) мини-иконка тележки
-              inner += '<span class="day-lang-dot dot-' + (LANG_DOT[lg] || "none") + '" title="' + (dict.trolleys[lg] || "") + '">';
+              inner += '<span class="day-lang-dot dot-' + lg + '" data-group="' + lg + '" title="' + (dict.trolleys[lg] || "") + '">';
               if (window.TrolleyUI) {
                 inner += '<span class="day-trolley-icon" data-group="' + lg + '" aria-hidden="true">' + TrolleyUI.getMiniSVG() + '</span>';
               }
@@ -746,16 +850,194 @@
             });
             inner += '</span>';
           }
-         if (anyNote) inner += '<span class="attention-badge">!</span>';
-         cell.innerHTML = inner;
-         cell.addEventListener("click", function (ev) { goToDateFromYear(ev.currentTarget.dataset.date); });
-        days.appendChild(cell);
+          if (anyNote) inner += '<span class="attention-badge">!</span>';
+          cell.innerHTML = inner;
+
+          // A11y расшифровка для скринридеров
+          var dObj = new Date(year, m, currentDay);
+          var weekdaysFull = {
+            ru: ["Воскресенье", "Понедельник", "Вторник", "Среда", "Четверг", "Пятница", "Суббота"],
+            uk: ["Неділя", "Понеділок", "Вівторок", "Середа", "Четверг", "П'ятниця", "Субота"],
+            de: ["Sonntag", "Montag", "Dienstag", "Mittwoch", "Donnerstag", "Freitag", "Samstag"]
+          };
+          var lang = getLang();
+          var dayOfWeekLabel = (weekdaysFull[lang] || weekdaysFull.ru)[dObj.getDay()];
+          var formattedDate = currentDay + " " + dict.months[m] + ", " + dayOfWeekLabel;
+          var statusText = dict.statuses[status];
+
+          var fullAriaLabel = formattedDate + ". " + statusText;
+          if (dayLangs.length) {
+            fullAriaLabel += ", " + dayLangs.map(function (lg) { return dict.trolleys[lg]; }).join(" и ");
+          }
+          if (noteText) {
+            fullAriaLabel += ", Заметка: " + noteText;
+          }
+          cell.setAttribute("aria-label", fullAriaLabel);
+
+          // Pointer/Touch listeners for Rich Tooltip
+          cell.addEventListener("pointerenter", function (ev) {
+            showTooltipForCell(ev.currentTarget, iso, status, rows, dayLangSet);
+          });
+          cell.addEventListener("pointerleave", function () {
+            hideTooltip();
+          });
+
+          // Keyboard Arrow Navigation & Click editor
+          cell.addEventListener("keydown", function (ev) {
+            var currentD = new Date(year, m, currentDay);
+            var nextD = null;
+            
+            switch (ev.key) {
+              case "ArrowLeft":
+                nextD = new Date(currentD.getFullYear(), currentD.getMonth(), currentD.getDate() - 1);
+                break;
+              case "ArrowRight":
+                nextD = new Date(currentD.getFullYear(), currentD.getMonth(), currentD.getDate() + 1);
+                break;
+              case "ArrowUp":
+                nextD = new Date(currentD.getFullYear(), currentD.getMonth(), currentD.getDate() - 7);
+                break;
+              case "ArrowDown":
+                nextD = new Date(currentD.getFullYear(), currentD.getMonth(), currentD.getDate() + 7);
+                break;
+              case "Enter":
+              case " ":
+                ev.preventDefault();
+                goToDateFromYear(iso);
+                break;
+              default:
+                return;
+            }
+            
+            if (nextD) {
+              ev.preventDefault();
+              var nextIso = nextD.getFullYear() + "-" + pad(nextD.getMonth() + 1) + "-" + pad(nextD.getDate());
+              var targetCell = root.querySelector('.day-cell[data-date="' + nextIso + '"]');
+              if (targetCell) {
+                targetCell.focus();
+                // Show tooltip for focused cell
+                var focusedStatus = targetCell.dataset.status;
+                var focusedRows = scheduleIndex[nextIso] || [];
+                var focusedLangs = getDayLangSetForDate(nextIso);
+                showTooltipForCell(targetCell, nextIso, focusedStatus, focusedRows, focusedLangs);
+              }
+            }
+          });
+
+          // Tap vs Click handler (Touch support)
+          cell.addEventListener("click", function (ev) {
+            var isTooltipActive = (yearTooltip.classList.contains("visible") && yearTooltip.dataset.activeDate === iso);
+            var isTouch = window.matchMedia("(pointer: coarse)").matches;
+            
+            if (isTouch && !isTooltipActive) {
+              ev.preventDefault();
+              ev.stopPropagation();
+              showTooltipForCell(ev.currentTarget, iso, status, rows, dayLangSet);
+              return;
+            }
+            goToDateFromYear(iso);
+          });
+
+          days.appendChild(cell);
+        })(d);
       }
       block.appendChild(days);
       frag.appendChild(block);
     }
     grid.appendChild(frag);
     root.appendChild(grid);
+
+    // Вспомогательная функция для всплывающей подсказки
+    function showTooltipForCell(cellEl, dateISO, status, rows, dayLangSet) {
+      if (!yearTooltip) return;
+      
+      yearTooltip.dataset.activeDate = dateISO;
+      
+      var dateParts = dateISO.split("-");
+      var dObj = new Date(parseInt(dateParts[0], 10), parseInt(dateParts[1], 10) - 1, parseInt(dateParts[2], 10));
+      
+      var monthName = dict.months[dObj.getMonth()];
+      var weekdaysFull = {
+        ru: ["Воскресенье", "Понедельник", "Вторник", "Среда", "Четверг", "Пятница", "Суббота"],
+        uk: ["Неділя", "Понеділок", "Вівторок", "Середа", "Четверг", "П'ятниця", "Субота"],
+        de: ["Sonntag", "Montag", "Dienstag", "Mittwoch", "Donnerstag", "Freitag", "Samstag"]
+      };
+      var lang = getLang();
+      var dayOfWeekLabel = (weekdaysFull[lang] || weekdaysFull.ru)[dObj.getDay()];
+      var formattedDate = dateParts[2] + " " + monthName + ", " + dayOfWeekLabel;
+
+      var statusText = dict.statuses[status];
+      
+      var noteText = "";
+      var eventRow = rows.find(function (r) { return r.description || r.note; });
+      if (eventRow) {
+        noteText = eventRow.description || eventRow.note;
+      }
+      
+      var bookingsHTML = "";
+      var dayBookings = (AppState.bookings || []).filter(function (b) { return b.date === dateISO; });
+      if (dayBookings.length > 0) {
+        bookingsHTML += '<div class="year-tooltip-bookings">';
+        dayBookings.forEach(function (b) {
+          if (b.cart1Lang && (b.name1 || b.name2)) {
+            var badgeText = b.cart1Lang.toUpperCase();
+            var namesText = [b.name1, b.name2].filter(Boolean).join(" • ");
+            bookingsHTML += '<div class="year-tooltip-booking-row">' +
+              '<span class="trolley-filter-badge" data-group="' + b.cart1Lang.toLowerCase() + '" style="margin: 0; padding: 2px 6px; font-size: 0.7rem; border-radius: 4px;">' + badgeText + '</span>' +
+              '<span>' + namesText + '</span>' +
+              '</div>';
+          }
+          if (b.cart2Lang && (b.name3 || b.name4)) {
+            var badgeText = b.cart2Lang.toUpperCase();
+            var namesText = [b.name3, b.name4].filter(Boolean).join(" • ");
+            bookingsHTML += '<div class="year-tooltip-booking-row">' +
+              '<span class="trolley-filter-badge" data-group="' + b.cart2Lang.toLowerCase() + '" style="margin: 0; padding: 2px 6px; font-size: 0.7rem; border-radius: 4px;">' + badgeText + '</span>' +
+              '<span>' + namesText + '</span>' +
+              '</div>';
+          }
+        });
+        bookingsHTML += '</div>';
+      }
+
+      var html = '<div class="year-tooltip-date">' + formattedDate + '</div>';
+      html += '<div class="year-tooltip-status status-' + status + '" style="font-weight:600; padding: 2px 6px; border-radius:4px; display:inline-block; font-size:0.75rem; margin-bottom:6px;">' + statusText + '</div>';
+      if (bookingsHTML) {
+        html += bookingsHTML;
+      }
+      if (noteText) {
+        html += '<div class="year-tooltip-note">📝 ' + noteText + '</div>';
+      }
+      
+      yearTooltip.innerHTML = html;
+      yearTooltip.classList.add("visible");
+      
+      var cellRect = cellEl.getBoundingClientRect();
+      var tooltipRect = yearTooltip.getBoundingClientRect();
+      
+      var scrollTop = window.pageYOffset || document.documentElement.scrollTop;
+      var scrollLeft = window.pageXOffset || document.documentElement.scrollLeft;
+      
+      var top = cellRect.top + scrollTop - tooltipRect.height - 8;
+      if (cellRect.top - tooltipRect.height - 8 < 0) {
+        top = cellRect.bottom + scrollTop + 8;
+      }
+      
+      var left = cellRect.left + scrollLeft + (cellRect.width / 2) - (tooltipRect.width / 2);
+      if (left < 8) left = 8;
+      if (left + tooltipRect.width > window.innerWidth - 8) {
+        left = window.innerWidth - tooltipRect.width - 8;
+      }
+      
+      yearTooltip.style.top = top + "px";
+      yearTooltip.style.left = left + "px";
+    }
+
+    function hideTooltip() {
+      if (yearTooltip) {
+        yearTooltip.classList.remove("visible");
+        yearTooltip.removeAttribute("data-active-date");
+      }
+    }
 
     updateSyncBadge();
   }
@@ -823,9 +1105,7 @@
     var fields = modal.querySelectorAll("[data-lockable]");
     for (var i = 0; i < fields.length; i++) {
       var el = fields[i];
-      // textarea/input
       if (el.tagName === "TEXTAREA" || el.tagName === "INPUT") el.disabled = locked;
-      // контейнеры пикеров тележек и статусов — блокируем кнопки внутри
       var inner = el.querySelectorAll("button, .trolley-picker, .status-option");
       for (var j = 0; j < inner.length; j++) {
         if (locked) { inner[j].setAttribute("disabled", "disabled"); inner[j].style.pointerEvents = "none"; }
@@ -833,10 +1113,8 @@
       }
       if (locked) el.classList.add("is-locked"); else el.classList.remove("is-locked");
     }
-    // Кнопки быстрых шаблонов активны ТОЛЬКО в режиме редактирования
     var presets = modal.querySelectorAll("#dayEditorPresets .quick-preset-btn");
     for (var p = 0; p < presets.length; p++) presets[p].disabled = locked;
-    // Переключаем видимость кнопок Редактировать / Сохранить
     var editBtn = document.getElementById("dayEditorEdit");
     var saveBtn = document.getElementById("dayEditorSave");
     if (editBtn) editBtn.style.display = locked ? "" : "none";
@@ -893,7 +1171,6 @@
     document.getElementById("dayEditorDesc").value = c1.description || c2.description || "";
     document.getElementById("dayEditorNote").value = c1.note || c2.note || "";
     updateDayEditorNoteBadge();
-    // Кнопки быстрых шаблонов: добавляют текст в примечание через запятую
     var dayEditorModalEl = document.getElementById("dayEditorModal");
     if (dayEditorModalEl) {
       var presetBtns = dayEditorModalEl.querySelectorAll("#dayEditorPresets .quick-preset-btn");
@@ -902,11 +1179,9 @@
       }
     }
     document.getElementById("dayEditorModal").style.display = "flex";
-    // По умолчанию — режим просмотра (все поля заблокированы)
     setEditorLock(true);
   }
 
-  // Пульсирующий значок "!" рядом с заголовком примечания, если есть текст
   function updateDayEditorNoteBadge() {
     var badge = document.getElementById("dayEditorNoteBadge");
     if (!badge) return;
@@ -1068,6 +1343,7 @@
     updateAppState: updateAppState,
     addBooking: addBooking,
     addBookingRecord: addBookingRecord,
+    addBookingRecordSafe: addBookingRecordSafe,
     removeBooking: removeBooking,
     removeBookingSafe: removeBookingSafe,
     saveDay: saveDay,

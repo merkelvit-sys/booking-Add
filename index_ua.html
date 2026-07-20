@@ -1357,11 +1357,11 @@
         </header>
 
         <div class="tabs">
-            <button class="tab-btn active" id="btnTabBooking" onclick="switchTab('booking')">
+            <button class="tab-btn" id="btnTabBooking" onclick="switchTab('booking')" style="display: none;">
                 <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 4v16m8-8H4" stroke-linecap="round" stroke-linejoin="round"/></svg>
                 Запис
             </button>
-            <button class="tab-btn" id="btnTabSchedule" onclick="switchTab('schedule')">
+            <button class="tab-btn active" id="btnTabSchedule" onclick="switchTab('schedule')">
                 <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" stroke-linecap="round" stroke-linejoin="round"/></svg>
                 Розклад
             </button>
@@ -1382,11 +1382,12 @@
                 <button type="button" onclick="jumpToToday()" style="background:none; border:none; color:var(--primary); font-size:0.75rem; font-weight:700; cursor:pointer; padding: 4px 8px;">Сьогодні</button>
             </h2>
             <div id="dateInfo" class="info-helper-box">
-                Виберіть тиждень (Поточний або Наступний) у перемикачі, а потім натисніть на потрібну дату в круглій стрічці днів.
+                Виберіть тиждень (Поточний, Наступний або Через один) у перемикачі, а потім натисніть на потрібну дату в круглій стрічці днів.
             </div>
             <div class="week-switcher">
                 <button type="button" class="week-btn active" id="btnThisWeek" onclick="switchWeek('this')">Поточний тиждень</button>
                 <button type="button" class="week-btn" id="btnNextWeek" onclick="switchWeek('next')">Наступний тиждень</button>
+                <button type="button" class="week-btn" id="btnWeekAfterNext" onclick="switchWeek('afterNext')">Через тиждень</button>
             </div>
             <div class="date-scroller" id="dateScroller">
                 <!-- Дати будуть додані через JavaScript -->
@@ -1394,7 +1395,7 @@
         </div>
 
         <!-- Вкладка ЗАПИС -->
-        <div id="bookingTabContent" class="tab-content active">
+        <div id="bookingTabContent" class="tab-content">
             <form id="bookingForm">
                 
                 <div class="form-section">
@@ -1411,29 +1412,7 @@
                         Виберіть місце для служіння. Кнопка «На карті» покаже точную геопозицию стенда. Кнопка «+ Своє місце» дозволяє додати нову точку вручну або вибравши на карті.
                     </div>
                     <div class="location-grid" id="locationGrid">
-                        <!-- Сюда будуть вставлятися кастомні локації -->
-                        
-                        <button type="button" class="btn-add-location" id="btnAddLocationBtn" onclick="showAddLocationForm()">
-                            <span>+ Своє місце</span>
-                        </button>
-
-                        <div class="add-location-form" id="addLocationForm">
-                            <div style="display: flex; flex-direction: column; gap: 6px; width: 100%;">
-                                <div class="add-location-form-inputs">
-                                    <input type="text" id="customLocationInput" class="add-location-input" placeholder="Введіть або виберіть на карті" autocomplete="off">
-                                    <button type="button" class="btn-add-confirm" onclick="addNewLocation()">ОК</button>
-                                    <button type="button" class="btn-add-cancel" onclick="hideAddLocationForm()">✖</button>
-                                </div>
-                                <div style="display: flex; align-items: center; justify-content: space-between; gap: 4px;">
-                                    <button type="button" class="btn-show-map" style="padding: 5px 10px; font-size: 0.75rem; background-color: var(--primary-container); color: var(--primary);" onclick="openMapInSelectionMode()">
-                                        📍 Позначити на карті
-                                    </button>
-                                    <span id="tempCoordsLabel" style="font-size: 0.7rem; color: var(--text-muted); font-weight: 500;">
-                                        Координати не вибрані
-                                    </span>
-                                </div>
-                            </div>
-                        </div>
+                        <!-- Сюда будуть вставлятися кастомні локации -->
                     </div>
                 </div>
 
@@ -1513,8 +1492,11 @@
         </div>
 
         <!-- Вкладка ГРАФИК -->
-        <div id="scheduleTabContent" class="tab-content">
-            <div class="refresh-row">
+        <div id="scheduleTabContent" class="tab-content active">
+            <div class="refresh-row" style="gap: 16px;">
+                <button type="button" class="btn-refresh" id="btnTopAddLocation" onclick="showAddLocationForm()">
+                    <span>+ Додати місце</span>
+                </button>
                 <button type="button" class="btn-refresh" onclick="onRefreshClick()">
                     <svg id="refreshIcon" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" style="transition: transform 0.8s ease; margin-right: 4px;"><path d="M4 4v5h.582m15.356 2A8.001 8.001 0 1121.21 8H18" stroke-linecap="round" stroke-linejoin="round"/></svg>
                     Оновити дані
@@ -1601,6 +1583,81 @@
                     <button type="button" class="btn-add-confirm" style="padding: 6px 12px; width: auto; background-color: var(--primary); color: white;" onclick="confirmMapSelection()">Вибрати цю точку</button>
                 </div>
             </div>
+        </div>
+    </div>
+
+    <!-- Add Location Modal -->
+    <div id="addLocationForm" class="modal-backdrop" style="display: none;" onclick="onAddLocationModalBackdropClick(event)">
+        <div class="modal-content" style="max-width: 400px; width: 90%;">
+            <div class="modal-header">
+                <h3 class="modal-title" id="addLocModalTitle">Додати місце</h3>
+                <button type="button" class="btn-close-modal" onclick="hideAddLocationForm()" aria-label="Закрити">✖</button>
+            </div>
+            <div style="display: flex; flex-direction: column; gap: 12px; margin-top: 8px;">
+                <div>
+                    <label class="compact-label" id="addLocNameLabel" for="customLocationInput">Назва локації</label>
+                    <input type="text" id="customLocationInput" class="input-field" placeholder="Наприклад, Вокзал" autocomplete="off">
+                </div>
+                <div style="display: flex; align-items: center; justify-content: space-between; gap: 8px;">
+                    <button type="button" class="btn-show-map" style="padding: 8px 12px; font-size: 0.8rem; background-color: var(--primary-container); color: var(--primary); display: flex; align-items: center; gap: 4px;" onclick="openMapInSelectionMode()">
+                        📍 <span id="addLocMapBtnText">Позначити на карті</span>
+                    </button>
+                    <span id="tempCoordsLabel" style="font-size: 0.75rem; color: var(--text-muted); font-weight: 500;">
+                        Координати не вибрані
+                    </span>
+                </div>
+                <button type="button" class="btn-submit" onclick="addNewLocation()" style="margin-top: 8px;">
+                    <span id="addLocConfirmBtnText">ОК</span>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Quick Booking Modal -->
+    <div id="quickBookingModal" class="modal-backdrop" style="display: none;" onclick="onQuickBookingBackdropClick(event)">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 class="modal-title" id="qbModalTitle">Швидкий запис на зміну</h3>
+                <button type="button" class="btn-close-modal" onclick="closeQuickBookingModal()" aria-label="Закрити">✖</button>
+            </div>
+            <form id="quickBookingForm">
+                <div class="form-section-compact" style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px;">
+                    <div>
+                        <label class="compact-label" id="qbDateLabel">Дата</label>
+                        <input type="text" id="qbDate" class="input-field" disabled style="background-color: var(--primary-container); border-color: var(--border); opacity: 0.85; cursor: not-allowed;">
+                    </div>
+                    <div>
+                        <label class="compact-label" id="qbTimeLabel">Час</label>
+                        <input type="text" id="qbTime" class="input-field" disabled style="background-color: var(--primary-container); border-color: var(--border); opacity: 0.85; cursor: not-allowed;">
+                    </div>
+                </div>
+                <div class="form-section-compact" style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px;">
+                    <div>
+                        <label class="compact-label" id="qbLocationLabel">Місце</label>
+                        <input type="text" id="qbLocation" class="input-field" disabled style="background-color: var(--primary-container); border-color: var(--border); opacity: 0.85; cursor: not-allowed;">
+                    </div>
+                    <div>
+                        <label class="compact-label" id="qbCartLabel">Тележка</label>
+                        <input type="text" id="qbCart" class="input-field" disabled style="background-color: var(--primary-container); border-color: var(--border); opacity: 0.85; cursor: not-allowed;">
+                    </div>
+                </div>
+                
+                <div class="form-section-compact">
+                    <label class="compact-label" id="qbLangLabel">Виберіть мову тележки</label>
+                    <div id="qbLangPicker"></div>
+                </div>
+
+                <div class="form-section-compact">
+                    <label class="compact-label" id="qbNamesLabel">Учасники зміни</label>
+                    <input type="text" id="qbName1" class="input-field" placeholder="Вісник 1 (ПІБ)" required autocomplete="off" style="margin-bottom: 8px;">
+                    <input type="text" id="qbName2" class="input-field" placeholder="Вісник 2 (ПІБ)" required autocomplete="off">
+                </div>
+
+                <button type="submit" id="qbSubmitBtn" class="btn-submit">
+                    <span class="spinner" id="qbBtnSpinner" style="display: none; margin-right: 6px;"></span>
+                    <span id="qbBtnText">Зберегти зміну</span>
+                </button>
+            </form>
         </div>
     </div>
 
