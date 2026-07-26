@@ -2,7 +2,7 @@
 <html lang="uk">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <title>Служіння з візками — Марбург</title>
     
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
@@ -1092,6 +1092,85 @@
         @media (max-height: 580px) {
             #mapContainer {
                 height: 180px;
+            }
+        }
+
+        
+        /* ── Адаптивность для малых экранов ──────────────────────────────── */
+        @media (max-width: 420px) {
+            .container {
+                padding: clamp(8px, 3vw, 14px);
+                border-radius: var(--radius-md);
+            }
+            header h1 {
+                font-size: 1.1rem !important;
+            }
+            .subtitle {
+                font-size: 0.75rem !important;
+            }
+            .lang-switcher-container {
+                flex-wrap: wrap;
+                justify-content: center;
+                gap: 4px;
+            }
+            .lang-btn {
+                padding: 4px 8px !important;
+                font-size: 0.72rem !important;
+            }
+            .tab-btn {
+                font-size: 0.75rem;
+                padding: 6px 10px;
+            }
+            .section-title {
+                font-size: 0.85rem !important;
+            }
+            .board-slot {
+                gap: 6px;
+            }
+            .board-time-label {
+                font-size: 0.75rem !important;
+                min-width: 0 !important;
+            }
+            .cart-card {
+                min-width: 0 !important;
+                width: 100% !important;
+                font-size: 0.78rem;
+            }
+            .board-carts {
+                grid-template-columns: 1fr !important;
+                gap: 6px !important;
+            }
+            .week-day-cell {
+                min-width: 36px !important;
+                font-size: 0.7rem !important;
+            }
+            .week-day-cell .day-num {
+                font-size: 1rem !important;
+            }
+            .pwa-banner {
+                width: calc(100% - 16px);
+                bottom: 8px;
+                padding: 12px;
+            }
+        }
+
+        @media (max-width: 360px) {
+            .container {
+                padding: 8px;
+            }
+            .week-strip {
+                gap: 2px !important;
+            }
+            .week-day-cell {
+                min-width: 30px !important;
+            }
+        }
+
+        /* ── Safe area для iPhone с вырезом (notch) ──────────────────────── */
+        @supports (padding-top: env(safe-area-inset-top)) {
+            body {
+                padding-top: env(safe-area-inset-top);
+                padding-bottom: env(safe-area-inset-bottom);
             }
         }
 

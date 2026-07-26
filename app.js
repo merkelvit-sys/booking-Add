@@ -671,12 +671,13 @@ window.addEventListener('beforeinstallprompt', (e) => {
   if (headerInstallBtn) headerInstallBtn.style.display = 'inline-flex';
 });
 
-// On iOS — always show header install button after load
+// On iOS and Android — show header install button if not already installed
 window.addEventListener('DOMContentLoaded', () => {
   const ua = navigator.userAgent.toLowerCase();
   const isIOS = /ipad|iphone|ipod/.test(ua) && !window.MSStream;
+  const isAndroid = /android/.test(ua);
   const isStandalone = window.navigator.standalone || window.matchMedia('(display-mode: standalone)').matches;
-  if (isIOS && !isStandalone) {
+  if ((isIOS || isAndroid) && !isStandalone) {
     const headerInstallBtn = document.getElementById('btnHeaderInstall');
     if (headerInstallBtn) headerInstallBtn.style.display = 'inline-flex';
   }
@@ -684,13 +685,15 @@ window.addEventListener('DOMContentLoaded', () => {
 
 function checkPWAInstallation() {
   const isStandalone = window.navigator.standalone || window.matchMedia('(display-mode: standalone)').matches;
+  // Clear old permanent-dismiss flag — it was too aggressive
+  if (localStorage.getItem('pwaInstallDismissed') === 'true') {
+    localStorage.removeItem('pwaInstallDismissed');
+  }
   // Dismiss expires after 7 days so users can re-install
   const dismissedAt = parseInt(localStorage.getItem('pwaInstallDismissedAt') || '0', 10);
   const isDismissed = dismissedAt > 0 && (Date.now() - dismissedAt < 7 * 24 * 60 * 60 * 1000);
-  // Also check legacy flag
-  const isDismissedLegacy = !dismissedAt && localStorage.getItem('pwaInstallDismissed') === 'true';
 
-  if (isStandalone || isDismissed || isDismissedLegacy) return;
+  if (isStandalone || isDismissed) return;
 
   const banner = document.getElementById('pwaInstallBanner');
   const bodyText = document.getElementById('pwaBodyText');
@@ -703,7 +706,11 @@ function checkPWAInstallation() {
     bodyText.innerHTML = S('pwaIos');
   } else if (deferredPrompt) {
     bodyText.textContent = S('pwaInstall');
+    // Show "Install" button for Android
+    const installBtn = document.getElementById('pwaInstallBtn');
+    if (installBtn) installBtn.style.display = 'inline-block';
   } else {
+    // Android: no prompt yet — show manual instructions
     bodyText.innerHTML = S('pwaAndroid');
   }
 
@@ -1142,10 +1149,11 @@ function toggleNoLocationsPlaceholder(show) {
     if (!placeholder) {
       placeholder = document.createElement('div');
       placeholder.id = 'noLocationsPlaceholder';
-      placeholder.style.cssText = "grid-column: span 2; padding: 16px; text-align: center; color: var(--text-muted); font-size: 0.85rem; border: 1px dashed var(--border); border-radius: var(--radius-md); margin-bottom: 8px;";
+      placeholder.style.cssText = "padding: 24px; text-align: center; color: var(--text-muted); font-size: 0.85rem; border: 1px dashed var(--border); border-radius: var(--radius-md); margin-bottom: 8px;";
       placeholder.innerHTML = S('noLocationsPlaceholder');
-      const grid = document.getElementById('locationGrid');
-      grid.insertBefore(placeholder, document.getElementById('btnAddLocationBtn'));
+      // Insert into scheduleBoard (locationGrid is a legacy element no longer in HTML)
+      const board = document.getElementById('scheduleBoard');
+      if (board) board.prepend(placeholder);
     }
     toggleFormState(true);
   } else {
@@ -1159,10 +1167,17 @@ function toggleNoLocationsPlaceholder(show) {
 // ----------------------------------------------------------------------------
 function renderTimeGrid() {
   const grid = document.getElementById('timeGrid');
-  grid.innerHTML = "";
-
+  // timeGrid is a legacy element — in the current UI, time slots
+  // are rendered inside the schedule board per-location.
+  // Still update timeslotsList so the board can use DEFAULT_TIMES.
   const savedCustomTimes = JSON.parse(localStorage.getItem('customTimes')) || [];
   timeslotsList = [...DEFAULT_TIMES, ...savedCustomTimes];
+  if (!grid) {
+    onLocationOrDateChange();
+    return;
+  }
+  grid.innerHTML = "";
+
 
   timeslotsList.forEach((time, index) => {
     const isCustom = !DEFAULT_TIMES.includes(time);
@@ -1241,14 +1256,19 @@ function renderTimeGrid() {
 }
 
 function showAddTimeForm() {
-  document.getElementById('addTimeForm').style.display = 'block';
-  document.getElementById('customStartTime').focus();
+  const f = document.getElementById('addTimeForm');
+  if (f) { f.style.display = 'block'; }
+  const s = document.getElementById('customStartTime');
+  if (s) s.focus();
 }
 
 function hideAddTimeForm() {
-  document.getElementById('addTimeForm').style.display = 'none';
-  document.getElementById('customStartTime').value = '';
-  document.getElementById('customEndTime').value = '';
+  const f = document.getElementById('addTimeForm');
+  if (f) f.style.display = 'none';
+  const s = document.getElementById('customStartTime');
+  if (s) s.value = '';
+  const e = document.getElementById('customEndTime');
+  if (e) e.value = '';
 }
 
 function addNewTime() {
@@ -1431,6 +1451,10 @@ function scrollToLocationCard(name) {
 function insertLocationCardUI(locName) {
   const grid = document.getElementById('locationGrid');
   const btnAdd = document.getElementById('btnAddLocationBtn');
+
+  // locationGrid is a legacy element — if missing, locations are rendered
+  // directly by renderScheduleBoard() so no extra insertion is needed here.
+  if (!grid || !btnAdd) return;
 
   const label = document.createElement('label');
   label.className = 'location-card';
