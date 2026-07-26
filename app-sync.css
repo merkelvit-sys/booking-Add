@@ -1117,3 +1117,45 @@
         box-shadow: 0 0 0 0 rgba(22, 163, 74, 0);
     }
 }
+
+
+/* ============================================================================
+   Accessibility: Large Font Mode
+   ============================================================================ */
+html.large-font-mode {
+  font-size: 18px !important; /* Slightly gentler scale to look clean on all screens */
+}
+html.large-font-mode .board-card {
+  padding: 12px;
+}
+html.large-font-mode .board-names {
+  font-size: 0.95rem;
+  font-weight: 600;
+}
+html.large-font-mode .compact-label {
+  font-size: 0.9rem;
+}
+html.large-font-mode .input-field {
+  font-size: 0.95rem;
+  height: 42px;
+}
+html.large-font-mode .btn-submit {
+  font-size: 1rem;
+  padding: 12px;
+}
+html.large-font-mode .year-grid {
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+}
+html.large-font-mode .day-cell {
+  font-size: 0.75rem;
+  min-height: 22px;
+}
+html.large-font-mode .day-num {
+  font-size: 0.8rem;
+}
+html.large-font-mode .month-weekdays span {
+  font-size: 0.65rem;
+}
+html.large-font-mode .month-title {
+  font-size: 0.95rem;
+}

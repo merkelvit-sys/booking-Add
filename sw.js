@@ -1,4 +1,4 @@
-const CACHE_NAME = 'service-schedule-v23'; // <-- v13: добавлен mobile-web-app-capable meta
+const CACHE_NAME = 'service-schedule-v31'; // <-- v13: добавлен mobile-web-app-capable meta
 const ASSETS = [
   './',
   './index.html',

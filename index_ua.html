@@ -1356,6 +1356,9 @@
                 </svg>
             </div>
             <div class="lang-switcher-container">
+                <button type="button" class="lang-btn" id="btnToggleFontSize" onclick="toggleFontSize()" title="Великий шрифт (Увімк/Вимк)" style="margin-right: 6px; padding: 4px 8px; gap: 2px;">
+                    <span style="font-size: 0.85rem; font-weight: bold;">A<sup>+</sup></span>
+                </button>
                 <a href="index.html" class="lang-btn">RU</a>
                 <a href="index_ua.html" class="lang-btn active">UA</a>
                 <a href="index_de.html" class="lang-btn">DE</a>
@@ -1554,7 +1557,7 @@
                             </button>
                         </div>
                         <div id="qbTimeInfo" class="info-helper-box" style="margin-top: 4px; margin-bottom: 6px;">Час чергування. Можна вказати нестандартний інтервал, наприклад, 10:30 - 12:30.</div>
-                        <input type="text" id="qbTime" class="input-field" placeholder="наприклад, 10:00 - 12:00" autocomplete="off">
+                        <input type="text" id="qbTime" class="input-field" disabled style="background-color: var(--primary-container); border-color: var(--border); opacity: 0.85; cursor: not-allowed;" placeholder="наприклад, 10:00 - 12:00">
                     </div>
                 </div>
                 <div class="form-section-compact" style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px;">
@@ -1592,15 +1595,33 @@
                 </div>
 
                 <div class="form-section-compact">
-                    <div style="display: flex; align-items: center; gap: 4px; margin-bottom: 6px;">
-                        <label class="compact-label" id="qbNamesLabel" style="margin-bottom: 0;">Учасники зміни</label>
-                        <button type="button" class="btn-info-toggle" onclick="toggleInfo('qbNamesInfo')" style="padding: 2px; height: 18px; display: inline-flex; align-items: center;">
-                            <svg viewBox="0 0 24 24" style="width: 14px; height: 14px;"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z" fill="currentColor"/></svg>
-                        </button>
+                    <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px;">
+                        <div style="display: flex; align-items: center; gap: 4px;">
+                            <label class="compact-label" id="qbNamesLabel" style="margin-bottom: 0;">Учасники зміни</label>
+                            <button type="button" class="btn-info-toggle" onclick="toggleInfo('qbNamesInfo')" style="padding: 2px; height: 18px; display: inline-flex; align-items: center;">
+                                <svg viewBox="0 0 24 24" style="width: 14px; height: 14px;"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z" fill="currentColor"/></svg>
+                            </button>
+                        </div>
+                        <button type="button" id="qbAutofillBtn" onclick="autofillMyNames()" style="
+                            background-color: var(--primary-container);
+                            color: var(--primary);
+                            border: none;
+                            border-radius: 4px;
+                            padding: 2px 8px;
+                            font-size: 0.7rem;
+                            font-weight: bold;
+                            cursor: pointer;
+                            display: none;
+                        ">⚡ Вставити мої імена</button>
                     </div>
                     <div id="qbNamesInfo" class="info-helper-box" style="margin-top: 4px; margin-bottom: 6px;">Вкажіть імена двох вісників для цього чергування.</div>
                     <input type="text" id="qbName1" class="input-field" placeholder="Вісник 1 (ПІБ)" required autocomplete="off" style="margin-bottom: 8px;">
-                    <input type="text" id="qbName2" class="input-field" placeholder="Вісник 2 (ПІБ)" required autocomplete="off">
+                    <input type="text" id="qbName2" class="input-field" placeholder="Вісник 2 (ПІБ)" required autocomplete="off" style="margin-bottom: 8px;">
+                    
+                    <div style="display: flex; align-items: center; gap: 6px; margin-top: 6px; margin-bottom: 8px;">
+                        <input type="checkbox" id="qbRememberMyNames" style="width: 14px; height: 14px; cursor: pointer;">
+                        <label for="qbRememberMyNames" id="qbRememberMyNamesLabel" style="font-size: 0.75rem; color: var(--text-muted); cursor: pointer; user-select: none;">Запам'ятати ці імена як мої</label>
+                    </div>
                 </div>
 
                 <button type="submit" id="qbSubmitBtn" class="btn-submit">
@@ -1647,6 +1668,14 @@
     </div>
 
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+        <script>
+        function toggleInfo(infoId) {
+            const box = document.getElementById(infoId);
+            if (!box) return;
+            const isVisible = window.getComputedStyle(box).display === 'block';
+            box.style.display = isVisible ? 'none' : 'block';
+        }
+    </script>
     <script src="trolley.js"></script>
     <script src="app.js"></script>
     <script src="app-sync.js"></script>

@@ -628,7 +628,7 @@ function getBookings() {
   });
 }
 
-const DEFAULT_TIMES = ["09:00 - 11:00", "11:00 - 13:00", "13:00 - 15:00", "15:00 - 17:00"];
+const DEFAULT_TIMES = ["09:00 - 11:00", "11:00 - 13:00", "13:00 - 15:00", "15:00 - 17:00", "17:00 - 19:00"];
 let timeslotsList = [];
 
 let leafletMap = null;
@@ -749,6 +749,7 @@ window.addEventListener('DOMContentLoaded', () => {
   loadCustomLocations();
   renderTimeGrid();
   initCartLangPickers();
+  initFontSizeMode();
 
   const btnTopAddLocation = document.getElementById('btnTopAddLocation');
   if (btnTopAddLocation) {
@@ -876,8 +877,8 @@ function generateWeekStrip() {
     currentMidnight.setHours(0, 0, 0, 0);
     const isPast = currentMidnight < todayMidnight;
     const diffDaysPast = Math.round((todayMidnight - currentMidnight) / 86400000);
-    const isPastAllowed = isPast && diffDaysPast <= 7;
-    const isTooOld = isPast && diffDaysPast > 7;
+    const isPastAllowed = true;
+    const isTooOld = false; // Разрешаем просмотр всей истории
 
     const card = document.createElement('div');
     const isActive = (isoString === defaultSelectedDate);
@@ -977,8 +978,8 @@ function generateWeekStripFor(weekOffset, preselectDate) {
     currentMidnight.setHours(0, 0, 0, 0);
     const isPast = currentMidnight < todayMidnight;
     const diffDaysPast = Math.round((todayMidnight - currentMidnight) / 86400000);
-    const isPastAllowed = isPast && diffDaysPast <= 7;
-    const isTooOld = isPast && diffDaysPast > 7;
+    const isPastAllowed = true;
+    const isTooOld = false; // Разрешаем просмотр всей истории
 
     const card = document.createElement('div');
     const isActive = (isoString === preselectDate);
@@ -2529,9 +2530,121 @@ function sortTimes(timeArray) {
   });
 }
 
+function getDayScheduleInfo(dateISO) {
+  if (!window.AppState || !Array.isArray(window.AppState.schedule)) {
+    return null;
+  }
+  const rows = window.AppState.schedule.filter(r => r.date === dateISO);
+  if (rows.length === 0) return null;
+  
+  let status = "available";
+  let description = "";
+  let note = "";
+  
+  for (const r of rows) {
+    if (r.status === "closed") {
+      status = "closed";
+    } else if (status !== "closed" && r.status && r.status !== "available") {
+      status = r.status;
+    }
+    if (r.description && !description) description = r.description.trim();
+    if (r.note && !note) note = r.note.trim();
+  }
+  
+  return { status, description, note };
+}
+
+function getLocalizedStatusName(status) {
+  const lang = getLang();
+  const dicts = {
+    ru: { closed: "Выходной", event: "Событие", holiday: "Праздник", special: "Особый день", available: "Служение" },
+    uk: { closed: "Вихідний", event: "Подія", holiday: "Свято", special: "Особливий день", available: "Служіння" },
+    de: { closed: "Ruhetag", event: "Ereignis", holiday: "Feiertag", special: "Besonderer Tag", available: "Dienst" }
+  };
+  const activeDict = dicts[lang === 'uk' ? 'uk' : (lang === 'de' ? 'de' : 'ru')] || dicts.ru;
+  return activeDict[status] || status;
+}
+
 function renderScheduleBoard() {
   const board = document.getElementById('scheduleBoard');
   board.innerHTML = "";
+
+  const info = getDayScheduleInfo(selectedDateISO);
+  if (info) {
+    if (info.status === "closed") {
+      const bannerHTML = `
+        <div class="day-status-banner closed-banner" style="
+          background-color: var(--error-bg, #ffebee);
+          color: var(--error, #c62828);
+          border: 1px solid rgba(198, 40, 40, 0.2);
+          border-radius: var(--radius-md, 8px);
+          padding: 24px;
+          text-align: center;
+          margin-bottom: 20px;
+          box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+        ">
+          <span style="font-size: 3rem; display: block; margin-bottom: 12px;">🚫</span>
+          <h3 style="margin: 0 0 8px 0; font-size: 1.3rem; font-weight: bold;">${getLocalizedStatusName('closed')}</h3>
+          ${info.description ? `<p style="margin: 0 0 8px 0; font-size: 0.95rem;">${info.description}</p>` : ''}
+          ${info.note ? `<p style="margin: 0; font-size: 0.85rem; opacity: 0.85; font-style: italic;">${info.note}</p>` : ''}
+        </div>
+      `;
+      board.innerHTML = bannerHTML;
+      // Скрываем кнопку добавления места в шапке при закрытом дне
+      const btnTopAddLocation = document.getElementById('btnTopAddLocation');
+      if (btnTopAddLocation) btnTopAddLocation.style.display = 'none';
+      return;
+    }
+    
+    if (info.status !== "available" || info.description || info.note) {
+      let icon = "ℹ️";
+      let bg = "var(--primary-container, #e8f0fe)";
+      let fg = "var(--primary, #1a73e8)";
+      let border = "rgba(26, 115, 232, 0.2)";
+      
+      if (info.status === "event") {
+        icon = "📅";
+        bg = "rgba(255, 152, 0, 0.1)";
+        fg = "#e65100";
+        border = "rgba(230, 81, 0, 0.2)";
+      } else if (info.status === "holiday") {
+        icon = "🎉";
+        bg = "rgba(76, 175, 80, 0.1)";
+        fg = "#2e7d32";
+        border = "rgba(46, 125, 50, 0.2)";
+      } else if (info.status === "special") {
+        icon = "⭐";
+        bg = "rgba(156, 39, 176, 0.1)";
+        fg = "#6a1b9a";
+        border = "rgba(106, 27, 154, 0.2)";
+      }
+      
+      const bannerHTML = `
+        <div class="day-status-banner event-banner" style="
+          background-color: ${bg};
+          color: ${fg};
+          border: 1px solid ${border};
+          border-radius: var(--radius-md, 8px);
+          padding: 16px;
+          margin-bottom: 20px;
+          display: flex;
+          align-items: flex-start;
+          gap: 12px;
+          box-shadow: 0 1px 4px rgba(0,0,0,0.03);
+        ">
+          <span style="font-size: 1.5rem; line-height: 1;">${icon}</span>
+          <div style="flex: 1;">
+            <h4 style="margin: 0 0 4px 0; font-size: 1rem; font-weight: bold;">
+              ${info.status !== "available" ? getLocalizedStatusName(info.status) : S('infoTitle', 'Информация')}
+            </h4>
+            ${info.description ? `<p style="margin: 0 0 4px 0; font-size: 0.9rem; color: var(--text-main);">${info.description}</p>` : ''}
+            ${info.note ? `<p style="margin: 0; font-size: 0.8rem; opacity: 0.85; font-style: italic;">${info.note}</p>` : ''}
+          </div>
+        </div>
+      `;
+      board.innerHTML = bannerHTML;
+    }
+  }
 
   const savedLocations = JSON.parse(localStorage.getItem('customLocations')) || [];
   if (savedLocations.length === 0) {
@@ -2555,13 +2668,13 @@ function renderScheduleBoard() {
     if (timeslotsList.indexOf(customTime) !== -1) return customTime;
     
     const match = customTime.match(/(\d{1,2})[.:](\d{2})/);
-    if (!match) return timeslotsList[0] || "10:00 - 12:00";
+    if (!match) return timeslotsList[0] || "09:00 - 11:00";
     
     const customHour = parseInt(match[1], 10);
     const customMin = parseInt(match[2], 10);
     const customTimeVal = customHour * 60 + customMin;
 
-    let closestSlot = timeslotsList[0] || "10:00 - 12:00";
+    let closestSlot = timeslotsList[0] || "09:00 - 11:00";
     let minDiff = Infinity;
 
     timeslotsList.forEach(slot => {
@@ -2885,6 +2998,16 @@ function formatDateReadable(isoString) {
   return isoString;
 }
 
+
+function autofillMyNames() {
+  const n1 = localStorage.getItem('myPreacherName1') || "";
+  const n2 = localStorage.getItem('myPreacherName2') || "";
+  const inp1 = document.getElementById('qbName1');
+  const inp2 = document.getElementById('qbName2');
+  if (inp1) inp1.value = n1;
+  if (inp2) inp2.value = n2;
+}
+
 function openQuickBookingModal(locName, dateISO, timeSlot, cartNum) {
   const todayObj = new Date();
   const todayStr = `${todayObj.getFullYear()}-${String(todayObj.getMonth() + 1).padStart(2, '0')}-${String(todayObj.getDate()).padStart(2, '0')}`;
@@ -2945,12 +3068,30 @@ function openQuickBookingModal(locName, dateISO, timeSlot, cartNum) {
   } else {
     name1Input.disabled = false;
     name2Input.disabled = false;
-    if (cartNum === 1) {
-      name1Input.value = localStorage.getItem('pwaName1') || "";
-      name2Input.value = localStorage.getItem('pwaName2') || "";
+    // Prefill names from localStorage (prioritize dedicated myPreacherNames)
+    const savedMyName1 = localStorage.getItem('myPreacherName1') || "";
+    const savedMyName2 = localStorage.getItem('myPreacherName2') || "";
+    const autofillBtn = document.getElementById('qbAutofillBtn');
+    const rememberCheckbox = document.getElementById('qbRememberMyNames');
+
+    if (savedMyName1 || savedMyName2) {
+      name1Input.value = savedMyName1;
+      name2Input.value = savedMyName2;
+      if (autofillBtn) autofillBtn.style.display = 'block';
     } else {
-      name1Input.value = localStorage.getItem('pwaName3') || "";
-      name2Input.value = localStorage.getItem('pwaName4') || "";
+      // Fallback to legacy names
+      if (cartNum === 1) {
+        name1Input.value = localStorage.getItem('pwaName1') || "";
+        name2Input.value = localStorage.getItem('pwaName2') || "";
+      } else {
+        name1Input.value = localStorage.getItem('pwaName3') || "";
+        name2Input.value = localStorage.getItem('pwaName4') || "";
+      }
+      if (autofillBtn) autofillBtn.style.display = 'none';
+    }
+    
+    if (rememberCheckbox) {
+      rememberCheckbox.checked = !savedMyName1 && !savedMyName2;
     }
   }
 
@@ -3108,6 +3249,12 @@ async function submitQuickBooking(e) {
   }
 
   // Сохраняем введенные имена в localStorage
+  const rememberCheckbox = document.getElementById('qbRememberMyNames');
+  if (rememberCheckbox && rememberCheckbox.checked) {
+    localStorage.setItem('myPreacherName1', name1);
+    localStorage.setItem('myPreacherName2', name2);
+  }
+  
   if (cartNum === 1) {
     localStorage.setItem('pwaName1', name1);
     localStorage.setItem('pwaName2', name2);
@@ -3246,38 +3393,7 @@ async function submitQuickBooking(e) {
   }
 }
 
-function initInfoTips() {
-  const tips = (I18N[getLang()] && I18N[getLang()].infoTips) || {};
-  if (!tips || !window.SyncCore || !SyncCore.createInfoTip) return;
 
-  // Вставляем подсказку КАК СОСЕДА метки (не внутрь), чтобы она не стиралась,
-  // когда openQuickBookingModal обновляет textContent меток по id.
-  function addSibling(sel, key) {
-    const el = document.querySelector(sel);
-    if (el && tips[key]) {
-      el.parentNode.insertBefore(SyncCore.createInfoTip(tips[key]), el.nextSibling);
-    }
-  }
-
-  addSibling('#qbDateLabel', 'qbDate');
-  addSibling('#qbTimeLabel', 'qbTime');
-  addSibling('#qbLocationLabel', 'qbLocation');
-  addSibling('#qbCartLabel', 'qbCart');
-  addSibling('#qbLangLabel', 'qbLang');
-  addSibling('#qbNamesLabel', 'qbNames');
-
-  // Язык тележки в основной форме «Запись» (по одной подсказке на каждый стенд)
-  const langLabels = document.querySelectorAll('.cart-lang-label');
-  for (let i = 0; i < langLabels.length; i++) {
-    if (tips.mainCartLang) langLabels[i].parentNode.insertBefore(SyncCore.createInfoTip(tips.mainCartLang), langLabels[i].nextSibling);
-  }
-}
-
-if (document.readyState === 'loading') {
-  document.addEventListener('DOMContentLoaded', initInfoTips);
-} else {
-  initInfoTips();
-}
 
 // ----------------------------------------------------------------------------
 // Глобальная обработка ошибок (silent logging — без alert в продакшне)
@@ -3290,3 +3406,28 @@ window.onerror = function (message, source, lineno, colno, error) {
 window.addEventListener('unhandledrejection', function (event) {
   console.error('[Unhandled Promise Rejection]', event.reason);
 });
+
+
+// ----------------------------------------------------------------------------
+// Дополнительные возможности: Режим крупного шрифта для слабовидящих
+// ----------------------------------------------------------------------------
+function toggleFontSize() {
+  const isLarge = document.documentElement.classList.toggle('large-font-mode');
+  localStorage.setItem('pwaLargeFont', isLarge ? 'true' : 'false');
+  updateFontSizeButtonState();
+}
+
+function updateFontSizeButtonState() {
+  const btn = document.getElementById('btnToggleFontSize');
+  if (!btn) return;
+  const isLarge = document.documentElement.classList.contains('large-font-mode');
+  btn.classList.toggle('active', isLarge);
+}
+
+function initFontSizeMode() {
+  const isLarge = localStorage.getItem('pwaLargeFont') === 'true';
+  if (isLarge) {
+    document.documentElement.classList.add('large-font-mode');
+  }
+  updateFontSizeButtonState();
+}
