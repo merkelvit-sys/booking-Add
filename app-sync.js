@@ -17,11 +17,25 @@
       dayEditorTitle:"День служения", statusLabel:"Статус", descLabel:"Описание события", noteLabel:"Заметка", trolleyLabel:"Тележка", trolleyPlaceholder:"— выберите —", trolleys:{ru:"Русская",ua:"Украинская",de:"Немецкая"}, noTrolley:"Выберите тележку",
       cart1Name:"Тележка №1 (Стенд 1)", cart2Name:"Тележка №2 (Стенд 2)", cart1Lang:"Язык тележки №1", cart2Lang:"Язык тележки №2",
       preacher1:"Возвещатель 1 (ФИО)", preacher2:"Возвещатель 2 (ФИО)",
-      save:"Сохранить", cancel:"Отмена", saving:"Сохранение…", saved:"Данные сохранены", edit:"Редактировать", saveChanges:"Сохранить изменения", saveError:"Ошибка сохранения", saveVerifyFail:"Сервер не сохранил изменения. Пересоздайте Web App (Deploy → New version) с новым кодом google_script.txt.",
+      save:"Сохранить", cancel:"Отмена", confirmDeleteYes:"Да, удалить", savedTitle:"Сохранено", errorTitle:"Ошибка", ok:"OK", daySaved:"Данные дня успешно сохранены!", saving:"Сохранение…", saved:"Данные сохранены", edit:"Редактировать", saveChanges:"Сохранить изменения", saveError:"Ошибка сохранения", saveVerifyFail:"Сервер не сохранил изменения. Пересоздайте Web App (Deploy → New version) с новым кодом google_script.txt.",
       offline:"Нет связи с сервером. Показан последний сохранённый график.",
       updated:"График обновлён", syncError:"Не удалось обновить данные",
       online:"Онлайн", offlineShort:"Офлайн", refresh:"Обновить",
-      presets:["Нет литературы","Тележка сломана ⚠️","Постер повреждён","Порван чехол"]
+      presets:["Нет литературы","Тележка сломана ⚠️","Постер повреждён","Порван чехол"],
+      infoTip:"Подсказка",
+      infoTips:{
+        status:"Что происходит в этот день.\n• Служение — стенд работает.\n• Выходной / Праздник — не служим.\n• Событие / Особое — особый день (например, поломка).",
+        cartLang:"Язык литературы на этой тележке: Русская, Украинская или Немецкая. От него зависит цвет ячейки в годовом графике.",
+        description:"Опишите событие или особый день (например, «Пасха», «Ярмарок»). Видно в годовом графике.",
+        note:"Заметка о проблеме или напоминание: «Порван чехол», «Нет литературы». Нажмите кнопку-шаблон ниже, чтобы добавить быстро.",
+        qbDate:"День, на который вы записываете смену.",
+        qbTime:"Время начала и окончания смены.",
+        qbLocation:"Место (локация), где будет стенд.",
+        qbCart:"Номер тележки (1 или 2), которую вы записываете.",
+        qbLang:"Язык литературы на тележке: Русская, Украинская или Немецкая.",
+        qbNames:"Имена двух участников этой тележки.",
+        mainCartLang:"Язык литературы на этой тележке (Русская / Украинская / Немецкая). Цвет помогает найти её в годовом графике."
+      }
     },
     uk: {
       months: ["Січень","Лютий","Березень","Квітень","Травень","Червень","Липень","Серпень","Вересень","Жовтень","Листопад","Грудень"],
@@ -30,22 +44,50 @@
       dayEditorTitle:"День служіння", statusLabel:"Статус", descLabel:"Опис події", noteLabel:"Примітка", trolleyLabel:"Тележка", trolleyPlaceholder:"— оберіть —", trolleys:{ru:"Російська",ua:"Українська",de:"Німецька"}, noTrolley:"Оберіть тележку",
       cart1Name:"Тележка №1 (Стенд 1)", cart2Name:"Тележка №2 (Стенд 2)", cart1Lang:"Мова тележки №1", cart2Lang:"Мова тележки №2",
       preacher1:"Возвіщувач 1 (ПІБ)", preacher2:"Возвіщувач 2 (ПІБ)",
-      save:"Зберегти", cancel:"Скасувати", saving:"Збереження…", saved:"Дані збережено", edit:"Редагувати", saveChanges:"Зберегти зміни", saveError:"Помилка збереження", saveVerifyFail:"Сервер не зберіг зміни. Перевидіть Web App (Deploy → New version) з новим кодом google_script.txt.",
+      save:"Зберегти", cancel:"Скасувати", confirmDeleteYes:"Так, видалити", savedTitle:"Збережено", errorTitle:"Помилка", ok:"OK", daySaved:"Дані дня успішно збережено!", saving:"Збереження…", saved:"Дані збережено", edit:"Редагувати", saveChanges:"Зберегти зміни", saveError:"Помилка збереження", saveVerifyFail:"Сервер не зберіг зміни. Перевидіть Web App (Deploy → New version) з новим кодом google_script.txt.",
       offline:"Немає звʼязку із сервером. Показано останній збережений графік.",
       updated:"Графік оновлено", syncError:"Не вдалося оновити дані",
       online:"Онлайн", offlineShort:"Офлайн", refresh:"Оновити",
-      presets:["Немає літератури","Тележка зламана ⚠️","Постер пошкоджено","Чохол порваний"]
+      presets:["Немає літератури","Тележка зламана ⚠️","Постер пошкоджено","Чохол порваний"],
+      infoTip:"Підказка",
+      infoTips:{
+        status:"Що відбувається цього дня.\n• Служіння — стенд працює.\n• Вихідний / Свято — не служимо.\n• Подія / Особливе — особливий день (наприклад, поломка).",
+        cartLang:"Мова літератури на цій тележці: Російська, Українська або Німецька. Від неї залежить колір клітинки у річному графіку.",
+        description:"Опишіть подію чи особливий день (наприклад, «Великдень», «Ярмарок»). Видно у річному графіку.",
+        note:"Примітка про проблему або нагадування: «Порваний чохол», «Немає літератури». Натисніть кнопку-шаблон нижче, щоб додати швидко.",
+        qbDate:"День, на який ви записуєте зміну.",
+        qbTime:"Час початку і закінчення зміни.",
+        qbLocation:"Місце (локація), де буде стенд.",
+        qbCart:"Номер тележки (1 або 2), яку ви записуєте.",
+        qbLang:"Мова літератури на тележці: Російська, Українська або Німецька.",
+        qbNames:"Імена двох учасників цієї тележки.",
+        mainCartLang:"Мова літератури на цій тележці (Російська / Українська / Німецька). Колір допомагає знайти її у річному графіку."
+      }
     },
     de: {
       months: ["Januar","Februar","März","April","Mai","Juni","Juli","August","September","Oktober","November","Dezember"],
       weekdays: ["Mo","Di","Mi","Do","Fr","Sa","So"],
       statuses: { available:"Dienst", closed:"Frei", event:"Veranstaltung", holiday:"Feiertag", special:"Besonderes" },
       dayEditorTitle:"Diensttag", statusLabel:"Status", descLabel:"Ereignisbeschreibung", noteLabel:"Notiz", trolleyLabel:"Trolley", trolleyPlaceholder:"— auswählen —", trolleys:{ru:"Russisch",ua:"Ukrainisch",de:"Deutsch"}, noTrolley:"Trolley auswählen",
-      save:"Speichern", cancel:"Abbrechen", saving:"Speichern…", saved:"Daten gespeichert", edit:"Bearbeiten", saveChanges:"Änderungen speichern", saveError:"Speicherfehler", saveVerifyFail:"Server hat die Änderungen nicht gespeichert. Erstellen Sie die Web App neu (Deploy → New version) mit dem neuen Code google_script.txt.",
+      save:"Speichern", cancel:"Abbrechen", confirmDeleteYes:"Ja, löschen", savedTitle:"Gespeichert", errorTitle:"Fehler", ok:"OK", daySaved:"Daten des Tages erfolgreich gespeichert!", saving:"Speichern…", saved:"Daten gespeichert", edit:"Bearbeiten", saveChanges:"Änderungen speichern", saveError:"Speicherfehler", saveVerifyFail:"Server hat die Änderungen nicht gespeichert. Erstellen Sie die Web App neu (Deploy → New version) mit dem neuen Code google_script.txt.",
       offline:"Keine Verbindung zum Server. Letzter gespeicherter Plan wird angezeigt.",
       updated:"Plan aktualisiert", syncError:"Daten konnten nicht aktualisiert werden",
       online:"Online", offlineShort:"Offline", refresh:"Aktualisieren",
-      presets:["Keine Literatur","Trolley kaputt ⚠️","Plakat beschädigt","Hülle zerrissen"]
+      presets:["Keine Literatur","Trolley kaputt ⚠️","Plakat beschädigt","Hülle zerrissen"],
+      infoTip:"Hinweis",
+      infoTips:{
+        status:"Was an diesem Tag passiert.\n• Dienst — Stand arbeitet.\n• Frei / Feiertag — kein Dienst.\n• Veranstaltung / Besonderes — besonderer Tag (z. B. Defekt).",
+        cartLang:"Sprache der Literatur auf diesem Trolley: Russisch, Ukrainisch oder Deutsch. Davon hängt die Farbe der Zelle im Jahresplan ab.",
+        description:"Beschreiben Sie das Ereignis oder den besonderen Tag (z. B. «Ostern», «Markt»). Sichtbar im Jahresplan.",
+        note:"Notiz zu einem Problem oder eine Erinnerung: «Hülle zerrissen», «Keine Literatur». Klicken Sie unten auf die Vorlage, um sie schnell hinzuzufügen.",
+        qbDate:"Der Tag, für den Sie die Schicht eintragen.",
+        qbTime:"Beginn und Ende der Schicht.",
+        qbLocation:"Ort (Standort), an dem der Stand steht.",
+        qbCart:"Nummer des Trolleys (1 oder 2), den Sie eintragen.",
+        qbLang:"Sprache der Literatur auf dem Trolley: Russisch, Ukrainisch oder Deutsch.",
+        qbNames:"Namen der beiden Teilnehmer dieses Trolleys.",
+        mainCartLang:"Sprache der Literatur auf diesem Trolley (Russisch / Ukrainisch / Deutsch). Die Farbe hilft, ihn im Jahresplan zu finden."
+      }
     }
   };
 
@@ -489,6 +531,7 @@
     var snapshot = (AppState.bookings || []).map(function (x) { return Object.assign({}, x); });
 
     removeBooking(b); // мгновенная перерисовка всех вкладок
+    renderAllTabs();
 
     if (typeof serverDeletePromiseFactory !== "function") {
       isSyncLocked = false;
@@ -796,9 +839,13 @@
           });
 
           var dayLangs = Object.keys(dayLangSet);
+          var dayBookings = (AppState.bookings || []).filter(function (b) { return b.date === iso; });
+          var hasBookings = dayBookings.length > 0;
+          var isServingStatus = (status === "serving" || status === "Служение" || status === "event");
+          var isServingDay = hasBookings || isServingStatus || (dayLangs && dayLangs.length > 0);
 
           var cell = document.createElement("div");
-          cell.className = "day-cell status-" + status;
+          cell.className = "day-cell status-" + status + (isServingDay ? " has-serving" : " no-serving");
           cell.dataset.date = iso;
           cell.dataset.status = status;
           cell.setAttribute("tabindex", "0");
@@ -1057,18 +1104,25 @@
           '<button type="button" class="btn-close-modal" onclick="SyncCore._closeDayEditor()">✖</button>' +
         '</div>' +
         '<div class="editor-date" id="dayEditorDate"></div>' +
-        '<div class="editor-field"><label>' + dict.statusLabel + '</label><div class="status-options" id="dayEditorStatus" data-lockable></div></div>' +
+        '<div class="day-editor-bookings-card" id="dayEditorBookingsCard" style="background: rgba(120,120,120,0.06); border: 1px solid var(--border); border-radius: var(--radius-md); padding: 12px; margin-bottom: 12px;">' +
+          '<div style="font-weight: 700; font-size: 0.85rem; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center;">' +
+            '<span>📋 Записи на этот день:</span>' +
+            '<button type="button" id="btnGoToDateFromModal" class="btn-goto-date" style="background: var(--primary-container); color: var(--primary); border: 1px solid var(--primary); border-radius: var(--radius-sm); padding: 4px 8px; font-size: 0.75rem; font-weight: 700; cursor: pointer;">📅 В график</button>' +
+          '</div>' +
+          '<div id="dayEditorBookingsList" style="font-size: 0.8rem; display: flex; flex-direction: column; gap: 6px;"></div>' +
+        '</div>' +
+        '<div class="editor-field"><label id="dayEditorStatusLabel">' + dict.statusLabel + '</label><div class="status-options" id="dayEditorStatus" data-lockable></div></div>' +
         // Пикер тележки №1
         '<div class="editor-field" id="trolleyPickerField1" data-lockable>' +
-          '<label style="margin-bottom:8px;display:block;">📦 ' + dict.cart1Name + '</label>' +
+          '<label id="dayEditorCart1Label" style="margin-bottom:8px;display:block;">📦 ' + dict.cart1Name + '</label>' +
         '</div>' +
         // Пикер тележки №2
         '<div class="editor-field" id="trolleyPickerField2" data-lockable>' +
-          '<label style="margin-bottom:8px;display:block;">📦 ' + dict.cart2Name + '</label>' +
+          '<label id="dayEditorCart2Label" style="margin-bottom:8px;display:block;">📦 ' + dict.cart2Name + '</label>' +
         '</div>' +
-        '<div class="editor-field" data-lockable><label>' + dict.descLabel + '</label><textarea id="dayEditorDesc" maxlength="500"></textarea></div>' +
+        '<div class="editor-field" data-lockable><label id="dayEditorDescLabel">' + dict.descLabel + '</label><textarea id="dayEditorDesc" maxlength="500"></textarea></div>' +
         '<div class="editor-field" data-lockable>' +
-          '<label>' + dict.noteLabel + ' <span id="dayEditorNoteBadge"></span></label>' +
+          '<label id="dayEditorNoteLabel">' + dict.noteLabel + ' <span id="dayEditorNoteBadge"></span></label>' +
           '<textarea id="dayEditorNote" maxlength="500"></textarea>' +
           '<div class="quick-presets-container" id="dayEditorPresets">' +
             (dict.presets || []).map(function (p) {
@@ -1096,6 +1150,18 @@
     document.getElementById("dayEditorCancel").addEventListener("click", function () { SyncCore._closeDayEditor(); });
     document.getElementById("dayEditorEdit").addEventListener("click", enterEditMode);
     document.getElementById("dayEditorSave").addEventListener("click", saveDayFromEditor);
+
+    // Подсказки (i в кружке) для полей редактора дня — помощь пожилым пользователям.
+    var dayTips = I18N[getLang()].infoTips || {};
+    function addDayTip(labelId, key) {
+      var lbl = document.getElementById(labelId);
+      if (lbl && dayTips[key]) lbl.appendChild(createInfoTip(dayTips[key]));
+    }
+    addDayTip("dayEditorStatusLabel", "status");
+    addDayTip("dayEditorCart1Label", "cartLang");
+    addDayTip("dayEditorCart2Label", "cartLang");
+    addDayTip("dayEditorDescLabel", "description");
+    addDayTip("dayEditorNoteLabel", "note");
   }
 
   // Блокирует/разблокирует все поля редактирования дня (режим просмотра/редактирования)
@@ -1125,11 +1191,30 @@
     setEditorLock(false);
   }
 
-  // Добавляет текст шаблона в поле примечания через запятую (только в режиме редактирования)
+  // Добавляет текст шаблона в поле примечания. При добавлении «проблемного»
+  // шаблона (поломка тележки/нет литературы) автоматически включает режим
+  // редактирования и переключает статус на «Особое» (special) — сервер принимает
+  // special с пустой тележкой, поэтому заметка гарантированно сохраняется.
   function applyQuickPreset(text) {
     var note = document.getElementById("dayEditorNote");
-    if (!note || note.disabled) return;
+    if (!note) return;
+    // Клик по шаблону из режима просмотра — сразу переходим в редактирование,
+    // чтобы действие не было «мёртвым» и сохранение стало возможным.
+    if (note.disabled) enterEditMode();
     note.value = (note.value ? note.value + ", " : "") + text;
+
+    // Проблемная заметка без языка тележки сохраняется только со статусом special.
+    if (!editorState.cart1Lang && !editorState.cart2Lang) {
+      editorState.status = "special";
+      var opts = document.getElementById("dayEditorStatus");
+      if (opts) {
+        var all = opts.querySelectorAll(".status-option");
+        for (var i = 0; i < all.length; i++) {
+          all[i].classList.toggle("active", all[i].dataset.status === "special");
+        }
+      }
+    }
+    updateDayEditorNoteBadge();
   }
 
   function openDayEditor(date) {
@@ -1171,6 +1256,44 @@
     document.getElementById("dayEditorDesc").value = c1.description || c2.description || "";
     document.getElementById("dayEditorNote").value = c1.note || c2.note || "";
     updateDayEditorNoteBadge();
+
+    // Заполнение подробного списка записей дня
+    var dayBookings = (AppState.bookings || []).filter(function (b) { return b.date === date; });
+    var bookingsHTML = "";
+    if (dayBookings.length > 0) {
+      dayBookings.forEach(function (b) {
+        var loc = b.location || "Марбург";
+        var time = b.time || "";
+        if (b.cart1Lang && (b.name1 || b.name2)) {
+          var names1 = [b.name1, b.name2].filter(Boolean).join(" • ");
+          bookingsHTML += '<div style="background: var(--card-bg); padding: 8px; border-radius: var(--radius-sm); border: 1px solid var(--border);">' +
+            '<div style="font-weight: 700; color: var(--primary);">🕒 ' + time + ' | 📍 ' + loc + ' (📦 №1 ' + b.cart1Lang.toUpperCase() + ')</div>' +
+            '<div style="color: var(--text); margin-top: 2px;">👥 ' + names1 + '</div>' +
+            '</div>';
+        }
+        if (b.cart2Lang && (b.name3 || b.name4)) {
+          var names2 = [b.name3, b.name4].filter(Boolean).join(" • ");
+          bookingsHTML += '<div style="background: var(--card-bg); padding: 8px; border-radius: var(--radius-sm); border: 1px solid var(--border);">' +
+            '<div style="font-weight: 700; color: var(--primary);">🕒 ' + time + ' | 📍 ' + loc + ' (📦 №2 ' + b.cart2Lang.toUpperCase() + ')</div>' +
+            '<div style="color: var(--text); margin-top: 2px;">👥 ' + names2 + '</div>' +
+            '</div>';
+        }
+      });
+    }
+    if (!bookingsHTML) {
+      bookingsHTML = '<div style="color: var(--text-muted); font-style: italic; padding: 4px 0;">Записей на этот день нет (свободно)</div>';
+    }
+    var listEl = document.getElementById("dayEditorBookingsList");
+    if (listEl) listEl.innerHTML = bookingsHTML;
+
+    var gotoBtn = document.getElementById("btnGoToDateFromModal");
+    if (gotoBtn) {
+      gotoBtn.onclick = function () {
+        closeDayEditor();
+        if (typeof goToDate === "function") goToDate(date);
+      };
+    }
+
     var dayEditorModalEl = document.getElementById("dayEditorModal");
     if (dayEditorModalEl) {
       var presetBtns = dayEditorModalEl.querySelectorAll("#dayEditorPresets .quick-preset-btn");
@@ -1196,6 +1319,140 @@
     if (m) m.style.display = "none";
   }
 
+  // ----- Кастомное модальное окно подтверждения удаления -----
+  // Заменяет устаревший window.confirm() единым стильным диалогом
+  // (кнопка «Отмена» + красная «Да, удалить»). Возвращает Promise<boolean>.
+  var confirmDeleteResolver = null;
+
+  function ensureConfirmDeleteModal() {
+    if (document.getElementById("confirmDeleteModal")) return;
+    var modal = document.createElement("div");
+    modal.id = "confirmDeleteModal";
+    modal.className = "modal-backdrop";
+    modal.style.display = "none";
+    modal.setAttribute("role", "alertdialog");
+    modal.setAttribute("aria-modal", "true");
+    modal.innerHTML =
+      '<div class="modal-content confirm-delete-content">' +
+        '<div class="modal-header">' +
+          '<h3 class="modal-title">🗑️ ' + t("deleteBooking") + '</h3>' +
+          '<button type="button" class="btn-close-modal" id="confirmDeleteClose" aria-label="✖">✖</button>' +
+        '</div>' +
+        '<div class="confirm-delete-body" id="confirmDeleteBody"></div>' +
+        '<div class="confirm-delete-actions">' +
+          '<button type="button" class="btn-confirm-cancel" id="confirmDeleteCancel">' + t("cancel") + '</button>' +
+          '<button type="button" class="btn-confirm-delete" id="confirmDeleteOk">🗑️ ' + t("confirmDeleteYes") + '</button>' +
+        '</div>' +
+      '</div>';
+
+    document.body.appendChild(modal);
+
+    function resolve(ok) {
+      if (confirmDeleteResolver) {
+        var r = confirmDeleteResolver;
+        confirmDeleteResolver = null;
+        modal.style.display = "none";
+        r(ok);
+      }
+    }
+
+    modal.addEventListener("click", function (e) { if (e.target === modal) resolve(false); });
+    document.getElementById("confirmDeleteClose").addEventListener("click", function () { resolve(false); });
+    document.getElementById("confirmDeleteCancel").addEventListener("click", function () { resolve(false); });
+    document.getElementById("confirmDeleteOk").addEventListener("click", function () { resolve(true); });
+    document.addEventListener("keydown", function onEsc(e) {
+      if (modal.style.display !== "none" && e.key === "Escape") {
+        e.preventDefault();
+        resolve(false);
+      }
+    });
+  }
+
+  function confirmDelete(message) {
+    ensureConfirmDeleteModal();
+    var modal = document.getElementById("confirmDeleteModal");
+    var body = document.getElementById("confirmDeleteBody");
+    if (body) body.textContent = message || "";
+    modal.style.display = "flex";
+    return new Promise(function (resolve) {
+      confirmDeleteResolver = resolve;
+    });
+  }
+
+  // ----- Информационное модальное окно результата (успех/ошибка) -----
+  // Показывает «сохранено» прямо по центру экрана (не зависит от прокрутки
+  // длинной страницы Года, где обычный toast внизу не виден). Автозакрытие
+  // через 2.6 с + закрытие по OK / Esc / клику по фону.
+  var resultResolver = null;
+  var resultAutoClose = null;
+
+  function ensureResultModal() {
+    if (document.getElementById("resultModal")) return;
+    var modal = document.createElement("div");
+    modal.id = "resultModal";
+    modal.className = "modal-backdrop";
+    modal.style.display = "none";
+    modal.setAttribute("role", "dialog");
+    modal.setAttribute("aria-modal", "true");
+    modal.innerHTML =
+      '<div class="modal-content result-content">' +
+        '<div class="modal-header">' +
+          '<h3 class="modal-title" id="resultTitle"></h3>' +
+          '<button type="button" class="btn-close-modal" id="resultClose" aria-label="✖">✖</button>' +
+        '</div>' +
+        '<div class="confirm-delete-body" id="resultBody"></div>' +
+        '<div class="confirm-delete-actions">' +
+          '<button type="button" class="btn-result-ok" id="resultOk">' + t("ok") + '</button>' +
+        '</div>' +
+      '</div>';
+    document.body.appendChild(modal);
+
+    function resolve() {
+      if (!resultResolver) return;
+      var r = resultResolver;
+      resultResolver = null;
+      if (resultAutoClose) { clearTimeout(resultAutoClose); resultAutoClose = null; }
+      modal.style.display = "none";
+      r();
+    }
+
+    modal.addEventListener("click", function (e) { if (e.target === modal) resolve(); });
+    document.getElementById("resultClose").addEventListener("click", resolve);
+    document.getElementById("resultOk").addEventListener("click", resolve);
+    document.addEventListener("keydown", function onEsc(e) {
+      if (modal.style.display !== "none" && e.key === "Escape") {
+        e.preventDefault();
+        resolve();
+      }
+    });
+  }
+
+  function showResult(kind, message) {
+    ensureResultModal();
+    var modal = document.getElementById("resultModal");
+    var title = document.getElementById("resultTitle");
+    var body = document.getElementById("resultBody");
+    var okBtn = document.getElementById("resultOk");
+    var isError = kind === "error";
+    if (title) {
+      title.textContent = (isError ? "⚠️ " : "✅ ") + t(isError ? "errorTitle" : "savedTitle");
+    }
+    if (body) body.textContent = message || "";
+    modal.classList.toggle("result-error", isError);
+    okBtn.classList.toggle("error", isError);
+    modal.style.display = "flex";
+    if (resultAutoClose) clearTimeout(resultAutoClose);
+    resultAutoClose = setTimeout(function () {
+      if (!resultResolver) return;
+      var r = resultResolver;
+      resultResolver = null;
+      resultAutoClose = null;
+      modal.style.display = "none";
+      r();
+    }, 2600);
+    return new Promise(function (resolve) { resultResolver = resolve; });
+  }
+
   function saveDayFromEditor() {
     var day = {
       date: editorState.date,
@@ -1205,9 +1462,16 @@
       description: (document.getElementById("dayEditorDesc").value || "").trim(),
       note: (document.getElementById("dayEditorNote").value || "").trim()
     };
+    // Гарантия сохранения: сервер отклоняет статус «available» с пустой
+    // тележкой, поэтому при наличии заметки/описания и отсутствии языка тележки
+    // принудительно ставим статус «Особое» (special) — он сохраняется и без языка.
+    if (!day.cart1Lang && !day.cart2Lang && (day.description || day.note)) {
+      day.status = "special";
+      editorState.status = "special";
+    }
     var err = validateDayForCart(day.cart1Lang, day.cart2Lang, day);
     if (err) {
-      showToast(err === "bad_trolley" ? t("noTrolley") : (t("saveError") + ": " + err), "error");
+      showResult("error", err === "bad_trolley" ? t("noTrolley") : (t("saveError") + ": " + err));
       return;
     }
 
@@ -1216,12 +1480,12 @@
 
     saveDay(day).then(function () {
       closeDayEditor();
-      showToast("Данные дня успешно обновлены!", "success");
+      SyncCore.showResult("success", t("daySaved"));
     }).catch(function (err) {
       if (err && err.message === "VERIFY_FAILED") {
-        showToast(t("saveVerifyFail"), "error");
+        SyncCore.showResult("error", t("saveVerifyFail"));
       } else {
-        showToast(t("saveError") + (err && err.message ? ": " + err.message : ""), "error");
+        SyncCore.showResult("error", t("saveError") + (err && err.message ? ": " + err.message : ""));
       }
     }).then(function () {
       saveBtn.disabled = false;
@@ -1237,6 +1501,54 @@
     if (typeof day.note !== "string" || day.note.length > 500) return "bad_note";
     return null;
   }
+
+  // ----- Информационные подсказки (i в кружке -> раскрывающееся меню) -----
+  // Самодостаточный поповер: кнопка-«i» переключает всплывающее меню рядом
+  // с ней. Закрывается по повторному клику, клику вне или Esc. Текст берётся
+  // из локализованного I18N.infoTips и не зависит от статичного HTML.
+  function closeAllInfoTips() {
+    var open = document.querySelectorAll(".info-tip.open");
+    for (var i = 0; i < open.length; i++) {
+      open[i].classList.remove("open");
+      var b = open[i].querySelector(".info-tip-btn");
+      if (b) b.setAttribute("aria-expanded", "false");
+    }
+  }
+
+  function createInfoTip(text) {
+    var wrap = document.createElement("span");
+    wrap.className = "info-tip";
+    var btn = document.createElement("button");
+    btn.type = "button";
+    btn.className = "info-tip-btn";
+    btn.setAttribute("aria-label", t("infoTip"));
+    btn.setAttribute("aria-expanded", "false");
+    btn.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z" fill="currentColor"/></svg>';
+    var pop = document.createElement("span");
+    pop.className = "info-tip-pop";
+    pop.setAttribute("role", "tooltip");
+    pop.textContent = text || "";
+    wrap.appendChild(btn);
+    wrap.appendChild(pop);
+    btn.addEventListener("click", function (e) {
+      e.preventDefault();
+      e.stopPropagation();
+      var isOpen = wrap.classList.contains("open");
+      closeAllInfoTips();
+      if (!isOpen) {
+        wrap.classList.add("open");
+        btn.setAttribute("aria-expanded", "true");
+      }
+    });
+    return wrap;
+  }
+
+  document.addEventListener("click", function (e) {
+    if (!(e.target.closest && e.target.closest(".info-tip"))) closeAllInfoTips();
+  });
+  document.addEventListener("keydown", function (e) {
+    if (e.key === "Escape") closeAllInfoTips();
+  });
 
   // Сохранение дня: валидация -> локально -> push на сервер (по тележкам)
   function saveDay(day) {
@@ -1262,7 +1574,9 @@
       }
     });
     saveCache(yearSchedule);
-    renderYearGrid();
+    // Перерисовываем ВСЕ вкладки (Запись/График/Год) из единого состояния,
+    // чтобы правки дня в Годе мгновенно отражались и в Графике («и наоборот»).
+    renderAllTabs();
 
     if (!isValidScriptUrl(GOOGLE_SCRIPT_URL)) return Promise.resolve(); // демо/офлайн-режим
 
@@ -1324,7 +1638,7 @@
           if (!ok) throw new Error("VERIFY_FAILED");
           setSchedule(sched);
           saveCache(yearSchedule);
-          renderYearGrid();
+          renderAllTabs();
           return true;
         });
       })
@@ -1346,6 +1660,9 @@
     addBookingRecordSafe: addBookingRecordSafe,
     removeBooking: removeBooking,
     removeBookingSafe: removeBookingSafe,
+    confirmDelete: confirmDelete,
+    showResult: showResult,
+    createInfoTip: createInfoTip,
     saveDay: saveDay,
     setTrolleyFilter: setTrolleyFilter,
     getTrolleyFilter: function () { return yearTrolleyFilter; },

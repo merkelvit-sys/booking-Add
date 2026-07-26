@@ -1,0 +1,763 @@
+diff --git a/app-sync.css b/app-sync.css
+index fcc94ef..c94afd3 100644
+--- a/app-sync.css
++++ b/app-sync.css
+@@ -752,6 +752,38 @@
+     background-color: rgba(120, 120, 120, 0.04);
+ }
+ 
++/* ===== ð»ÐÇð║ð©ðÁ ÐüÐéð©ð╗Ðîð¢ÐïðÁ Ðåð▓ðÁÐéð¢ÐïðÁ ð▒ðÁð╣ð┤ðÂð© ÐÅðÀÐïð║ð¥ð▓ ÐéðÁð╗ðÁðÂðÁð║ (RU, UA, DE) ===== */
++.trolley-lang-badge {
++    display: inline-flex;
++    align-items: center;
++    justify-content: center;
++    padding: 3px 8px;
++    font-size: 0.68rem;
++    font-weight: 800;
++    letter-spacing: 0.6px;
++    border-radius: 6px;
++    line-height: 1;
++    margin-left: 6px;
++    vertical-align: middle;
++    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.15);
++    text-transform: uppercase;
++}
++.trolley-lang-badge.lang-badge-ru {
++    background-color: #dc2626;
++    color: #ffffff;
++    border: 1px solid #b91c1c;
++}
++.trolley-lang-badge.lang-badge-ua {
++    background-color: #2563eb;
++    color: #ffffff;
++    border: 1px solid #1d4ed8;
++}
++.trolley-lang-badge.lang-badge-de {
++    background-color: #d97706;
++    color: #ffffff;
++    border: 1px solid #b45309;
++}
++
+ .board-cart-info.empty {
+     cursor: pointer;
+     touch-action: manipulation;
+diff --git a/app.js b/app.js
+index 55b3f65..6542a43 100644
+--- a/app.js
++++ b/app.js
+@@ -736,10 +736,14 @@ window.addEventListener('DOMContentLoaded', () => {
+   }
+ 
+   // ðùð░ð┐ð¥ð╗ð¢ð©ÐéÐî Ðüð¥ÐàÐÇð░ð¢Ðæð¢ð¢ÐïðÁ ð©ð╝ðÁð¢ð░
+-  document.getElementById('name1').value = localStorage.getItem('pwaName1') || '';
+-  document.getElementById('name2').value = localStorage.getItem('pwaName2') || '';
+-  document.getElementById('name3').value = localStorage.getItem('pwaName3') || '';
+-  document.getElementById('name4').value = localStorage.getItem('pwaName4') || '';
++  const n1 = document.getElementById('name1');
++  const n2 = document.getElementById('name2');
++  const n3 = document.getElementById('name3');
++  const n4 = document.getElementById('name4');
++  if (n1) n1.value = localStorage.getItem('pwaName1') || '';
++  if (n2) n2.value = localStorage.getItem('pwaName2') || '';
++  if (n3) n3.value = localStorage.getItem('pwaName3') || '';
++  if (n4) n4.value = localStorage.getItem('pwaName4') || '';
+ 
+   generateWeekStrip();
+   loadCustomLocations();
+@@ -754,7 +758,10 @@ window.addEventListener('DOMContentLoaded', () => {
+   // ðƒÐÇð©ð╝ðÁÐçð░ð¢ð©ðÁ: ðÀð░ð┐ÐâÐüð║ SyncCore.runAppLaunch() ð© startAutoSync() ð▓Ðïð¢ðÁÐüðÁð¢ ð▓
+   // ensureAutoSyncStarts() ð¢ð©ðÂðÁ ÔÇö ð¥ð¢ ÐüÐÇð░ð▒ð░ÐéÐïð▓ð░ðÁÐé ð│ð░ÐÇð░ð¢Ðéð©ÐÇð¥ð▓ð░ð¢ð¢ð¥, ð┤ð░ðÂðÁ ðÁÐüð╗ð©
+   // DOMContentLoaded ÐâðÂðÁ ð┐ÐÇð¥ÐêÐæð╗ ð┤ð¥ ðÀð░ð│ÐÇÐâðÀð║ð© app-sync.js. ðùð┤ðÁÐüÐî ðØðò ð┤Ðâð▒ð╗ð©ÐÇÐâðÁð╝.
+-  document.getElementById('bookingForm').addEventListener('submit', handleFormSubmit);
++  const bookingFormEl = document.getElementById('bookingForm');
++  if (bookingFormEl) {
++    bookingFormEl.addEventListener('submit', handleFormSubmit);
++  }
+ 
+   const qbForm = document.getElementById('quickBookingForm');
+   if (qbForm) {
+@@ -994,19 +1001,16 @@ function generateWeekStripFor(weekOffset, preselectDate) {
+ }
+ 
+ function switchTab(tabId) {
+-  const tabs = ['booking', 'schedule', 'year'];
++  if (tabId !== 'year') tabId = 'schedule';
++  const tabs = ['schedule', 'year'];
+   tabs.forEach(t => {
+     const btn = document.getElementById('btnTab' + t.charAt(0).toUpperCase() + t.slice(1));
+     const content = document.getElementById(t + 'TabContent');
+     if (btn) btn.classList.toggle('active', tabId === t);
+     if (content) content.classList.toggle('active', tabId === t);
+   });
+-  // ðæð╗ð¥ð║ ð▓Ðïð▒ð¥ÐÇð░ ð┤ð░ÐéÐï ð¢ÐâðÂðÁð¢ ð▓ð¥ ð▓ð║ð╗ð░ð┤ð║ð░Ðà ┬½ðùð░ð┐ð©ÐüÐî┬╗ ðÿ ┬½ðôÐÇð░Ðäð©ð║┬╗ (ð▓ ðôÐÇð░Ðäð©ð║ðÁ ð┐ð¥ ð¢ðÁð╝Ðâ
+-  // ð┐ðÁÐÇðÁð║ð╗ÐÄÐçð░ÐÄÐéÐüÐÅ ð┤ð¢ð© ð¢ðÁð┤ðÁð╗ð©). ðƒÐÇÐÅÐçðÁð╝ ðÁð│ð¥ Ðéð¥ð╗Ðîð║ð¥ ð▓ ┬½ðôð¥ð┤┬╗.
+   const dateBlock = document.getElementById('dateSelectBlock');
+-  if (dateBlock) dateBlock.style.display = (tabId === 'booking' || tabId === 'schedule') ? '' : 'none';
+-  // ð£ð│ð¢ð¥ð▓ðÁð¢ð¢Ðïð╣ ð┐ð¥ð║ð░ðÀ ð©ðÀ ðÁð┤ð©ð¢ð¥ð│ð¥ Ðüð¥ÐüÐéð¥ÐÅð¢ð©ÐÅ (ðæðòðù ÐüðÁÐéðÁð▓ÐïÐà ðÀð░ð┐ÐÇð¥Ðüð¥ð▓)
+-  if (tabId === 'booking') renderBookingTab();
++  if (dateBlock) dateBlock.style.display = (tabId === 'schedule') ? '' : 'none';
+   if (tabId === 'schedule') renderScheduleTab();
+   if (tabId === 'year' && window.SyncCore) SyncCore.renderYearGrid();
+ }
+@@ -1273,11 +1277,10 @@ function toggleFormState(disabled) {
+     if (status) status.textContent = disabled ? S('selectLocation') : S('statusAvailable');
+   });
+ 
+-  document.getElementById('name1').disabled = disabled;
+-  document.getElementById('name2').disabled = disabled;
+-  document.getElementById('name3').disabled = disabled;
+-  document.getElementById('name4').disabled = disabled;
+-  document.getElementById('submitBtn').disabled = disabled;
++  ['name1', 'name2', 'name3', 'name4', 'submitBtn'].forEach(id => {
++    const el = document.getElementById(id);
++    if (el) el.disabled = disabled;
++  });
+ }
+ 
+ // ----------------------------------------------------------------------------
+@@ -1624,11 +1627,11 @@ function onTimeChange() {
+ 
+   const cartBox1 = document.getElementById('cartBox1');
+   const cartBox2 = document.getElementById('cartBox2');
+-
+   const name1 = document.getElementById('name1');
+   const name2 = document.getElementById('name2');
+   const name3 = document.getElementById('name3');
+   const name4 = document.getElementById('name4');
++  if (!cartBox1 || !name1) return;
+ 
+   // ðØðÁ ð┐ðÁÐÇðÁðÀð░ð┐ð©ÐüÐïð▓ð░ðÁð╝ ð┐ð¥ð╗ÐÅ ð©ð╝Ðæð¢, ð┐ð¥ð║ð░ ð┐ð¥ð╗ÐîðÀð¥ð▓ð░ÐéðÁð╗Ðî ð©Ðà ÐÇðÁð┤ð░ð║Ðéð©ÐÇÐâðÁÐé
+   // (ðÀð░Ðëð©Ðéð░ ð¥Ðé ð┐ð¥ÐéðÁÐÇð© ð▓ð▓ðÁð┤Ðæð¢ð¢ÐïÐà ð┤ð░ð¢ð¢ÐïÐà ð┐ÐÇð© Ðäð¥ð¢ð¥ð▓ð¥ð╣ Ðüð©ð¢ÐàÐÇð¥ð¢ð©ðÀð░Ðåð©ð©).
+@@ -1918,13 +1921,15 @@ async function handleFormSubmit(e) {
+     return;
+   }
+ 
+-  const name1Val = document.getElementById('name1').value.trim();
+-  const name2Val = document.getElementById('name2').value.trim();
+-  const name3Val = document.getElementById('name3').value.trim();
+-  const name4Val = document.getElementById('name4').value.trim();
++  const name1El = document.getElementById('name1');
++  if (!name1El) return;
++  const name1Val = name1El.value.trim();
++  const name2Val = (document.getElementById('name2') || {}).value || '';
++  const name3Val = (document.getElementById('name3') || {}).value || '';
++  const name4Val = (document.getElementById('name4') || {}).value || '';
+ 
+-  const isCart1Enabled = !document.getElementById('name1').disabled;
+-  const isCart2Enabled = !document.getElementById('name3').disabled;
++  const isCart1Enabled = !name1El.disabled;
++  const isCart2Enabled = !(document.getElementById('name3') || {}).disabled;
+ 
+   if (isCart1Enabled && (!name1Val || !name2Val)) {
+     showToast(S('fillCart1'), "error");
+@@ -2540,6 +2545,7 @@ function renderScheduleBoard() {
+   function normLang(g) {
+     g = (g || "").toString().trim().toLowerCase();
+     if (g === "ru" || g === "ua" || g === "de") return g;
++    if (g === "uk") return "ua";
+     if (g === "ÐÇ" || g === "Ðâ" || g === "ð¢") return { "ÐÇ": "ru", "Ðâ": "ua", "ð¢": "de" }[g];
+     return "";
+   }
+@@ -2592,25 +2598,31 @@ function renderScheduleBoard() {
+     }
+     const s = slotMap[key];
+     const cNum = parseInt(b.cartNumber, 10);
++    const bLang = normLang(b.cart1Lang || b.cart2Lang || b.language || b.group);
++
+     if (cNum === 1) {
+-      if (b.cart1Lang) s.cart1Lang = normLang(b.cart1Lang);
++      if (bLang) s.cart1Lang = bLang;
+       if (b.name1) s.name1 = b.name1;
+       if (b.name2) s.name2 = b.name2;
++      if (!s.name1 && b.names && b.names[0]) s.name1 = b.names[0];
++      if (!s.name2 && b.names && b.names[1]) s.name2 = b.names[1];
+       s.cart1ActualTime = b.time;
+     } else if (cNum === 2) {
+-      if (b.cart2Lang) s.cart2Lang = normLang(b.cart2Lang);
++      if (bLang) s.cart2Lang = bLang;
+       if (b.name3) s.name3 = b.name3;
+       if (b.name4) s.name4 = b.name4;
++      if (!s.name3 && b.names && b.names[0]) s.name3 = b.names[0];
++      if (!s.name4 && b.names && b.names[1]) s.name4 = b.names[1];
+       s.cart2ActualTime = b.time;
+     } else {
+-      if (b.cart1Lang) {
+-        s.cart1Lang = normLang(b.cart1Lang);
++      if (normLang(b.cart1Lang) || bLang) {
++        s.cart1Lang = normLang(b.cart1Lang) || bLang;
+         s.name1 = b.name1 || (b.names && b.names[0]) || "";
+         s.name2 = b.name2 || (b.names && b.names[1]) || "";
+         s.cart1ActualTime = b.time;
+       }
+-      if (b.cart2Lang) {
+-        s.cart2Lang = normLang(b.cart2Lang);
++      if (normLang(b.cart2Lang) || bLang) {
++        s.cart2Lang = normLang(b.cart2Lang) || bLang;
+         s.name3 = b.name3 || (b.names && b.names[0]) || "";
+         s.name4 = b.name4 || (b.names && b.names[1]) || "";
+         s.cart2ActualTime = b.time;
+@@ -2620,23 +2632,25 @@ function renderScheduleBoard() {
+ 
+   const LANG_BADGE = { ru: "RU", ua: "UA", de: "DE" };
+   const LANG_LABEL = {
+-    ru: { RU: "ðáÐâÐüÐüð║ð░ÐÅ ÐéðÁð╗ðÁðÂð║ð░", UA: "ðúð║ÐÇð░ð©ð¢Ðüð║ð░ÐÅ ÐéðÁð╗ðÁðÂð║ð░", DE: "ðØðÁð╝ðÁÐåð║ð░ÐÅ ÐéðÁð╗ðÁðÂð║ð░" },
+-    uk: { RU: "ðáð¥ÐüÐûð╣ÐüÐîð║ð░ ÐéðÁð╗ðÁðÂð║ð░", UA: "ðúð║ÐÇð░Ðùð¢ÐüÐîð║ð░ ÐéðÁð╗ðÁðÂð║ð░", DE: "ðØÐûð╝ðÁÐåÐîð║ð░ ÐéðÁð╗ðÁðÂð║ð░" },
+-    de: { RU: "Russische Trolley", UA: "Ukrainische Trolley", DE: "Deutsche Trolley" }
++    ru: { ru: "ðáÐâÐüÐüð║ð░ÐÅ", ua: "ðúð║ÐÇð░ð©ð¢Ðüð║ð░ÐÅ", de: "ðØðÁð╝ðÁÐåð║ð░ÐÅ" },
++    uk: { ru: "ðáð¥ÐüÐûð╣ÐüÐîð║ð░", ua: "ðúð║ÐÇð░Ðùð¢ÐüÐîð║ð░", de: "ðØÐûð╝ðÁÐåÐîð║ð░" },
++    de: { ru: "Russisch", ua: "Ukrainisch", de: "Deutsch" }
+   };
+-  const langLabel = LANG_LABEL[getLang()] || LANG_LABEL.ru;
++  const langLabelMap = LANG_LABEL[getLang()] || LANG_LABEL.ru;
+ 
+   const todayObj = new Date();
+   const todayStr = `${todayObj.getFullYear()}-${String(todayObj.getMonth() + 1).padStart(2, '0')}-${String(todayObj.getDate()).padStart(2, '0')}`;
+   const isPastDate = selectedDateISO < todayStr;
+ 
+   function cartCardHTML(cartNum, lang, n1, n2, locName, time, hasNames, actualTime) {
+-    const cls = lang || "none";
++    const cls = (lang || "").toLowerCase() || "none";
+     const icon = (window.TrolleyUI) ? window.TrolleyUI.getMiniSVG() : '';
+-    const badge = lang ? LANG_BADGE[lang] : "";
+-    
++    const badgeText = (lang && LANG_BADGE[cls]) ? LANG_BADGE[cls] : "";
++    const badgeHTML = badgeText ? `<span class="trolley-lang-badge lang-badge-${cls}">${badgeText}</span>` : "";
++
+     const timeDisplay = (actualTime && actualTime !== time) ? ` (${actualTime})` : "";
+-    const title = lang ? `${langLabel[lang.toUpperCase()]}${timeDisplay}` : S('free');
++    const langName = langLabelMap[cls] ? `${langLabelMap[cls]} ` : "";
++    const title = lang ? `${langName}${S('cartLabel', 'ÐéðÁð╗ðÁðÂð║ð░')}${timeDisplay}` : `${S('cartLabel', 'ðóðÁð╗ðÁðÂð║ð░')} Ôäû${cartNum}`;
+ 
+     const isJustAdded = justAddedSlot &&
+                         justAddedSlot.location === locName &&
+@@ -2656,7 +2670,7 @@ function renderScheduleBoard() {
+           <div class="cart-info-header">
+             <span class="board-cart-title">
+               <span class="day-trolley-icon" data-group="${cls}" aria-hidden="true">${icon}</span>
+-              ­ƒôª ${title}
++              ­ƒôª ${title} ${badgeHTML}
+             </span>
+             ${deleteBtn}
+           </div>
+@@ -2901,24 +2915,14 @@ function openQuickBookingModal(locName, dateISO, timeSlot, cartNum) {
+   document.getElementById('qbDate').value = formatDateReadable(dateISO);
+   document.getElementById('qbTime').value = timeSlot;
+   document.getElementById('qbLocation').value = locName;
+-  document.getElementById('qbCart').value = `${S('cartLabel')} Ôäû${cartNum}`;
++  const qbCartInput = document.getElementById('qbCart');
++  if (qbCartInput) qbCartInput.value = `${S('cartLabel')} Ôäû${cartNum}`;
+ 
+-  let defaultName1 = "";
+-  let defaultName2 = "";
+-  if (cartNum === 1) {
+-    defaultName1 = localStorage.getItem('pwaName1') || localStorage.getItem('pwaName3') || '';
+-    defaultName2 = localStorage.getItem('pwaName2') || localStorage.getItem('pwaName4') || '';
+-  } else {
+-    defaultName1 = localStorage.getItem('pwaName3') || localStorage.getItem('pwaName1') || '';
+-    defaultName2 = localStorage.getItem('pwaName4') || localStorage.getItem('pwaName2') || '';
+-  }
++  switchQBCart(cartNum);
+ 
+   const name1Input = document.getElementById('qbName1');
+   const name2Input = document.getElementById('qbName2');
+ 
+-  name1Input.value = defaultName1;
+-  name2Input.value = defaultName2;
+-
+   name1Input.placeholder = getLang() === 'uk' ? 'ðÆÐûÐüð¢ð©ð║ 1 (ðƒðåðæ)' : (getLang() === 'de' ? 'Verk├╝ndiger 1 (Name)' : 'ðÆð¥ðÀð▓ðÁÐëð░ÐéðÁð╗Ðî 1 (ðñðÿð×)');
+   name2Input.placeholder = getLang() === 'uk' ? 'ðÆÐûÐüð¢ð©ð║ 2 (ðƒðåðæ)' : (getLang() === 'de' ? 'Verk├╝ndiger 2 (Name)' : 'ðÆð¥ðÀð▓ðÁÐëð░ÐéðÁð╗Ðî 2 (ðñðÿð×)');
+ 
+@@ -2940,6 +2944,39 @@ function openQuickBookingModal(locName, dateISO, timeSlot, cartNum) {
+   }, 50);
+ }
+ 
++function switchQBCart(cartNum) {
++  const modal = document.getElementById('quickBookingModal');
++  if (!modal) return;
++  modal.dataset.cartNum = cartNum;
++
++  const btn1 = document.getElementById('qbCartBtn1');
++  const btn2 = document.getElementById('qbCartBtn2');
++  if (btn1) {
++    btn1.style.background = cartNum === 1 ? 'var(--primary-container)' : 'var(--card-bg)';
++    btn1.style.borderColor = cartNum === 1 ? 'var(--primary)' : 'var(--border)';
++    btn1.style.color = cartNum === 1 ? 'var(--primary)' : 'var(--text-muted)';
++  }
++  if (btn2) {
++    btn2.style.background = cartNum === 2 ? 'var(--primary-container)' : 'var(--card-bg)';
++    btn2.style.borderColor = cartNum === 2 ? 'var(--primary)' : 'var(--border)';
++    btn2.style.color = cartNum === 2 ? 'var(--primary)' : 'var(--text-muted)';
++  }
++
++  let defaultName1 = "";
++  let defaultName2 = "";
++  if (cartNum === 1) {
++    defaultName1 = localStorage.getItem('pwaName1') || localStorage.getItem('pwaName3') || '';
++    defaultName2 = localStorage.getItem('pwaName2') || localStorage.getItem('pwaName4') || '';
++  } else {
++    defaultName1 = localStorage.getItem('pwaName3') || localStorage.getItem('pwaName1') || '';
++    defaultName2 = localStorage.getItem('pwaName4') || localStorage.getItem('pwaName2') || '';
++  }
++  const n1 = document.getElementById('qbName1');
++  const n2 = document.getElementById('qbName2');
++  if (n1) n1.value = defaultName1;
++  if (n2) n2.value = defaultName2;
++}
++
+ function closeQuickBookingModal() {
+   const modal = document.getElementById('quickBookingModal');
+   if (!modal) return;
+@@ -3073,10 +3110,14 @@ async function submitQuickBooking(e) {
+     localStorage.setItem('pwaName4', name2);
+   }
+ 
+-  document.getElementById('name1').value = localStorage.getItem('pwaName1') || '';
+-  document.getElementById('name2').value = localStorage.getItem('pwaName2') || '';
+-  document.getElementById('name3').value = localStorage.getItem('pwaName3') || '';
+-  document.getElementById('name4').value = localStorage.getItem('pwaName4') || '';
++  const n1 = document.getElementById('name1');
++  const n2 = document.getElementById('name2');
++  const n3 = document.getElementById('name3');
++  const n4 = document.getElementById('name4');
++  if (n1) n1.value = localStorage.getItem('pwaName1') || '';
++  if (n2) n2.value = localStorage.getItem('pwaName2') || '';
++  if (n3) n3.value = localStorage.getItem('pwaName3') || '';
++  if (n4) n4.value = localStorage.getItem('pwaName4') || '';
+ 
+   const btn = document.getElementById('qbSubmitBtn');
+   const spinner = document.getElementById('qbBtnSpinner');
+@@ -3086,12 +3127,15 @@ async function submitQuickBooking(e) {
+   if (spinner) spinner.style.display = 'inline-block';
+   if (btnText) btnText.textContent = S('btnSaving');
+ 
++  const langUpper = (selectedQBLang || "RU").toUpperCase();
+   const record = {
+     date: dateISO,
+     time: timeSlot,
+     location: locName,
+     cartNumber: cartNum,
+-    language: selectedQBLang,
++    language: langUpper,
++    cart1Lang: cartNum === 1 ? langUpper : "",
++    cart2Lang: cartNum === 2 ? langUpper : "",
+     names: [name1, name2]
+   };
+ 
+diff --git a/index.html b/index.html
+index 55afb1d..6f521ad 100644
+--- a/index.html
++++ b/index.html
+@@ -1351,7 +1351,7 @@
+ 
+     <div class="container" id="app">
+         <header>
+-            <div class="logo-container" id="logoHome" onclick="switchTab('booking')" style="cursor: pointer;" title="ðØð░ ð│ð╗ð░ð▓ð¢ÐâÐÄ / + ðùð░ð┐ð©ÐüÐî">
++            <div class="logo-container" id="logoHome" onclick="switchTab('schedule')" style="cursor: pointer;" title="ðØð░ ð│ð╗ð░ð▓ð¢ÐâÐÄ (ðôÐÇð░Ðäð©ð║)">
+                 <svg class="logo-icon" viewBox="0 0 24 24">
+                     <rect x="7" y="3" width="10" height="14" rx="1.5" />
+                     <line x1="12" y1="3" x2="12" y2="17" />
+@@ -1375,10 +1375,6 @@
+         </header>
+ 
+         <div class="tabs">
+-            <button class="tab-btn" id="btnTabBooking" onclick="switchTab('booking')">
+-                <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 4v16m8-8H4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+-                ðùð░ð┐ð©ÐüÐî
+-            </button>
+             <button class="tab-btn active" id="btnTabSchedule" onclick="switchTab('schedule')">
+                 <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                 ðôÐÇð░Ðäð©ð║
+@@ -1413,102 +1409,7 @@
+             </div>
+         </div>
+ 
+-        <!-- ðÆð║ð╗ð░ð┤ð║ð░ ðùðÉðƒðÿðíð¼ -->
+-        <div id="bookingTabContent" class="tab-content">
+-            <form id="bookingForm">
+-                
+-                <div class="form-section">
+-                    <h2 class="section-title">
+-                        <span style="display: inline-flex; align-items: center;">
+-                            1. ðÆÐïð▒ðÁÐÇð©ÐéðÁ ð╗ð¥ð║ð░Ðåð©ÐÄ
+-                            <button type="button" class="btn-info-toggle" onclick="toggleInfo('locationInfo')" title="ðƒð¥ð║ð░ðÀð░ÐéÐî ð┐ð¥ð┤Ðüð║ð░ðÀð║Ðâ">
+-                                <svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z" fill="currentColor"/></svg>
+-                            </button>
+-                        </span>
+-                        <button type="button" class="btn-show-map" style="text-transform: none; font-size: 0.7rem;" onclick="showCurrentLocationOnMap()">­ƒù║ ðØð░ ð║ð░ÐÇÐéðÁ</button>
+-                    </h2>
+-                    <div id="locationInfo" class="info-helper-box">
+-                        ðÆÐïð▒ðÁÐÇð©ÐéðÁ ð╝ðÁÐüÐéð¥ ð┤ð╗ÐÅ Ðüð╗ÐâðÂðÁð¢ð©ÐÅ. ðÜð¢ð¥ð┐ð║ð░ ┬½ðØð░ ð║ð░ÐÇÐéðÁ┬╗ ð┐ð¥ð║ð░ðÂðÁÐé Ðéð¥Ðçð¢ÐâÐÄ ð│ðÁð¥ð┐ð¥ðÀð©Ðåð©ÐÄ ÐüÐéðÁð¢ð┤ð░. ðÜð¢ð¥ð┐ð║ð░ ┬½+ ðíð▓ð¥Ðæ ð╝ðÁÐüÐéð¥┬╗ ð┐ð¥ðÀð▓ð¥ð╗ÐÅðÁÐé ð┤ð¥ð▒ð░ð▓ð©ÐéÐî ð¢ð¥ð▓ÐâÐÄ Ðéð¥Ðçð║Ðâ ð▓ÐÇÐâÐçð¢ÐâÐÄ ð©ð╗ð© ð▓Ðïð▒ÐÇð░ð▓ ð¢ð░ ð║ð░ÐÇÐéðÁ.
+-                    </div>
+-                    <div class="location-grid" id="locationGrid">
+-                        <!-- ðíÐÄð┤ð░ ð▒Ðâð┤ÐâÐé ð▓ÐüÐéð░ð▓ð╗ÐÅÐéÐîÐüÐÅ ð║ð░ÐüÐéð¥ð╝ð¢ÐïðÁ ð╗ð¥ð║ð░Ðåð©ð© -->
+-                    </div>
+-                </div>
+ 
+-                <div class="form-section">
+-                    <h2 class="section-title">
+-                        <span>2. ðÆÐïð▒ðÁÐÇð©ÐéðÁ ð▓ÐÇðÁð╝ÐÅ</span>
+-                        <button type="button" class="btn-info-toggle" onclick="toggleInfo('timeInfo')" title="ðƒð¥ð║ð░ðÀð░ÐéÐî ð┐ð¥ð┤Ðüð║ð░ðÀð║Ðâ">
+-                            <svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z" fill="currentColor"/></svg>
+-                        </button>
+-                    </h2>
+-                    <div id="timeInfo" class="info-helper-box">
+-                        ðÆÐïð▒ðÁÐÇð©ÐéðÁ Ðçð░Ðüð¥ð▓ð¥ð╣ ð©ð¢ÐéðÁÐÇð▓ð░ð╗ Ðüð╝ðÁð¢Ðï. ðòÐüð╗ð© ð║ð░ÐÇÐéð¥Ðçð║ð░ ð▓ÐÇðÁð╝ðÁð¢ð© ðÀð░ð▒ð╗ð¥ð║ð©ÐÇð¥ð▓ð░ð¢ð░ (ÐüðÁÐÇð░ÐÅ), ðÀð¢ð░Ðçð©Ðé ð▓ÐüðÁ ÐüÐéðÁð¢ð┤Ðï ð¢ð░ ÐìÐéð¥ ð▓ÐÇðÁð╝ÐÅ ÐâðÂðÁ ðÀð░ð▒ÐÇð¥ð¢ð©ÐÇð¥ð▓ð░ð¢Ðï.
+-                    </div>
+-                    <div class="time-grid" id="timeGrid">
+-                        <!-- ðíÐÄð┤ð░ ð▒Ðâð┤ÐâÐé ð▓ÐüÐéð░ð▓ð╗ÐÅÐéÐîÐüÐÅ ð║ð░ÐüÐéð¥ð╝ð¢ÐïðÁ ð©ð╗ð© ð┤ðÁÐäð¥ð╗Ðéð¢ÐïðÁ ð║ð░ÐÇÐéð¥Ðçð║ð© ð▓ÐÇðÁð╝ðÁð¢ð© -->
+-                    </div>
+-                </div>
+-
+-                <div class="form-section">
+-                    <h2 class="section-title">
+-                        <span>3. ðúÐçð░ÐüÐéð¢ð©ð║ð© Ðüð╝ðÁð¢Ðï (ð┤ð¥ 2 ÐéðÁð╗ðÁðÂðÁð║)</span>
+-                        <button type="button" class="btn-info-toggle" onclick="toggleInfo('namesInfo')" title="ðƒð¥ð║ð░ðÀð░ÐéÐî ð┐ð¥ð┤Ðüð║ð░ðÀð║Ðâ">
+-                            <svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z" fill="currentColor"/></svg>
+-                        </button>
+-                    </h2>
+-                    <div id="namesInfo" class="info-helper-box">
+-                        ðØð░ ð║ð░ðÂð┤ÐâÐÄ Ðüð╝ðÁð¢Ðâ ð▓Ðïð┤ðÁð╗ÐÅðÁÐéÐüÐÅ ð┤ð¥ ð┤ð▓ÐâÐà ÐéðÁð╗ðÁðÂðÁð║ (ð┐ð¥ 2 ÐçðÁð╗ð¥ð▓ðÁð║ð░ ð¢ð░ ð║ð░ðÂð┤ÐâÐÄ). ðÆð▓ðÁð┤ð©ÐéðÁ ð©ð╝ðÁð¢ð░ ÐâÐçð░ÐüÐéð¢ð©ð║ð¥ð▓. ðòÐüð╗ð© ð┐ðÁÐÇð▓ð░ÐÅ ÐéðÁð╗ðÁðÂð║ð░ ÐâðÂðÁ ðÀð░ð¢ÐÅÐéð░ ð║ðÁð╝-Ðéð¥ ð┤ÐÇÐâð│ð©ð╝, ðÀð░ð┐ð¥ð╗ð¢ð©ÐéðÁ ð©ð╝ðÁð¢ð░ ð┤ð╗ÐÅ ð▓Ðéð¥ÐÇð¥ð╣ Ðüð▓ð¥ð▒ð¥ð┤ð¢ð¥ð╣ ÐéðÁð╗ðÁðÂð║ð©.
+-                    </div>
+-                    <div class="carts-container">
+-
+-                        <!-- Cart 1 -->
+-                        <div class="cart-box" id="cartBox1">
+-                            <div class="cart-header">
+-                                <svg class="cart-header-icon" viewBox="0 0 24 24">
+-                                    <circle cx="12" cy="12" r="10" />
+-                                    <text x="9" y="16" font-size="12" font-weight="bold" fill="currentColor">1</text>
+-                                </svg>
+-                                ­ƒôª ðóðÁð╗ðÁðÂð║ð░ Ôäû1 (ðíÐéðÁð¢ð┤ 1)
+-                            </div>
+-                            <div class="cart-lang-label">
+-                                <span>ðÆÐïð▒ðÁÐÇð©ÐéðÁ ÐÅðÀÐïð║ ÐéðÁð╗ðÁðÂð║ð©</span>
+-                            </div>
+-                            <div class="cart-lang-picker" id="cart1LangPicker" aria-label="ð»ðÀÐïð║ ÐéðÁð╗ðÁðÂð║ð© Ôäû1"></div>
+-                            <div class="input-group">
+-                                <input type="text" id="name1" class="input-field" placeholder="ðÆð¥ðÀð▓ðÁÐëð░ÐéðÁð╗Ðî 1 (ðñðÿð×)" required autocomplete="off">
+-                                <input type="text" id="name2" class="input-field" placeholder="ðÆð¥ðÀð▓ðÁÐëð░ÐéðÁð╗Ðî 2 (ðñðÿð×)" required autocomplete="off">
+-                            </div>
+-                        </div>
+-
+-                        <!-- Cart 2 -->
+-                        <div class="cart-box" id="cartBox2">
+-                            <div class="cart-header">
+-                                <svg class="cart-header-icon" viewBox="0 0 24 24">
+-                                    <circle cx="12" cy="12" r="10" />
+-                                    <text x="9" y="16" font-size="12" font-weight="bold" fill="currentColor">2</text>
+-                                </svg>
+-                                ­ƒôª ðóðÁð╗ðÁðÂð║ð░ Ôäû2 (ðíÐéðÁð¢ð┤ 2)
+-                            </div>
+-                            <div class="cart-lang-label">
+-                                <span>ðÆÐïð▒ðÁÐÇð©ÐéðÁ ÐÅðÀÐïð║ ÐéðÁð╗ðÁðÂð║ð©</span>
+-                            </div>
+-                            <div class="cart-lang-picker" id="cart2LangPicker" aria-label="ð»ðÀÐïð║ ÐéðÁð╗ðÁðÂð║ð© Ôäû2"></div>
+-                            <div class="input-group">
+-                                <input type="text" id="name3" class="input-field" placeholder="ðÆð¥ðÀð▓ðÁÐëð░ÐéðÁð╗Ðî 1 (ðñðÿð×)" autocomplete="off">
+-                                <input type="text" id="name4" class="input-field" placeholder="ðÆð¥ðÀð▓ðÁÐëð░ÐéðÁð╗Ðî 2 (ðñðÿð×)" autocomplete="off">
+-                            </div>
+-                        </div>
+-
+-                    </div>
+-                </div>
+-
+-                <button type="submit" id="submitBtn" class="btn-submit">
+-                    <span class="spinner" id="btnSpinner"></span>
+-                    <span id="btnText">ðùð░ð┐ð©Ðüð░ÐéÐî Ðüð╝ðÁð¢Ðâ</span>
+-                </button>
+-            </form>
+-        </div>
+ 
+         <!-- ðÆð║ð╗ð░ð┤ð║ð░ ðôðáðÉðñðÿðÜ -->
+         <div id="scheduleTabContent" class="tab-content active">
+@@ -1657,7 +1558,10 @@
+                     </div>
+                     <div>
+                         <label class="compact-label" id="qbCartLabel">ðóðÁð╗ðÁðÂð║ð░</label>
+-                        <input type="text" id="qbCart" class="input-field" disabled style="background-color: var(--primary-container); border-color: var(--border); opacity: 0.85; cursor: not-allowed;">
++                        <div id="qbCartToggleGroup" style="display: flex; gap: 4px;">
++                            <button type="button" class="qb-cart-btn" id="qbCartBtn1" onclick="switchQBCart(1)" style="flex:1; padding: 6px 4px; font-size: 0.75rem; font-weight: 700; border: 1px solid var(--border); border-radius: var(--radius-sm); background: var(--card-bg); color: var(--text); cursor: pointer;">­ƒôª Ôäû1</button>
++                            <button type="button" class="qb-cart-btn" id="qbCartBtn2" onclick="switchQBCart(2)" style="flex:1; padding: 6px 4px; font-size: 0.75rem; font-weight: 700; border: 1px solid var(--border); border-radius: var(--radius-sm); background: var(--card-bg); color: var(--text); cursor: pointer;">­ƒôª Ôäû2</button>
++                        </div>
+                     </div>
+                 </div>
+                 
+diff --git a/index_de.html b/index_de.html
+index b197d31..4e25fa7 100644
+--- a/index_de.html
++++ b/index_de.html
+@@ -1345,7 +1345,7 @@
+ 
+     <div class="container" id="app">
+         <header>
+-            <div class="logo-container" id="logoHome" onclick="switchTab('booking')" style="cursor: pointer;" title="Startseite / + Anmeldung">
++            <div class="logo-container" id="logoHome" onclick="switchTab('schedule')" style="cursor: pointer;" title="Zur Hauptseite (Zeitplan)">
+                 <svg class="logo-icon" viewBox="0 0 24 24">
+                     <rect x="7" y="3" width="10" height="14" rx="1.5" />
+                     <line x1="12" y1="3" x2="12" y2="17" />
+@@ -1369,10 +1369,6 @@
+         </header>
+ 
+         <div class="tabs">
+-            <button class="tab-btn" id="btnTabBooking" onclick="switchTab('booking')">
+-                <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 4v16m8-8H4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+-                Anmeldung
+-            </button>
+             <button class="tab-btn active" id="btnTabSchedule" onclick="switchTab('schedule')">
+                 <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                 Zeitplan
+@@ -1407,103 +1403,6 @@
+             </div>
+         </div>
+ 
+-        <!-- TAB BOOKING -->
+-        <div id="bookingTabContent" class="tab-content">
+-            <form id="bookingForm">
+-                
+-                <div class="form-section">
+-                    <h2 class="section-title">
+-                        <span style="display: inline-flex; align-items: center;">
+-                            1. Standort ausw├ñhlen
+-                            <button type="button" class="btn-info-toggle" onclick="toggleInfo('locationInfo')" title="Hilfe anzeigen">
+-                                <svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z" fill="currentColor"/></svg>
+-                            </button>
+-                        </span>
+-                        <button type="button" class="btn-show-map" style="text-transform: none; font-size: 0.7rem;" onclick="showCurrentLocationOnMap()">­ƒù║ Auf Karte</button>
+-                    </h2>
+-                    <div id="locationInfo" class="info-helper-box">
+-                        W├ñhlen Sie einen Dienstort. Die Schaltfl├ñche ÔÇ×Auf KarteÔÇ£ zeigt den genauen Standort des Standes. Mit ÔÇ×+ Eigener OrtÔÇ£ k├Ânnen Sie manuell einen neuen Standort hinzuf├╝gen oder auf der Karte markieren.
+-                    </div>
+-                    <div class="location-grid" id="locationGrid">
+-                        <!-- Custom locations UI -->
+-                    </div>
+-                </div>
+-
+-                <div class="form-section">
+-                    <h2 class="section-title">
+-                        <span>2. Uhrzeit ausw├ñhlen</span>
+-                        <button type="button" class="btn-info-toggle" onclick="toggleInfo('timeInfo')" title="Hilfe anzeigen">
+-                            <svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z" fill="currentColor"/></svg>
+-                        </button>
+-                    </h2>
+-                    <div id="timeInfo" class="info-helper-box">
+-                        W├ñhlen Sie das Zeitintervall f├╝r Ihre Schicht. Wenn ein Zeitfenster ausgegraut ist, sind alle Trolleys f├╝r dieses Zeitfenster bereits ausgebucht.
+-                    </div>
+-                    <div class="time-grid" id="timeGrid">
+-                        <!-- Custom time cards inserted here -->
+-                    </div>
+-                </div>
+-
+-                <div class="form-section">
+-                    <h2 class="section-title">
+-                        <span>3. Schichtteilnehmer (bis zu 2 Trolleys)</span>
+-                        <button type="button" class="btn-info-toggle" onclick="toggleInfo('namesInfo')" title="Hilfe anzeigen">
+-                            <svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z" fill="currentColor"/></svg>
+-                        </button>
+-                    </h2>
+-                    <div id="namesInfo" class="info-helper-box">
+-                        F├╝r jede Schicht stehen bis zu zwei Trolleys zur Verf├╝gung (jeweils 2 Personen). Geben Sie die Namen der Teilnehmer ein. Wenn der erste Trolley bereits von jemand anderem besetzt ist, f├╝llen Sie die Namen f├╝r den zweiten freien Trolley aus.
+-                    </div>
+-                    <div class="carts-container">
+-                        
+-                        <!-- Cart 1 -->
+-                        <div class="cart-box" id="cartBox1">
+-                            <div class="cart-header">
+-                                <svg class="cart-header-icon" viewBox="0 0 24 24">
+-                                    <circle cx="12" cy="12" r="10" />
+-                                    <text x="9" y="16" font-size="12" font-weight="bold" fill="currentColor">1</text>
+-                                </svg>
+-                                ­ƒôª Trolley Nr. 1 (Stand 1)
+-                            </div>
+-                            <div class="cart-lang-label">
+-                                <span>Sprache des Trolleys w├ñhlen</span>
+-                            </div>
+-                            <div class="cart-lang-picker" id="cart1LangPicker" aria-label="Sprache Trolley Nr. 1"></div>
+-                            <div class="input-group">
+-                                <input type="text" id="name1" class="input-field" placeholder="Verk├╝ndiger 1 (Name)" required autocomplete="off">
+-                                <input type="text" id="name2" class="input-field" placeholder="Verk├╝ndiger 2 (Name)" required autocomplete="off">
+-                            </div>
+-                        </div>
+-
+-                        <!-- Cart 2 -->
+-                        <div class="cart-box" id="cartBox2">
+-                            <div class="cart-header">
+-                                <svg class="cart-header-icon" viewBox="0 0 24 24">
+-                                    <circle cx="12" cy="12" r="10" />
+-                                    <text x="9" y="16" font-size="12" font-weight="bold" fill="currentColor">2</text>
+-                                </svg>
+-                                ­ƒôª Trolley Nr. 2 (Stand 2)
+-                            </div>
+-                            <div class="cart-lang-label">
+-                                <span>Sprache des Trolleys w├ñhlen</span>
+-                            </div>
+-                            <div class="cart-lang-picker" id="cart2LangPicker" aria-label="Sprache Trolley Nr. 2"></div>
+-                            <div class="input-group">
+-                                <input type="text" id="name3" class="input-field" placeholder="Verk├╝ndiger 1 (Name)" autocomplete="off">
+-                                <input type="text" id="name4" class="input-field" placeholder="Verk├╝ndiger 2 (Name)" autocomplete="off">
+-                            </div>
+-                        </div>
+-
+-                    </div>
+-                </div>
+-
+-                <button type="submit" id="submitBtn" class="btn-submit">
+-                    <span class="spinner" id="btnSpinner"></span>
+-                    <span id="btnText">Schicht eintragen</span>
+-                </button>
+-            </form>
+-        </div>
+-
+         <!-- TAB SCHEDULE -->
+         <div id="scheduleTabContent" class="tab-content active">
+             <div class="refresh-row" style="gap: 16px;">
+@@ -1651,7 +1550,10 @@
+                     </div>
+                     <div>
+                         <label class="compact-label" id="qbCartLabel">Trolley</label>
+-                        <input type="text" id="qbCart" class="input-field" disabled style="background-color: var(--primary-container); border-color: var(--border); opacity: 0.85; cursor: not-allowed;">
++                        <div id="qbCartToggleGroup" style="display: flex; gap: 4px;">
++                            <button type="button" class="qb-cart-btn" id="qbCartBtn1" onclick="switchQBCart(1)" style="flex:1; padding: 6px 4px; font-size: 0.75rem; font-weight: 700; border: 1px solid var(--border); border-radius: var(--radius-sm); background: var(--card-bg); color: var(--text); cursor: pointer;">­ƒôª Nr. 1</button>
++                            <button type="button" class="qb-cart-btn" id="qbCartBtn2" onclick="switchQBCart(2)" style="flex:1; padding: 6px 4px; font-size: 0.75rem; font-weight: 700; border: 1px solid var(--border); border-radius: var(--radius-sm); background: var(--card-bg); color: var(--text); cursor: pointer;">­ƒôª Nr. 2</button>
++                        </div>
+                     </div>
+                 </div>
+                 
+diff --git a/index_ua.html b/index_ua.html
+index c7e783c..dd0c052 100644
+--- a/index_ua.html
++++ b/index_ua.html
+@@ -1345,7 +1345,7 @@
+ 
+     <div class="container" id="app">
+         <header>
+-            <div class="logo-container" id="logoHome" onclick="switchTab('booking')" style="cursor: pointer;" title="ðØð░ ð│ð¥ð╗ð¥ð▓ð¢Ðâ / + ðùð░ð┐ð©Ðü">
++            <div class="logo-container" id="logoHome" onclick="switchTab('schedule')" style="cursor: pointer;" title="ðØð░ ð│ð¥ð╗ð¥ð▓ð¢Ðâ (ðáð¥ðÀð║ð╗ð░ð┤)">
+                 <svg class="logo-icon" viewBox="0 0 24 24">
+                     <rect x="7" y="3" width="10" height="14" rx="1.5" />
+                     <line x1="12" y1="3" x2="12" y2="17" />
+@@ -1369,10 +1369,6 @@
+         </header>
+ 
+         <div class="tabs">
+-            <button class="tab-btn" id="btnTabBooking" onclick="switchTab('booking')">
+-                <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 4v16m8-8H4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+-                ðùð░ð┐ð©Ðü
+-            </button>
+             <button class="tab-btn active" id="btnTabSchedule" onclick="switchTab('schedule')">
+                 <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                 ðáð¥ðÀð║ð╗ð░ð┤
+@@ -1407,102 +1403,7 @@
+             </div>
+         </div>
+ 
+-        <!-- ðÆð║ð╗ð░ð┤ð║ð░ ðùðÉðƒðÿðí -->
+-        <div id="bookingTabContent" class="tab-content">
+-            <form id="bookingForm">
+-                
+-                <div class="form-section">
+-                    <h2 class="section-title">
+-                        <span style="display: inline-flex; align-items: center;">
+-                            1. ðÆð©ð▒ðÁÐÇÐûÐéÐî ð╗ð¥ð║ð░Ðåð©ÐÄ
+-                            <button type="button" class="btn-info-toggle" onclick="toggleInfo('locationInfo')" title="ðƒð¥ð║ð░ðÀð░Ðéð© ð┐Ðûð┤ð║ð░ðÀð║Ðâ">
+-                                <svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z" fill="currentColor"/></svg>
+-                            </button>
+-                        </span>
+-                        <button type="button" class="btn-show-map" style="text-transform: none; font-size: 0.7rem;" onclick="showCurrentLocationOnMap()">­ƒù║ ðØð░ ð║ð░ÐÇÐéÐû</button>
+-                    </h2>
+-                    <div id="locationInfo" class="info-helper-box">
+-                        ðÆð©ð▒ðÁÐÇÐûÐéÐî ð╝ÐûÐüÐåðÁ ð┤ð╗ÐÅ Ðüð╗ÐâðÂÐûð¢ð¢ÐÅ. ðÜð¢ð¥ð┐ð║ð░ ┬½ðØð░ ð║ð░ÐÇÐéÐû┬╗ ð┐ð¥ð║ð░ðÂðÁ Ðéð¥Ðçð¢ÐâÐÄ ð│ðÁð¥ð┐ð¥ðÀð©Ðåð©ÐÄ ÐüÐéðÁð¢ð┤ð░. ðÜð¢ð¥ð┐ð║ð░ ┬½+ ðíð▓ð¥Ðö ð╝ÐûÐüÐåðÁ┬╗ ð┤ð¥ðÀð▓ð¥ð╗ÐÅÐö ð┤ð¥ð┤ð░Ðéð© ð¢ð¥ð▓Ðâ Ðéð¥Ðçð║Ðâ ð▓ÐÇÐâÐçð¢Ðâ ð░ð▒ð¥ ð▓ð©ð▒ÐÇð░ð▓Ðêð© ð¢ð░ ð║ð░ÐÇÐéÐû.
+-                    </div>
+-                    <div class="location-grid" id="locationGrid">
+-                        <!-- ðíÐÄð┤ð░ ð▒Ðâð┤ÐâÐéÐî ð▓ÐüÐéð░ð▓ð╗ÐÅÐéð©ÐüÐÅ ð║ð░ÐüÐéð¥ð╝ð¢Ðû ð╗ð¥ð║ð░Ðåð©ð© -->
+-                    </div>
+-                </div>
+ 
+-                <div class="form-section">
+-                    <h2 class="section-title">
+-                        <span>2. ðÆð©ð▒ðÁÐÇÐûÐéÐî Ðçð░Ðü</span>
+-                        <button type="button" class="btn-info-toggle" onclick="toggleInfo('timeInfo')" title="ðƒð¥ð║ð░ðÀð░Ðéð© ð┐Ðûð┤ð║ð░ðÀð║Ðâ">
+-                            <svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z" fill="currentColor"/></svg>
+-                        </button>
+-                    </h2>
+-                    <div id="timeInfo" class="info-helper-box">
+-                        ðÆð©ð▒ðÁÐÇÐûÐéÐî ð│ð¥ð┤ð©ð¢ð¢ð©ð╣ Ðûð¢ÐéðÁÐÇð▓ð░ð╗ ðÀð╝Ðûð¢ð©. ð»ð║Ðëð¥ ð║ð░ÐÇÐéð║ð░ Ðçð░ÐüÐâ ðÀð░ð▒ð╗ð¥ð║ð¥ð▓ð░ð¢ð░ (ÐüÐûÐÇð░), ÐåðÁ ð¥ðÀð¢ð░Ðçð░Ðö, Ðëð¥ ð▓ÐüÐû ÐüÐéðÁð¢ð┤ð© ð¢ð░ ÐåðÁð╣ Ðçð░Ðü ÐâðÂðÁ ðÀð░ð▒ÐÇð¥ð¢Ðîð¥ð▓ð░ð¢Ðû.
+-                    </div>
+-                    <div class="time-grid" id="timeGrid">
+-                        <!-- ðíÐÄð┤ð░ ð▒Ðâð┤ÐâÐéÐî ð▓ÐüÐéð░ð▓ð╗ÐÅÐéÐîÐüÐÅ ð║ð░ÐüÐéð¥ð╝ð¢Ðû ð░ð▒ð¥ ð┤ðÁÐäð¥ð╗Ðéð¢ÐïðÁ ð║ð░ÐÇÐéð¥Ðçð║ð© Ðçð░ÐüÐâ -->
+-                    </div>
+-                </div>
+-
+-                <div class="form-section">
+-                    <h2 class="section-title">
+-                        <span>3. ðúÐçð░Ðüð¢ð©ð║ð© ðÀð╝Ðûð¢ð© (ð┤ð¥ 2 ÐüÐéðÁð¢ð┤Ðûð▓)</span>
+-                        <button type="button" class="btn-info-toggle" onclick="toggleInfo('namesInfo')" title="ðƒð¥ð║ð░ðÀð░Ðéð© ð┐Ðûð┤ð║ð░ðÀð║Ðâ">
+-                            <svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z" fill="currentColor"/></svg>
+-                        </button>
+-                    </h2>
+-                    <div id="namesInfo" class="info-helper-box">
+-                        ðØð░ ð║ð¥ðÂð¢Ðâ ðÀð╝Ðûð¢Ðâ ð▓ð©ð┤Ðûð╗ÐÅÐöÐéÐîÐüÐÅ ð┤ð¥ ð┤ð▓ð¥Ðà ÐüÐéðÁð¢ð┤Ðûð▓ (ð┐ð¥ 2 ð¥Ðüð¥ð▒ð© ð¢ð░ ð║ð¥ðÂðÁð¢). ðÆð▓ðÁð┤ÐûÐéÐî Ðûð╝ðÁð¢ð░ ÐâÐçð░Ðüð¢ð©ð║Ðûð▓. ð»ð║Ðëð¥ ð┐ðÁÐÇÐêð©ð╣ ÐüÐéðÁð¢ð┤ ð▓ðÂðÁ ðÀð░ð╣ð¢ÐÅÐéð©ð╣ ð║ð©ð╝ð¥ÐüÐî Ðûð¢Ðêð©ð╝, ðÀð░ð┐ð¥ð▓ð¢ÐûÐéÐî Ðûð╝ðÁð¢ð░ ð┤ð╗ÐÅ ð┤ÐÇÐâð│ð¥ð│ð¥ ð▓Ðûð╗Ðîð¢ð¥ð│ð¥ ÐüÐéðÁð¢ð┤Ðâ.
+-                    </div>
+-                    <div class="carts-container">
+-                        
+-                        <!-- Cart 1 -->
+-                        <div class="cart-box" id="cartBox1">
+-                            <div class="cart-header">
+-                                <svg class="cart-header-icon" viewBox="0 0 24 24">
+-                                    <circle cx="12" cy="12" r="10" />
+-                                    <text x="9" y="16" font-size="12" font-weight="bold" fill="currentColor">1</text>
+-                                </svg>
+-                                ­ƒôª ðóðÁð╗ðÁðÂð║ð░ Ôäû1 (ðíÐéðÁð¢ð┤ 1)
+-                            </div>
+-                            <div class="cart-lang-label">
+-                                <span>ðÆð©ð▒ðÁÐÇÐûÐéÐî ð╝ð¥ð▓Ðâ ÐéðÁð╗ðÁðÂð║ð©</span>
+-                            </div>
+-                            <div class="cart-lang-picker" id="cart1LangPicker" aria-label="ð£ð¥ð▓ð░ ÐéðÁð╗ðÁðÂð║ð© Ôäû1"></div>
+-                            <div class="input-group">
+-                                <input type="text" id="name1" class="input-field" placeholder="ðÆÐûÐüð¢ð©ð║ 1 (ðƒðåðæ)" required autocomplete="off">
+-                                <input type="text" id="name2" class="input-field" placeholder="ðÆÐûÐüð¢ð©ð║ 2 (ðƒðåðæ)" required autocomplete="off">
+-                            </div>
+-                        </div>
+-
+-                        <!-- Cart 2 -->
+-                        <div class="cart-box" id="cartBox2">
+-                            <div class="cart-header">
+-                                <svg class="cart-header-icon" viewBox="0 0 24 24">
+-                                    <circle cx="12" cy="12" r="10" />
+-                                    <text x="9" y="16" font-size="12" font-weight="bold" fill="currentColor">2</text>
+-                                </svg>
+-                                ­ƒôª ðóðÁð╗ðÁðÂð║ð░ Ôäû2 (ðíÐéðÁð¢ð┤ 2)
+-                            </div>
+-                            <div class="cart-lang-label">
+-                                <span>ðÆð©ð▒ðÁÐÇÐûÐéÐî ð╝ð¥ð▓Ðâ ÐéðÁð╗ðÁðÂð║ð©</span>
+-                            </div>
+-                            <div class="cart-lang-picker" id="cart2LangPicker" aria-label="ð£ð¥ð▓ð░ ÐéðÁð╗ðÁðÂð║ð© Ôäû2"></div>
+-                            <div class="input-group">
+-                                <input type="text" id="name3" class="input-field" placeholder="ðÆÐûÐüð¢ð©ð║ 1 (ðƒðåðæ)" autocomplete="off">
+-                                <input type="text" id="name4" class="input-field" placeholder="ðÆÐûÐüð¢ð©ð║ 2 (ðƒðåðæ)" autocomplete="off">
+-                            </div>
+-                        </div>
+-
+-                    </div>
+-                </div>
+-
+-                <button type="submit" id="submitBtn" class="btn-submit">
+-                    <span class="spinner" id="btnSpinner"></span>
+-                    <span id="btnText">ðùð░ð┐ð©Ðüð░Ðéð© ðÀð╝Ðûð¢Ðâ</span>
+-                </button>
+-            </form>
+-        </div>
+ 
+         <!-- ðÆð║ð╗ð░ð┤ð║ð░ ðôðáðÉðñðÿðÜ -->
+         <div id="scheduleTabContent" class="tab-content active">
+@@ -1651,7 +1552,10 @@
+                     </div>
+                     <div>
+                         <label class="compact-label" id="qbCartLabel">ðóðÁð╗ðÁðÂð║ð░</label>
+-                        <input type="text" id="qbCart" class="input-field" disabled style="background-color: var(--primary-container); border-color: var(--border); opacity: 0.85; cursor: not-allowed;">
++                        <div id="qbCartToggleGroup" style="display: flex; gap: 4px;">
++                            <button type="button" class="qb-cart-btn" id="qbCartBtn1" onclick="switchQBCart(1)" style="flex:1; padding: 6px 4px; font-size: 0.75rem; font-weight: 700; border: 1px solid var(--border); border-radius: var(--radius-sm); background: var(--card-bg); color: var(--text); cursor: pointer;">­ƒôª Ôäû1</button>
++                            <button type="button" class="qb-cart-btn" id="qbCartBtn2" onclick="switchQBCart(2)" style="flex:1; padding: 6px 4px; font-size: 0.75rem; font-weight: 700; border: 1px solid var(--border); border-radius: var(--radius-sm); background: var(--card-bg); color: var(--text); cursor: pointer;">­ƒôª Ôäû2</button>
++                        </div>
+                     </div>
+                 </div>
+                 

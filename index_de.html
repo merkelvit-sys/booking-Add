@@ -149,6 +149,18 @@
             display: flex;
             justify-content: center;
             margin-bottom: 8px;
+            cursor: pointer;
+            user-select: none;
+            transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1), filter 0.2s ease;
+        }
+
+        .logo-container:hover {
+            transform: scale(1.08);
+            filter: drop-shadow(0 4px 10px rgba(37, 99, 235, 0.25));
+        }
+
+        .logo-container:active {
+            transform: scale(0.95);
         }
 
         .logo-icon {
@@ -1333,7 +1345,7 @@
 
     <div class="container" id="app">
         <header>
-            <div class="logo-container">
+            <div class="logo-container" id="logoHome" onclick="switchTab('schedule')" style="cursor: pointer;" title="Zur Hauptseite (Zeitplan)">
                 <svg class="logo-icon" viewBox="0 0 24 24">
                     <rect x="7" y="3" width="10" height="14" rx="1.5" />
                     <line x1="12" y1="3" x2="12" y2="17" />
@@ -1357,10 +1369,6 @@
         </header>
 
         <div class="tabs">
-            <button class="tab-btn" id="btnTabBooking" onclick="switchTab('booking')" style="display: none;">
-                <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 4v16m8-8H4" stroke-linecap="round" stroke-linejoin="round"/></svg>
-                Anmeldung
-            </button>
             <button class="tab-btn active" id="btnTabSchedule" onclick="switchTab('schedule')">
                 <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" stroke-linecap="round" stroke-linejoin="round"/></svg>
                 Zeitplan
@@ -1385,6 +1393,7 @@
                 Wählen Sie im Umschalter eine Woche (Diese, Nächste oder Übernächste) und klicken Sie dann auf das gewünschte Datum in der Tagesleiste.
             </div>
             <div class="week-switcher">
+                <button type="button" class="week-btn" id="btnPrevWeek" onclick="switchWeek('prev')">Letzte Woche</button>
                 <button type="button" class="week-btn active" id="btnThisWeek" onclick="switchWeek('this')">Diese Woche</button>
                 <button type="button" class="week-btn" id="btnNextWeek" onclick="switchWeek('next')">Nächste Woche</button>
                 <button type="button" class="week-btn" id="btnWeekAfterNext" onclick="switchWeek('afterNext')">Übernächste Woche</button>
@@ -1392,103 +1401,6 @@
             <div class="date-scroller" id="dateScroller">
                 <!-- Dates will be inserted by JS -->
             </div>
-        </div>
-
-        <!-- TAB BOOKING -->
-        <div id="bookingTabContent" class="tab-content">
-            <form id="bookingForm">
-                
-                <div class="form-section">
-                    <h2 class="section-title">
-                        <span style="display: inline-flex; align-items: center;">
-                            1. Standort auswählen
-                            <button type="button" class="btn-info-toggle" onclick="toggleInfo('locationInfo')" title="Hilfe anzeigen">
-                                <svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z" fill="currentColor"/></svg>
-                            </button>
-                        </span>
-                        <button type="button" class="btn-show-map" style="text-transform: none; font-size: 0.7rem;" onclick="showCurrentLocationOnMap()">🗺 Auf Karte</button>
-                    </h2>
-                    <div id="locationInfo" class="info-helper-box">
-                        Wählen Sie einen Dienstort. Die Schaltfläche „Auf Karte“ zeigt den genauen Standort des Standes. Mit „+ Eigener Ort“ können Sie manuell einen neuen Standort hinzufügen oder auf der Karte markieren.
-                    </div>
-                    <div class="location-grid" id="locationGrid">
-                        <!-- Custom locations UI -->
-                    </div>
-                </div>
-
-                <div class="form-section">
-                    <h2 class="section-title">
-                        <span>2. Uhrzeit auswählen</span>
-                        <button type="button" class="btn-info-toggle" onclick="toggleInfo('timeInfo')" title="Hilfe anzeigen">
-                            <svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z" fill="currentColor"/></svg>
-                        </button>
-                    </h2>
-                    <div id="timeInfo" class="info-helper-box">
-                        Wählen Sie das Zeitintervall für Ihre Schicht. Wenn ein Zeitfenster ausgegraut ist, sind alle Trolleys für dieses Zeitfenster bereits ausgebucht.
-                    </div>
-                    <div class="time-grid" id="timeGrid">
-                        <!-- Custom time cards inserted here -->
-                    </div>
-                </div>
-
-                <div class="form-section">
-                    <h2 class="section-title">
-                        <span>3. Schichtteilnehmer (bis zu 2 Trolleys)</span>
-                        <button type="button" class="btn-info-toggle" onclick="toggleInfo('namesInfo')" title="Hilfe anzeigen">
-                            <svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z" fill="currentColor"/></svg>
-                        </button>
-                    </h2>
-                    <div id="namesInfo" class="info-helper-box">
-                        Für jede Schicht stehen bis zu zwei Trolleys zur Verfügung (jeweils 2 Personen). Geben Sie die Namen der Teilnehmer ein. Wenn der erste Trolley bereits von jemand anderem besetzt ist, füllen Sie die Namen für den zweiten freien Trolley aus.
-                    </div>
-                    <div class="carts-container">
-                        
-                        <!-- Cart 1 -->
-                        <div class="cart-box" id="cartBox1">
-                            <div class="cart-header">
-                                <svg class="cart-header-icon" viewBox="0 0 24 24">
-                                    <circle cx="12" cy="12" r="10" />
-                                    <text x="9" y="16" font-size="12" font-weight="bold" fill="currentColor">1</text>
-                                </svg>
-                                📦 Trolley Nr. 1 (Stand 1)
-                            </div>
-                            <div class="cart-lang-label">
-                                <span>Sprache des Trolleys wählen</span>
-                            </div>
-                            <div class="cart-lang-picker" id="cart1LangPicker" aria-label="Sprache Trolley Nr. 1"></div>
-                            <div class="input-group">
-                                <input type="text" id="name1" class="input-field" placeholder="Verkündiger 1 (Name)" required autocomplete="off">
-                                <input type="text" id="name2" class="input-field" placeholder="Verkündiger 2 (Name)" required autocomplete="off">
-                            </div>
-                        </div>
-
-                        <!-- Cart 2 -->
-                        <div class="cart-box" id="cartBox2">
-                            <div class="cart-header">
-                                <svg class="cart-header-icon" viewBox="0 0 24 24">
-                                    <circle cx="12" cy="12" r="10" />
-                                    <text x="9" y="16" font-size="12" font-weight="bold" fill="currentColor">2</text>
-                                </svg>
-                                📦 Trolley Nr. 2 (Stand 2)
-                            </div>
-                            <div class="cart-lang-label">
-                                <span>Sprache des Trolleys wählen</span>
-                            </div>
-                            <div class="cart-lang-picker" id="cart2LangPicker" aria-label="Sprache Trolley Nr. 2"></div>
-                            <div class="input-group">
-                                <input type="text" id="name3" class="input-field" placeholder="Verkündiger 1 (Name)" autocomplete="off">
-                                <input type="text" id="name4" class="input-field" placeholder="Verkündiger 2 (Name)" autocomplete="off">
-                            </div>
-                        </div>
-
-                    </div>
-                </div>
-
-                <button type="submit" id="submitBtn" class="btn-submit">
-                    <span class="spinner" id="btnSpinner"></span>
-                    <span id="btnText">Schicht eintragen</span>
-                </button>
-            </form>
         </div>
 
         <!-- TAB SCHEDULE -->
@@ -1623,32 +1535,68 @@
             <form id="quickBookingForm">
                 <div class="form-section-compact" style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px;">
                     <div>
-                        <label class="compact-label" id="qbDateLabel">Datum</label>
+                        <div style="display: flex; align-items: center; gap: 4px; margin-bottom: 4px;">
+                            <label class="compact-label" id="qbDateLabel" style="margin-bottom: 0;">Datum</label>
+                            <button type="button" class="btn-info-toggle" onclick="toggleInfo('qbDateInfo')" style="padding: 2px; height: 18px; display: inline-flex; align-items: center;">
+                                <svg viewBox="0 0 24 24" style="width: 14px; height: 14px;"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z" fill="currentColor"/></svg>
+                            </button>
+                        </div>
+                        <div id="qbDateInfo" class="info-helper-box" style="margin-top: 4px; margin-bottom: 6px;">Datum der Schicht (schreibgeschützt)</div>
                         <input type="text" id="qbDate" class="input-field" disabled style="background-color: var(--primary-container); border-color: var(--border); opacity: 0.85; cursor: not-allowed;">
                     </div>
                     <div>
-                        <label class="compact-label" id="qbTimeLabel">Uhrzeit</label>
+                        <div style="display: flex; align-items: center; gap: 4px; margin-bottom: 4px;">
+                            <label class="compact-label" id="qbTimeLabel" style="margin-bottom: 0;">Uhrzeit</label>
+                            <button type="button" class="btn-info-toggle" onclick="toggleInfo('qbTimeInfo')" style="padding: 2px; height: 18px; display: inline-flex; align-items: center;">
+                                <svg viewBox="0 0 24 24" style="width: 14px; height: 14px;"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z" fill="currentColor"/></svg>
+                            </button>
+                        </div>
+                        <div id="qbTimeInfo" class="info-helper-box" style="margin-top: 4px; margin-bottom: 6px;">Schichtzeit. Sie können ein benutzerdefiniertes Intervall eingeben, z.B. 10:30 - 12:30.</div>
                         <input type="text" id="qbTime" class="input-field" placeholder="z.B. 10:00 - 12:00" autocomplete="off">
                     </div>
                 </div>
                 <div class="form-section-compact" style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px;">
                     <div>
-                        <label class="compact-label" id="qbLocationLabel">Standort</label>
+                        <div style="display: flex; align-items: center; gap: 4px; margin-bottom: 4px;">
+                            <label class="compact-label" id="qbLocationLabel" style="margin-bottom: 0;">Standort</label>
+                            <button type="button" class="btn-info-toggle" onclick="toggleInfo('qbLocationInfo')" style="padding: 2px; height: 18px; display: inline-flex; align-items: center;">
+                                <svg viewBox="0 0 24 24" style="width: 14px; height: 14px;"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z" fill="currentColor"/></svg>
+                            </button>
+                        </div>
+                        <div id="qbLocationInfo" class="info-helper-box" style="margin-top: 4px; margin-bottom: 6px;">Ausgewählter Standort für den Dienst (schreibgeschützt)</div>
                         <input type="text" id="qbLocation" class="input-field" disabled style="background-color: var(--primary-container); border-color: var(--border); opacity: 0.85; cursor: not-allowed;">
                     </div>
                     <div>
-                        <label class="compact-label" id="qbCartLabel">Trolley</label>
+                        <div style="display: flex; align-items: center; gap: 4px; margin-bottom: 4px;">
+                            <label class="compact-label" id="qbCartLabel" style="margin-bottom: 0;">Trolley</label>
+                            <button type="button" class="btn-info-toggle" onclick="toggleInfo('qbCartInfo')" style="padding: 2px; height: 18px; display: inline-flex; align-items: center;">
+                                <svg viewBox="0 0 24 24" style="width: 14px; height: 14px;"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z" fill="currentColor"/></svg>
+                            </button>
+                        </div>
+                        <div id="qbCartInfo" class="info-helper-box" style="margin-top: 4px; margin-bottom: 6px;">Trolley-Nummer für diese Schicht (schreibgeschützt)</div>
                         <input type="text" id="qbCart" class="input-field" disabled style="background-color: var(--primary-container); border-color: var(--border); opacity: 0.85; cursor: not-allowed;">
                     </div>
                 </div>
                 
                 <div class="form-section-compact">
-                    <label class="compact-label" id="qbLangLabel">Sprache des Trolleys wählen</label>
+                    <div style="display: flex; align-items: center; gap: 4px; margin-bottom: 6px;">
+                        <label class="compact-label" id="qbLangLabel" style="margin-bottom: 0;">Sprache des Trolleys wählen</label>
+                        <button type="button" class="btn-info-toggle" onclick="toggleInfo('qbLangInfo')" style="padding: 2px; height: 18px; display: inline-flex; align-items: center;">
+                            <svg viewBox="0 0 24 24" style="width: 14px; height: 14px;"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z" fill="currentColor"/></svg>
+                        </button>
+                    </div>
+                    <div id="qbLangInfo" class="info-helper-box" style="margin-top: 4px; margin-bottom: 6px;">Wählen Sie die Sprache der Literatur, die an diesem Trolley präsentiert wird.</div>
                     <div id="qbLangPicker"></div>
                 </div>
 
                 <div class="form-section-compact">
-                    <label class="compact-label" id="qbNamesLabel">Teilnehmer der Schicht</label>
+                    <div style="display: flex; align-items: center; gap: 4px; margin-bottom: 6px;">
+                        <label class="compact-label" id="qbNamesLabel" style="margin-bottom: 0;">Verkündiger der Schicht</label>
+                        <button type="button" class="btn-info-toggle" onclick="toggleInfo('qbNamesInfo')" style="padding: 2px; height: 18px; display: inline-flex; align-items: center;">
+                            <svg viewBox="0 0 24 24" style="width: 14px; height: 14px;"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z" fill="currentColor"/></svg>
+                        </button>
+                    </div>
+                    <div id="qbNamesInfo" class="info-helper-box" style="margin-top: 4px; margin-bottom: 6px;">Geben Sie die Namen von zwei Verkündigern für diesen Dienst an.</div>
                     <input type="text" id="qbName1" class="input-field" placeholder="Verkündiger 1 (Name)" required autocomplete="off" style="margin-bottom: 8px;">
                     <input type="text" id="qbName2" class="input-field" placeholder="Verkündiger 2 (Name)" required autocomplete="off">
                 </div>

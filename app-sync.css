@@ -215,6 +215,37 @@
 .day-cell.status-holiday   { background-color: hsl(0, 72%, 94%); color: hsl(0, 72%, 40%); }
 .day-cell.status-special   { background-color: hsl(38, 92%, 92%); color: hsl(38, 90%, 35%); }
 
+/* Наглядное выделение дней служения на сетке года */
+.day-cell.has-serving {
+    background-color: hsl(142, 75%, 90%) !important;
+    color: hsl(142, 80%, 20%) !important;
+    border: 1.5px solid hsl(142, 70%, 45%) !important;
+    font-weight: 700;
+    position: relative;
+}
+
+.day-cell.has-serving::before {
+    content: '';
+    position: absolute;
+    top: 2px;
+    right: 2px;
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background-color: hsl(142, 71%, 45%);
+    box-shadow: 0 0 4px rgba(22, 163, 74, 0.6);
+}
+
+.day-cell.no-serving {
+    opacity: 0.7;
+}
+
+.date-card.past-disabled {
+    opacity: 0.35;
+    cursor: not-allowed !important;
+    pointer-events: none;
+}
+
 .legend-dot.status-available { background-color: hsl(142, 70%, 92%); border-color: hsl(142, 70%, 70%); }
 .legend-dot.status-closed    { background-color: hsl(210, 16%, 92%); border-color: hsl(210, 16%, 75%); }
 .legend-dot.status-event     { background-color: hsl(217, 89%, 92%); border-color: hsl(217, 89%, 70%); }
@@ -332,7 +363,7 @@
 }
 .btn-editor-save:hover:not(:disabled) { background-color: #15803d; transform: translateY(-1px); }
 .btn-editor-save:disabled { opacity: 0.6; cursor: not-allowed; }
-.btn-editor-cancel {
+ .btn-editor-cancel {
     background-color: rgba(120, 120, 120, 0.18);
     color: var(--text, #1e293b);
     border: none;
@@ -342,6 +373,117 @@
     font-weight: 600;
     cursor: pointer;
 }
+
+/* Confirm-delete custom modal (replaces window.confirm) */
+.confirm-delete-content { max-width: 400px; }
+.confirm-delete-body {
+    margin: 6px 0 4px;
+    font-size: 0.95rem;
+    line-height: 1.4;
+    color: var(--text, #1e293b);
+}
+.confirm-delete-actions {
+    display: flex;
+    gap: 10px;
+    justify-content: flex-end;
+    margin-top: 16px;
+}
+.btn-confirm-delete {
+    background-color: #dc2626;
+    color: #fff;
+    border: none;
+    padding: 9px 16px;
+    border-radius: var(--radius-sm, 8px);
+    font-size: 0.82rem;
+    font-weight: 700;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    transition: background-color 0.2s ease, transform 0.15s ease;
+}
+.btn-confirm-delete:hover:not(:disabled) { background-color: #b91c1c; transform: translateY(-1px); }
+.btn-confirm-delete:disabled { opacity: 0.6; cursor: not-allowed; }
+.btn-confirm-cancel {
+    background-color: var(--surface-2, #e5e7eb);
+    color: var(--text, #1e293b);
+    border: none;
+    padding: 9px 16px;
+    border-radius: var(--radius-sm, 8px);
+    font-size: 0.82rem;
+    font-weight: 600;
+    cursor: pointer;
+}
+.btn-confirm-cancel:hover { background-color: var(--surface-3, #d1d5db); }
+
+/* Info tip (i в кружке -> раскрывающееся меню-поповер) */
+.info-tip {
+    position: relative;
+    display: inline-flex;
+    vertical-align: middle;
+    margin-left: 6px;
+}
+.info-tip-btn {
+    background: none;
+    border: none;
+    color: var(--primary, #2563eb);
+    cursor: pointer;
+    padding: 2px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    width: 22px;
+    height: 22px;
+    transition: background-color 0.2s, color 0.2s;
+}
+.info-tip-btn:hover,
+.info-tip-btn:focus-visible { background-color: var(--primary-container, rgba(37,99,235,0.12)); outline: none; }
+.info-tip-btn svg { width: 16px; height: 16px; }
+.info-tip-pop {
+    display: none;
+    position: absolute;
+    top: calc(100% + 8px);
+    right: 0;
+    z-index: 2500;
+    width: min(300px, 82vw);
+    background-color: var(--card-bg, #fff);
+    color: var(--text, #1e293b);
+    border: 1px solid var(--border, #e2e8f0);
+    border-left: 4px solid var(--primary, #2563eb);
+    border-radius: var(--radius-sm, 8px);
+    box-shadow: var(--shadow-lg, 0 10px 30px rgba(0,0,0,0.18));
+    padding: 10px 12px;
+    font-size: 0.8rem;
+    font-weight: 500;
+    line-height: 1.45;
+    text-align: left;
+    white-space: pre-line;
+    animation: slideDown 0.18s ease-out forwards;
+}
+.info-tip.open .info-tip-pop { display: block; }
+
+@keyframes slideDown {
+    from { opacity: 0; transform: translateY(-6px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+/* Result (success/error) modal */
+.result-content { max-width: 400px; }
+.btn-result-ok {
+    background-color: var(--success, #16a34a);
+    color: #fff;
+    border: none;
+    padding: 9px 22px;
+    border-radius: var(--radius-sm, 8px);
+    font-size: 0.85rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: background-color 0.2s ease, transform 0.15s ease;
+}
+.btn-result-ok:hover { background-color: #15803d; transform: translateY(-1px); }
+.btn-result-ok.error { background-color: #dc2626; }
+.btn-result-ok.error:hover { background-color: #b91c1c; }
 
 /* Year sync indicator */
 .year-sync-badge {
@@ -608,6 +750,38 @@
 }
 .board-cart-info.has-lang-none {
     background-color: rgba(120, 120, 120, 0.04);
+}
+
+/* ===== Яркие стильные цветные бейджи языков тележек (RU, UA, DE) ===== */
+.trolley-lang-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 3px 8px;
+    font-size: 0.68rem;
+    font-weight: 800;
+    letter-spacing: 0.6px;
+    border-radius: 6px;
+    line-height: 1;
+    margin-left: 6px;
+    vertical-align: middle;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.15);
+    text-transform: uppercase;
+}
+.trolley-lang-badge.lang-badge-ru {
+    background-color: #dc2626;
+    color: #ffffff;
+    border: 1px solid #b91c1c;
+}
+.trolley-lang-badge.lang-badge-ua {
+    background-color: #2563eb;
+    color: #ffffff;
+    border: 1px solid #1d4ed8;
+}
+.trolley-lang-badge.lang-badge-de {
+    background-color: #d97706;
+    color: #ffffff;
+    border: 1px solid #b45309;
 }
 
 .board-cart-info.empty {

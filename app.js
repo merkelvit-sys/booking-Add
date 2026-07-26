@@ -106,6 +106,20 @@ const I18N = {
     quickBookLang: "Выберите язык тележки",
     quickBookNames: "Участники смены",
     quickBookSave: "Сохранить смену",
+    infoTip: "Подсказка",
+    infoTips:{
+      status:"Что происходит в этот день.\n• Служение — стенд работает.\n• Выходной / Праздник — не служим.\n• Событие / Особое — особый день (например, поломка).",
+      cartLang:"Язык литературы на этой тележке: Русская, Украинская или Немецкая. От него зависит цвет ячейки в годовом графике.",
+      description:"Опишите событие или особый день (например, «Пасха», «Ярмарок»). Видно в годовом графике.",
+      note:"Заметка о проблеме или напоминание: «Порван чехол», «Нет литературы». Нажмите кнопку-шаблон ниже, чтобы добавить быстро.",
+      qbDate:"День, на который вы записываете смену.",
+      qbTime:"Время начала и окончания смены.",
+      qbLocation:"Место (локация), где будет стенд.",
+      qbCart:"Номер тележки (1 или 2), которую вы записываете.",
+      qbLang:"Язык литературы на тележке: Русская, Украинская или Немецкая.",
+      qbNames:"Имена двух участников этой тележки.",
+      mainCartLang:"Язык литературы на этой тележке (Русская / Украинская / Немецкая). Цвет помогает найти её в годовом графике."
+    },
     addLocationBtn: "+ Добавить место",
     addLocationTitle: "Добавить место",
     addLocationName: "Название локации",
@@ -266,6 +280,20 @@ const I18N = {
     quickBookLang: "Виберіть мову тележки",
     quickBookNames: "Учасники зміни",
     quickBookSave: "Зберегти зміну",
+    infoTip: "Підказка",
+    infoTips:{
+      status:"Що відбувається цього дня.\n• Служіння — стенд працює.\n• Вихідний / Свято — не служимо.\n• Подія / Особливе — особливий день (наприклад, поломка).",
+      cartLang:"Мова літератури на цій тележці: Російська, Українська або Німецька. Від неї залежить колір клітинки у річному графіку.",
+      description:"Опишіть подію чи особливий день (наприклад, «Великдень», «Ярмарок»). Видно у річному графіку.",
+      note:"Примітка про проблему або нагадування: «Порваний чохол», «Немає літератури». Натисніть кнопку-шаблон нижче, щоб додати швидко.",
+      qbDate:"День, на який ви записуєте зміну.",
+      qbTime:"Час початку і закінчення зміни.",
+      qbLocation:"Місце (локація), де буде стенд.",
+      qbCart:"Номер тележки (1 або 2), яку ви записуєте.",
+      qbLang:"Мова літератури на тележці: Російська, Українська або Німецька.",
+      qbNames:"Імена двох учасників цієї тележки.",
+      mainCartLang:"Мова літератури на цій тележці (Російська / Українська / Німецька). Колір допомагає знайти її у річному графіку."
+    },
     addLocationBtn: "+ Додати місце",
     addLocationTitle: "Додати місце",
     addLocationName: "Назва локації",
@@ -426,6 +454,20 @@ const I18N = {
     quickBookLang: "Sprache des Trolleys wählen",
     quickBookNames: "Teilnehmer der Schicht",
     quickBookSave: "Schicht eintragen",
+    infoTip: "Hinweis",
+    infoTips:{
+      status:"Was an diesem Tag passiert.\n• Dienst — Stand arbeitet.\n• Frei / Feiertag — kein Dienst.\n• Veranstaltung / Besonderes — besonderer Tag (z. B. Defekt).",
+      cartLang:"Sprache der Literatur auf diesem Trolley: Russisch, Ukrainisch oder Deutsch. Davon hängt die Farbe der Zelle im Jahresplan ab.",
+      description:"Beschreiben Sie das Ereignis oder den besonderen Tag (z. B. «Ostern», «Markt»). Sichtbar im Jahresplan.",
+      note:"Notiz zu einem Problem oder eine Erinnerung: «Hülle zerrissen», «Keine Literatur». Klicken Sie unten auf die Vorlage, um sie schnell hinzuzufügen.",
+      qbDate:"Der Tag, für den Sie die Schicht eintragen.",
+      qbTime:"Beginn und Ende der Schicht.",
+      qbLocation:"Ort (Standort), an dem der Stand steht.",
+      qbCart:"Nummer des Trolleys (1 oder 2), den Sie eintragen.",
+      qbLang:"Sprache der Literatur auf dem Trolley: Russisch, Ukrainisch oder Deutsch.",
+      qbNames:"Namen der beiden Teilnehmer dieses Trolleys.",
+      mainCartLang:"Sprache der Literatur auf diesem Trolley (Russisch / Ukrainisch / Deutsch). Die Farbe hilft, ihn im Jahresplan zu finden."
+    },
     addLocationBtn: "+ Ort hinzufügen",
     addLocationTitle: "Ort hinzufügen",
     addLocationName: "Standortname",
@@ -530,9 +572,9 @@ function S(key, vars) {
 
 // Локализованные подписи языков тележки (для карточек-пикеров RU/UA/DE)
 const LANG_LABELS = {
-  ru: { ru: "Русская", ua: "Украинская", de: "Немецкая" },
-  uk: { ru: "Російська", ua: "Українська", de: "Німецька" },
-  de: { ru: "Russisch", ua: "Ukrainisch", de: "Deutsch" }
+  ru: { ru: "🇷🇺 Русская", ua: "🇺🇦 Украинская", de: "🇩🇪 Немецкая" },
+  uk: { ru: "🇷🇺 Російська", ua: "🇺🇦 Українська", de: "🇩🇪 Німецька" },
+  de: { ru: "🇷🇺 Russisch", ua: "🇺🇦 Ukrainisch", de: "🇩🇪 Deutsch" }
 };
 
 function getTrolleyLabels() {
@@ -694,10 +736,14 @@ window.addEventListener('DOMContentLoaded', () => {
   }
 
   // Заполнить сохранённые имена
-  document.getElementById('name1').value = localStorage.getItem('pwaName1') || '';
-  document.getElementById('name2').value = localStorage.getItem('pwaName2') || '';
-  document.getElementById('name3').value = localStorage.getItem('pwaName3') || '';
-  document.getElementById('name4').value = localStorage.getItem('pwaName4') || '';
+  const n1 = document.getElementById('name1');
+  const n2 = document.getElementById('name2');
+  const n3 = document.getElementById('name3');
+  const n4 = document.getElementById('name4');
+  if (n1) n1.value = localStorage.getItem('pwaName1') || '';
+  if (n2) n2.value = localStorage.getItem('pwaName2') || '';
+  if (n3) n3.value = localStorage.getItem('pwaName3') || '';
+  if (n4) n4.value = localStorage.getItem('pwaName4') || '';
 
   generateWeekStrip();
   loadCustomLocations();
@@ -712,7 +758,10 @@ window.addEventListener('DOMContentLoaded', () => {
   // Примечание: запуск SyncCore.runAppLaunch() и startAutoSync() вынесен в
   // ensureAutoSyncStarts() ниже — он срабатывает гарантированно, даже если
   // DOMContentLoaded уже прошёл до загрузки app-sync.js. Здесь НЕ дублируем.
-  document.getElementById('bookingForm').addEventListener('submit', handleFormSubmit);
+  const bookingFormEl = document.getElementById('bookingForm');
+  if (bookingFormEl) {
+    bookingFormEl.addEventListener('submit', handleFormSubmit);
+  }
 
   const qbForm = document.getElementById('quickBookingForm');
   if (qbForm) {
@@ -763,7 +812,9 @@ window.addEventListener('DOMContentLoaded', () => {
 // Неделя / даты
 // ----------------------------------------------------------------------------
 function switchWeek(weekType) {
-  if (weekType === 'this') {
+  if (weekType === 'prev') {
+    currentWeekOffset = -1;
+  } else if (weekType === 'this') {
     currentWeekOffset = 0;
   } else if (weekType === 'next') {
     currentWeekOffset = 1;
@@ -771,10 +822,12 @@ function switchWeek(weekType) {
     currentWeekOffset = 2;
   }
   
+  const bPrev = document.getElementById('btnPrevWeek');
   const bThis = document.getElementById('btnThisWeek');
   const bNext = document.getElementById('btnNextWeek');
   const bAfter = document.getElementById('btnWeekAfterNext');
   
+  if (bPrev) bPrev.classList.toggle('active', currentWeekOffset === -1);
   if (bThis) bThis.classList.toggle('active', currentWeekOffset === 0);
   if (bNext) bNext.classList.toggle('active', currentWeekOffset === 1);
   if (bAfter) bAfter.classList.toggle('active', currentWeekOffset === 2);
@@ -800,6 +853,8 @@ function generateWeekStrip() {
   let defaultSelectedDate = "";
   if (currentWeekOffset === 0) {
     defaultSelectedDate = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+  } else if (currentWeekOffset === -1) {
+    defaultSelectedDate = `${monday.getFullYear()}-${String(monday.getMonth() + 1).padStart(2, '0')}-${String(monday.getDate()).padStart(2, '0')}`;
   } else {
     const nextMonday = new Date(monday);
     defaultSelectedDate = `${nextMonday.getFullYear()}-${String(nextMonday.getMonth() + 1).padStart(2, '0')}-${String(nextMonday.getDate()).padStart(2, '0')}`;
@@ -820,14 +875,17 @@ function generateWeekStrip() {
     const currentMidnight = new Date(current);
     currentMidnight.setHours(0, 0, 0, 0);
     const isPast = currentMidnight < todayMidnight;
+    const diffDaysPast = Math.round((todayMidnight - currentMidnight) / 86400000);
+    const isPastAllowed = isPast && diffDaysPast <= 7;
+    const isTooOld = isPast && diffDaysPast > 7;
 
     const card = document.createElement('div');
     const isActive = (isoString === defaultSelectedDate);
 
-    card.className = `date-card ${isActive ? 'active' : ''} ${isPast ? 'past-day' : ''}`;
+    card.className = `date-card ${isActive ? 'active' : ''} ${isPast ? 'past-day' : ''} ${isTooOld ? 'past-disabled' : ''}`;
     card.dataset.date = isoString;
 
-    if (!isPast) {
+    if (!isTooOld) {
       card.onclick = () => selectDate(isoString);
     }
 
@@ -871,9 +929,11 @@ function goToDate(dateISO) {
   const weekOffset = Math.floor(diffDays / 7);
 
   currentWeekOffset = weekOffset;
+  const pb = document.getElementById('btnPrevWeek');
   const wb = document.getElementById('btnThisWeek');
   const nb = document.getElementById('btnNextWeek');
   const ab = document.getElementById('btnWeekAfterNext');
+  if (pb) pb.classList.toggle('active', weekOffset === -1);
   if (wb) wb.classList.toggle('active', weekOffset === 0);
   if (nb) nb.classList.toggle('active', weekOffset === 1);
   if (ab) ab.classList.toggle('active', weekOffset === 2);
@@ -916,14 +976,17 @@ function generateWeekStripFor(weekOffset, preselectDate) {
     const currentMidnight = new Date(current);
     currentMidnight.setHours(0, 0, 0, 0);
     const isPast = currentMidnight < todayMidnight;
+    const diffDaysPast = Math.round((todayMidnight - currentMidnight) / 86400000);
+    const isPastAllowed = isPast && diffDaysPast <= 7;
+    const isTooOld = isPast && diffDaysPast > 7;
 
     const card = document.createElement('div');
     const isActive = (isoString === preselectDate);
 
-    card.className = `date-card ${isActive ? 'active' : ''} ${isPast ? 'past-day' : ''}`;
+    card.className = `date-card ${isActive ? 'active' : ''} ${isPast ? 'past-day' : ''} ${isTooOld ? 'past-disabled' : ''}`;
     card.dataset.date = isoString;
 
-    if (!isPast) {
+    if (!isTooOld) {
       card.onclick = () => selectDate(isoString);
     }
 
@@ -938,19 +1001,16 @@ function generateWeekStripFor(weekOffset, preselectDate) {
 }
 
 function switchTab(tabId) {
-  const tabs = ['booking', 'schedule', 'year'];
+  if (tabId !== 'year') tabId = 'schedule';
+  const tabs = ['schedule', 'year'];
   tabs.forEach(t => {
     const btn = document.getElementById('btnTab' + t.charAt(0).toUpperCase() + t.slice(1));
     const content = document.getElementById(t + 'TabContent');
     if (btn) btn.classList.toggle('active', tabId === t);
     if (content) content.classList.toggle('active', tabId === t);
   });
-  // Блок выбора даты нужен во вкладках «Запись» И «График» (в Графике по нему
-  // переключаются дни недели). Прячем его только в «Год».
   const dateBlock = document.getElementById('dateSelectBlock');
-  if (dateBlock) dateBlock.style.display = (tabId === 'booking' || tabId === 'schedule') ? '' : 'none';
-  // Мгновенный показ из единого состояния (БЕЗ сетевых запросов)
-  if (tabId === 'booking') renderBookingTab();
+  if (dateBlock) dateBlock.style.display = (tabId === 'schedule') ? '' : 'none';
   if (tabId === 'schedule') renderScheduleTab();
   if (tabId === 'year' && window.SyncCore) SyncCore.renderYearGrid();
 }
@@ -1217,11 +1277,10 @@ function toggleFormState(disabled) {
     if (status) status.textContent = disabled ? S('selectLocation') : S('statusAvailable');
   });
 
-  document.getElementById('name1').disabled = disabled;
-  document.getElementById('name2').disabled = disabled;
-  document.getElementById('name3').disabled = disabled;
-  document.getElementById('name4').disabled = disabled;
-  document.getElementById('submitBtn').disabled = disabled;
+  ['name1', 'name2', 'name3', 'name4', 'submitBtn'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.disabled = disabled;
+  });
 }
 
 // ----------------------------------------------------------------------------
@@ -1568,11 +1627,11 @@ function onTimeChange() {
 
   const cartBox1 = document.getElementById('cartBox1');
   const cartBox2 = document.getElementById('cartBox2');
-
   const name1 = document.getElementById('name1');
   const name2 = document.getElementById('name2');
   const name3 = document.getElementById('name3');
   const name4 = document.getElementById('name4');
+  if (!cartBox1 || !name1) return;
 
   // Не перезаписываем поля имён, пока пользователь их редактирует
   // (защита от потери введённых данных при фоновой синхронизации).
@@ -1862,13 +1921,15 @@ async function handleFormSubmit(e) {
     return;
   }
 
-  const name1Val = document.getElementById('name1').value.trim();
-  const name2Val = document.getElementById('name2').value.trim();
-  const name3Val = document.getElementById('name3').value.trim();
-  const name4Val = document.getElementById('name4').value.trim();
+  const name1El = document.getElementById('name1');
+  if (!name1El) return;
+  const name1Val = name1El.value.trim();
+  const name2Val = (document.getElementById('name2') || {}).value || '';
+  const name3Val = (document.getElementById('name3') || {}).value || '';
+  const name4Val = (document.getElementById('name4') || {}).value || '';
 
-  const isCart1Enabled = !document.getElementById('name1').disabled;
-  const isCart2Enabled = !document.getElementById('name3').disabled;
+  const isCart1Enabled = !name1El.disabled;
+  const isCart2Enabled = !(document.getElementById('name3') || {}).disabled;
 
   if (isCart1Enabled && (!name1Val || !name2Val)) {
     showToast(S('fillCart1'), "error");
@@ -2180,7 +2241,14 @@ async function verifyBookingSaved(clientRecords, providedServerBookings) {
 }
 
 async function deleteBooking(location, date, time, cartNumber) {
-  if (!confirm(S('confirmDelete'))) {
+  const todayObj = new Date();
+  const todayStr = `${todayObj.getFullYear()}-${String(todayObj.getMonth() + 1).padStart(2, '0')}-${String(todayObj.getDate()).padStart(2, '0')}`;
+  if (date < todayStr) {
+    showToast("Нельзя удалять записи за прошлые дни", "error");
+    return;
+  }
+
+  if (!(await SyncCore.confirmDelete(S('confirmDelete')))) {
     return;
   }
 
@@ -2477,6 +2545,7 @@ function renderScheduleBoard() {
   function normLang(g) {
     g = (g || "").toString().trim().toLowerCase();
     if (g === "ru" || g === "ua" || g === "de") return g;
+    if (g === "uk") return "ua";
     if (g === "р" || g === "у" || g === "н") return { "р": "ru", "у": "ua", "н": "de" }[g];
     return "";
   }
@@ -2529,25 +2598,31 @@ function renderScheduleBoard() {
     }
     const s = slotMap[key];
     const cNum = parseInt(b.cartNumber, 10);
+    const bLang = normLang(b.cart1Lang || b.cart2Lang || b.language || b.group);
+
     if (cNum === 1) {
-      if (b.cart1Lang) s.cart1Lang = normLang(b.cart1Lang);
+      if (bLang) s.cart1Lang = bLang;
       if (b.name1) s.name1 = b.name1;
       if (b.name2) s.name2 = b.name2;
+      if (!s.name1 && b.names && b.names[0]) s.name1 = b.names[0];
+      if (!s.name2 && b.names && b.names[1]) s.name2 = b.names[1];
       s.cart1ActualTime = b.time;
     } else if (cNum === 2) {
-      if (b.cart2Lang) s.cart2Lang = normLang(b.cart2Lang);
+      if (bLang) s.cart2Lang = bLang;
       if (b.name3) s.name3 = b.name3;
       if (b.name4) s.name4 = b.name4;
+      if (!s.name3 && b.names && b.names[0]) s.name3 = b.names[0];
+      if (!s.name4 && b.names && b.names[1]) s.name4 = b.names[1];
       s.cart2ActualTime = b.time;
     } else {
-      if (b.cart1Lang) {
-        s.cart1Lang = normLang(b.cart1Lang);
+      if (normLang(b.cart1Lang) || bLang) {
+        s.cart1Lang = normLang(b.cart1Lang) || bLang;
         s.name1 = b.name1 || (b.names && b.names[0]) || "";
         s.name2 = b.name2 || (b.names && b.names[1]) || "";
         s.cart1ActualTime = b.time;
       }
-      if (b.cart2Lang) {
-        s.cart2Lang = normLang(b.cart2Lang);
+      if (normLang(b.cart2Lang) || bLang) {
+        s.cart2Lang = normLang(b.cart2Lang) || bLang;
         s.name3 = b.name3 || (b.names && b.names[0]) || "";
         s.name4 = b.name4 || (b.names && b.names[1]) || "";
         s.cart2ActualTime = b.time;
@@ -2557,19 +2632,30 @@ function renderScheduleBoard() {
 
   const LANG_BADGE = { ru: "RU", ua: "UA", de: "DE" };
   const LANG_LABEL = {
-    ru: { RU: "Русская тележка", UA: "Украинская тележка", DE: "Немецкая тележка" },
-    uk: { RU: "Російська тележка", UA: "Українська тележка", DE: "Німецька тележка" },
-    de: { RU: "Russische Trolley", UA: "Ukrainische Trolley", DE: "Deutsche Trolley" }
+    ru: { ru: "Русская", ua: "Украинская", de: "Немецкая" },
+    uk: { ru: "Російська", ua: "Українська", de: "Німецька" },
+    de: { ru: "Russisch", ua: "Ukrainisch", de: "Deutsch" }
   };
-  const langLabel = LANG_LABEL[getLang()] || LANG_LABEL.ru;
+  const langLabelMap = LANG_LABEL[getLang()] || LANG_LABEL.ru;
+
+  const todayObj = new Date();
+  const todayStr = `${todayObj.getFullYear()}-${String(todayObj.getMonth() + 1).padStart(2, '0')}-${String(todayObj.getDate()).padStart(2, '0')}`;
+  const isPastDate = selectedDateISO < todayStr;
+
+  const btnTopAddLocation = document.getElementById('btnTopAddLocation');
+  if (btnTopAddLocation) {
+    btnTopAddLocation.style.display = isPastDate ? 'none' : 'flex';
+  }
 
   function cartCardHTML(cartNum, lang, n1, n2, locName, time, hasNames, actualTime) {
-    const cls = lang || "none";
+    const cls = (lang || "").toLowerCase() || "none";
     const icon = (window.TrolleyUI) ? window.TrolleyUI.getMiniSVG() : '';
-    const badge = lang ? LANG_BADGE[lang] : "";
-    
+    const badgeText = (lang && LANG_BADGE[cls]) ? LANG_BADGE[cls] : "";
+    const badgeHTML = badgeText ? `<span class="trolley-lang-badge lang-badge-${cls}">${badgeText}</span>` : "";
+
     const timeDisplay = (actualTime && actualTime !== time) ? ` (${actualTime})` : "";
-    const title = lang ? `${langLabel[lang.toUpperCase()]}${timeDisplay}` : S('free');
+    const langName = langLabelMap[cls] ? `${langLabelMap[cls]} ` : "";
+    const title = lang ? `${langName}${S('cartLabel', 'тележка')}${timeDisplay}` : `${S('cartLabel', 'Тележка')} №${cartNum}`;
 
     const isJustAdded = justAddedSlot &&
                         justAddedSlot.location === locName &&
@@ -2577,20 +2663,40 @@ function renderScheduleBoard() {
                         justAddedSlot.time === time &&
                         justAddedSlot.cartNum === cartNum;
     const pulseClass = isJustAdded ? " slot-just-added" : "";
+    const pastClass = isPastDate ? " past-readonly-slot" : "";
 
     if (hasNames) {
+      const deleteBtn = isPastDate
+        ? `<span class="readonly-badge" style="font-size:0.65rem; color:var(--text-muted); font-weight:600; padding:1px 5px; border:1px solid var(--border); border-radius:4px;">Read-Only</span>`
+        : `<button type="button" class="btn-delete-booking" onclick="deleteBooking('${locName.replace(/'/g, "\\'")}', '${selectedDateISO}', '${(actualTime || time).replace(/'/g, "\\'")}', ${cartNum})" title="${S('deleteBooking')}" aria-label="${S('deleteBooking')}">🗑️</button>`;
+
       return `
-        <div class="board-cart-info has-lang-${cls}${pulseClass}">
+        <div class="board-cart-info has-lang-${cls}${pulseClass}${pastClass}">
           <div class="cart-info-header">
             <span class="board-cart-title">
               <span class="day-trolley-icon" data-group="${cls}" aria-hidden="true">${icon}</span>
-              📦 ${title}
+              📦 ${title} ${badgeHTML}
             </span>
-            <button type="button" class="btn-delete-booking" onclick="deleteBooking('${locName.replace(/'/g, "\\'")}', '${selectedDateISO}', '${(actualTime || time).replace(/'/g, "\\'")}', ${cartNum})" title="${S('deleteBooking')}" aria-label="${S('deleteBooking')}">🗑️</button>
+            ${deleteBtn}
           </div>
           <span class="board-names" title="${n1}, ${n2}">${n1}${n2 ? ' • ' + n2 : ''}</span>
         </div>`;
     }
+
+    if (isPastDate) {
+      return `
+        <div class="board-cart-info empty has-lang-${cls} past-readonly-slot" 
+             style="opacity: 0.55; cursor: not-allowed;"
+             tabindex="-1" 
+             aria-label="${S('cartLabel')} №${cartNum}: ${S('free')} (${selectedDateISO})">
+          <span class="board-cart-title">
+            <span class="day-trolley-icon" data-group="${cls}" aria-hidden="true">${icon}</span>
+            📦 ${S('cartLabel')} №${cartNum}
+          </span>
+          <span class="board-names" style="color: var(--text-muted);">${S('free')}</span>
+        </div>`;
+    }
+
     return `
       <div class="board-cart-info empty has-lang-${cls}" 
            tabindex="0" 
@@ -2615,12 +2721,15 @@ function renderScheduleBoard() {
 
     const titleDiv = document.createElement('div');
     titleDiv.className = 'board-location-title';
+    const addTimeBtnHTML = isPastDate ? "" : `
+      <button type="button" class="btn-show-map" style="padding: 6px 10px; font-size: 0.75rem; font-weight: bold; background-color: var(--primary-container); color: var(--primary);" onclick="addCustomTimeSlotPrompt('${locName.replace(/'/g, "\\'")}')">
+        ➕ ${S('addTimeSlotBtn', '+ Время')}
+      </button>
+    `;
     titleDiv.innerHTML = `
       <span>${locName}</span>
       <div style="display: flex; gap: 6px; align-items: center;">
-        <button type="button" class="btn-show-map" style="padding: 6px 10px; font-size: 0.75rem; font-weight: bold; background-color: var(--primary-container); color: var(--primary);" onclick="addCustomTimeSlotPrompt('${locName.replace(/'/g, "\\'")}')">
-          ➕ ${S('addTimeSlotBtn', '+ Время')}
-        </button>
+        ${addTimeBtnHTML}
         <button type="button" class="btn-show-map" style="padding: 6px 10px; font-size: 0.75rem;" onclick="showMapForLocationName('${locName.replace(/'/g, "\\'")}')">
           🗺 ${S('onMap')}
         </button>
@@ -2777,15 +2886,12 @@ function formatDateReadable(isoString) {
 }
 
 function openQuickBookingModal(locName, dateISO, timeSlot, cartNum) {
-  try {
-    if (navigator.vibrate) {
-      navigator.vibrate(15);
-    }
-  } catch (err) {
-    console.warn("Haptic feedback error:", err);
+  const todayObj = new Date();
+  const todayStr = `${todayObj.getFullYear()}-${String(todayObj.getMonth() + 1).padStart(2, '0')}-${String(todayObj.getDate()).padStart(2, '0')}`;
+  if (dateISO < todayStr) {
+    showToast(getLang() === 'uk' ? 'Не можна створювати записи на минулі дні' : (getLang() === 'de' ? 'Buchungen für vergangene Tage sind nicht möglich' : 'Нельзя создавать записи на прошедшие дни'), "error");
+    return;
   }
-
-  previousActiveElement = document.activeElement;
 
   const modal = document.getElementById('quickBookingModal');
   if (!modal) return;
@@ -2795,40 +2901,60 @@ function openQuickBookingModal(locName, dateISO, timeSlot, cartNum) {
   modal.dataset.time = timeSlot;
   modal.dataset.cartNum = cartNum;
 
-  document.getElementById('qbModalTitle').textContent = S('quickBookTitle');
-  document.getElementById('qbDateLabel').textContent = S('quickBookDate');
-  document.getElementById('qbTimeLabel').textContent = S('quickBookTime');
-  document.getElementById('qbLocationLabel').textContent = S('quickBookPlace');
-  document.getElementById('qbCartLabel').textContent = S('quickBookCart');
-  document.getElementById('qbLangLabel').textContent = S('quickBookLang');
-  document.getElementById('qbNamesLabel').textContent = S('quickBookNames');
-  document.getElementById('qbBtnText').textContent = S('quickBookSave');
-
   document.getElementById('qbDate').value = formatDateReadable(dateISO);
-  document.getElementById('qbTime').value = timeSlot;
   document.getElementById('qbLocation').value = locName;
-  document.getElementById('qbCart').value = `${S('cartLabel')} №${cartNum}`;
+  document.getElementById('qbTime').value = timeSlot;
 
-  let defaultName1 = "";
-  let defaultName2 = "";
-  if (cartNum === 1) {
-    defaultName1 = localStorage.getItem('pwaName1') || localStorage.getItem('pwaName3') || '';
-    defaultName2 = localStorage.getItem('pwaName2') || localStorage.getItem('pwaName4') || '';
-  } else {
-    defaultName1 = localStorage.getItem('pwaName3') || localStorage.getItem('pwaName1') || '';
-    defaultName2 = localStorage.getItem('pwaName4') || localStorage.getItem('pwaName2') || '';
-  }
+  const qbCartInput = document.getElementById('qbCart');
+  if (qbCartInput) qbCartInput.value = `${S('cartLabel')} №${cartNum}`;
+
+  // Находим существующую бронь на этот слот времени
+  const booking = getBookings().find(b =>
+    b.date === dateISO &&
+    b.location === locName &&
+    b.time === timeSlot
+  );
 
   const name1Input = document.getElementById('qbName1');
   const name2Input = document.getElementById('qbName2');
 
-  name1Input.value = defaultName1;
-  name2Input.value = defaultName2;
-
   name1Input.placeholder = getLang() === 'uk' ? 'Вісник 1 (ПІБ)' : (getLang() === 'de' ? 'Verkündiger 1 (Name)' : 'Возвещатель 1 (ФИО)');
   name2Input.placeholder = getLang() === 'uk' ? 'Вісник 2 (ПІБ)' : (getLang() === 'de' ? 'Verkündiger 2 (Name)' : 'Возвещатель 2 (ФИО)');
 
-  selectedQBLang = getGroup().toLowerCase();
+  const activeLang = getLang() === 'uk' ? 'ua' : getLang();
+  let prefillLang = activeLang;
+  let isOccupied = false;
+
+  if (booking) {
+    if (cartNum === 1 && (booking.name1 || booking.name2)) {
+      name1Input.value = booking.name1 || "";
+      name2Input.value = booking.name2 || "";
+      prefillLang = (booking.cart1Lang || activeLang).toLowerCase();
+      isOccupied = true;
+    } else if (cartNum === 2 && (booking.name3 || booking.name4)) {
+      name1Input.value = booking.name3 || "";
+      name2Input.value = booking.name4 || "";
+      prefillLang = (booking.cart2Lang || activeLang).toLowerCase();
+      isOccupied = true;
+    }
+  }
+
+  if (isOccupied) {
+    name1Input.disabled = true;
+    name2Input.disabled = true;
+  } else {
+    name1Input.disabled = false;
+    name2Input.disabled = false;
+    if (cartNum === 1) {
+      name1Input.value = localStorage.getItem('pwaName1') || "";
+      name2Input.value = localStorage.getItem('pwaName2') || "";
+    } else {
+      name1Input.value = localStorage.getItem('pwaName3') || "";
+      name2Input.value = localStorage.getItem('pwaName4') || "";
+    }
+  }
+
+  selectedQBLang = prefillLang;
   const labels = getTrolleyLabels();
   const qbLangPicker = document.getElementById("qbLangPicker");
   if (qbLangPicker && window.TrolleyUI) {
@@ -2836,14 +2962,17 @@ function openQuickBookingModal(locName, dateISO, timeSlot, cartNum) {
     qbLangPicker.appendChild(window.TrolleyUI.createGroupPicker(labels, selectedQBLang, function (g) {
       selectedQBLang = g;
     }));
+    qbLangPicker.style.pointerEvents = isOccupied ? "none" : "auto";
   }
 
   modal.style.display = 'flex';
   document.body.style.overflow = 'hidden';
 
   setTimeout(() => {
-    name1Input.focus();
-  }, 50);
+    if (!isOccupied && name1Input) {
+      name1Input.focus();
+    }
+  }, 100);
 }
 
 function closeQuickBookingModal() {
@@ -2953,6 +3082,13 @@ async function submitQuickBooking(e) {
   const timeSlot = document.getElementById('qbTime').value.trim();
   const cartNum = parseInt(modal.dataset.cartNum, 10);
 
+  const todayObj = new Date();
+  const todayStr = `${todayObj.getFullYear()}-${String(todayObj.getMonth() + 1).padStart(2, '0')}-${String(todayObj.getDate()).padStart(2, '0')}`;
+  if (dateISO < todayStr) {
+    showToast(getLang() === 'uk' ? 'Не можна створювати записи на минулі дні' : (getLang() === 'de' ? 'Buchungen für vergangene Tage sind nicht möglich' : 'Нельзя создавать записи на прошедшие дни'), "error");
+    return;
+  }
+
   if (!locName || !dateISO || !timeSlot || !cartNum) {
     showToast(S('selectPlaceTime'), "error");
     return;
@@ -2971,6 +3107,7 @@ async function submitQuickBooking(e) {
     return;
   }
 
+  // Сохраняем введенные имена в localStorage
   if (cartNum === 1) {
     localStorage.setItem('pwaName1', name1);
     localStorage.setItem('pwaName2', name2);
@@ -2979,10 +3116,15 @@ async function submitQuickBooking(e) {
     localStorage.setItem('pwaName4', name2);
   }
 
-  document.getElementById('name1').value = localStorage.getItem('pwaName1') || '';
-  document.getElementById('name2').value = localStorage.getItem('pwaName2') || '';
-  document.getElementById('name3').value = localStorage.getItem('pwaName3') || '';
-  document.getElementById('name4').value = localStorage.getItem('pwaName4') || '';
+  // Обновляем инпуты в основном приложении (если они отображаются на вкладке "Запись" — легаси)
+  const n1 = document.getElementById('name1');
+  const n2 = document.getElementById('name2');
+  const n3 = document.getElementById('name3');
+  const n4 = document.getElementById('name4');
+  if (n1) n1.value = localStorage.getItem('pwaName1') || '';
+  if (n2) n2.value = localStorage.getItem('pwaName2') || '';
+  if (n3) n3.value = localStorage.getItem('pwaName3') || '';
+  if (n4) n4.value = localStorage.getItem('pwaName4') || '';
 
   const btn = document.getElementById('qbSubmitBtn');
   const spinner = document.getElementById('qbBtnSpinner');
@@ -2992,12 +3134,15 @@ async function submitQuickBooking(e) {
   if (spinner) spinner.style.display = 'inline-block';
   if (btnText) btnText.textContent = S('btnSaving');
 
+  const langUpper = (selectedQBLang || "RU").toUpperCase();
   const record = {
     date: dateISO,
     time: timeSlot,
     location: locName,
     cartNumber: cartNum,
-    language: selectedQBLang,
+    language: langUpper,
+    cart1Lang: cartNum === 1 ? langUpper : "",
+    cart2Lang: cartNum === 2 ? langUpper : "",
     names: [name1, name2]
   };
 
@@ -3089,19 +3234,49 @@ async function submitQuickBooking(e) {
         justAddedSlot = null;
         renderScheduleBoard();
       }, 1500);
-
-      SyncCore.refreshSilently();
     }, 1500);
 
   } catch (err) {
-    console.error(err);
-    const isConflict = err && err.message && err.message !== "SERVER_ERROR";
-    showToast(isConflict ? err.message : S('networkSendError'), "error");
+    console.error('Network or JS error during quick booking:', err);
+    showToast(S('networkSendError'), "error");
     justAddedSlot = null;
     if (btn) btn.disabled = false;
     if (spinner) spinner.style.display = 'none';
     if (btnText) btnText.textContent = S('quickBookSave');
   }
+}
+
+function initInfoTips() {
+  const tips = (I18N[getLang()] && I18N[getLang()].infoTips) || {};
+  if (!tips || !window.SyncCore || !SyncCore.createInfoTip) return;
+
+  // Вставляем подсказку КАК СОСЕДА метки (не внутрь), чтобы она не стиралась,
+  // когда openQuickBookingModal обновляет textContent меток по id.
+  function addSibling(sel, key) {
+    const el = document.querySelector(sel);
+    if (el && tips[key]) {
+      el.parentNode.insertBefore(SyncCore.createInfoTip(tips[key]), el.nextSibling);
+    }
+  }
+
+  addSibling('#qbDateLabel', 'qbDate');
+  addSibling('#qbTimeLabel', 'qbTime');
+  addSibling('#qbLocationLabel', 'qbLocation');
+  addSibling('#qbCartLabel', 'qbCart');
+  addSibling('#qbLangLabel', 'qbLang');
+  addSibling('#qbNamesLabel', 'qbNames');
+
+  // Язык тележки в основной форме «Запись» (по одной подсказке на каждый стенд)
+  const langLabels = document.querySelectorAll('.cart-lang-label');
+  for (let i = 0; i < langLabels.length; i++) {
+    if (tips.mainCartLang) langLabels[i].parentNode.insertBefore(SyncCore.createInfoTip(tips.mainCartLang), langLabels[i].nextSibling);
+  }
+}
+
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', initInfoTips);
+} else {
+  initInfoTips();
 }
 
 // ----------------------------------------------------------------------------
