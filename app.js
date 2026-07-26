@@ -666,13 +666,31 @@ window.addEventListener('beforeinstallprompt', (e) => {
   deferredPrompt = e;
   const installBtn = document.getElementById('pwaInstallBtn');
   if (installBtn) installBtn.style.display = 'inline-block';
+  // Show header install button for Android/Chrome
+  const headerInstallBtn = document.getElementById('btnHeaderInstall');
+  if (headerInstallBtn) headerInstallBtn.style.display = 'inline-flex';
 });
+
+// On iOS — always show header install button after load
+window.addEventListener('DOMContentLoaded', () => {
+  const ua = navigator.userAgent.toLowerCase();
+  const isIOS = /ipad|iphone|ipod/.test(ua) && !window.MSStream;
+  const isStandalone = window.navigator.standalone || window.matchMedia('(display-mode: standalone)').matches;
+  if (isIOS && !isStandalone) {
+    const headerInstallBtn = document.getElementById('btnHeaderInstall');
+    if (headerInstallBtn) headerInstallBtn.style.display = 'inline-flex';
+  }
+}, { once: true });
 
 function checkPWAInstallation() {
   const isStandalone = window.navigator.standalone || window.matchMedia('(display-mode: standalone)').matches;
-  const isDismissed = localStorage.getItem('pwaInstallDismissed') === 'true';
+  // Dismiss expires after 7 days so users can re-install
+  const dismissedAt = parseInt(localStorage.getItem('pwaInstallDismissedAt') || '0', 10);
+  const isDismissed = dismissedAt > 0 && (Date.now() - dismissedAt < 7 * 24 * 60 * 60 * 1000);
+  // Also check legacy flag
+  const isDismissedLegacy = !dismissedAt && localStorage.getItem('pwaInstallDismissed') === 'true';
 
-  if (isStandalone || isDismissed) return;
+  if (isStandalone || isDismissed || isDismissedLegacy) return;
 
   const banner = document.getElementById('pwaInstallBanner');
   const bodyText = document.getElementById('pwaBodyText');
@@ -707,10 +725,19 @@ function dismissPWAInstall() {
   const banner = document.getElementById('pwaInstallBanner');
   if (!banner) return;
   banner.classList.remove('show');
-  localStorage.setItem('pwaInstallDismissed', 'true');
+  // Save timestamp so banner can reappear after 7 days
+  localStorage.setItem('pwaInstallDismissedAt', String(Date.now()));
   setTimeout(() => {
     banner.style.display = 'none';
   }, 400);
+}
+
+// Programmatically show the PWA install banner (called from header button)
+function showPWAInstallBanner() {
+  // Clear dismissal so banner can show
+  localStorage.removeItem('pwaInstallDismissedAt');
+  localStorage.removeItem('pwaInstallDismissed');
+  checkPWAInstallation();
 }
 
 // ----------------------------------------------------------------------------
