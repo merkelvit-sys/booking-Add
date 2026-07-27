@@ -1,0 +1,1764 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>Trolleydienst — Marburg</title>
+    
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
+    
+    <link rel="manifest" href="manifest_de.json">
+    <link rel="apple-touch-icon" href="icon-192.png">
+    <link rel="icon" type="image/svg+xml" href="icon.svg">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <meta name="apple-mobile-web-app-title" content="Dienst DE">
+    <meta name="theme-color" content="#2563eb">
+    
+    <style>
+        :root {
+            --primary: hsl(217, 89%, 61%);
+            --primary-hover: hsl(217, 89%, 51%);
+            --primary-container: hsl(217, 89%, 95%);
+            --success: hsl(142, 71%, 45%);
+            --success-bg: hsl(142, 70%, 95%);
+            --error: hsl(0, 72%, 51%);
+            --error-bg: hsl(0, 70%, 96%);
+            --bg: hsl(210, 40%, 98%);
+            --card-bg: hsl(0, 0%, 100%);
+            --border: hsl(210, 14%, 89%);
+            --border-hover: hsl(210, 14%, 80%);
+            --text: hsl(210, 24%, 16%);
+            --text-muted: hsl(210, 10%, 45%);
+            --radius-sm: 8px;
+            --radius-md: 12px;
+            --radius-lg: 16px;
+            --font-sans: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
+            --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.08), 0 4px 6px -2px rgba(0, 0, 0, 0.04);
+            --map-filter: none;
+        }
+
+        @media (prefers-color-scheme: dark) {
+            :root {
+                --bg: hsl(210, 20%, 10%);
+                --card-bg: hsl(210, 20%, 14%);
+                --border: hsl(210, 14%, 22%);
+                --border-hover: hsl(210, 14%, 32%);
+                --text: hsl(210, 20%, 90%);
+                --text-muted: hsl(210, 10%, 65%);
+                --primary-container: hsl(217, 89%, 20%);
+                --success-bg: hsl(142, 70%, 15%);
+                --error-bg: hsl(0, 70%, 15%);
+                --success: hsl(142, 71%, 55%);
+                --error: hsl(0, 72%, 60%);
+                --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.5);
+                --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.6);
+                --map-filter: invert(100%) hue-rotate(180deg) brightness(95%) contrast(90%);
+            }
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        html {
+            height: auto;
+            min-height: 100%;
+            overflow-y: auto;
+        }
+
+        body {
+            font-family: var(--font-sans);
+            background-color: var(--bg);
+            color: var(--text);
+            line-height: 1.5;
+            padding: clamp(8px, 3vw, 16px);
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
+            min-height: 100vh;
+            height: auto;
+            overflow-x: hidden;
+            transition: background-color 0.3s ease, color 0.3s ease;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 480px;
+            min-width: 0;
+            background-color: var(--card-bg);
+            border-radius: var(--radius-lg);
+            padding: clamp(12px, 4vw, 20px);
+            box-shadow: var(--shadow-lg);
+            border: 1px solid var(--border);
+            transition: background-color 0.3s ease, border-color 0.3s ease;
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 16px;
+        }
+
+        .lang-switcher-container {
+            display: flex;
+            justify-content: center;
+            gap: 6px;
+            margin-bottom: 12px;
+        }
+
+        .lang-btn {
+            padding: 4px 10px;
+            font-size: 0.75rem;
+            font-weight: 700;
+            border: 1px solid var(--border);
+            border-radius: var(--radius-sm);
+            background: transparent;
+            color: var(--text-muted);
+            cursor: pointer;
+            transition: all 0.2s;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            text-decoration: none;
+        }
+
+        .lang-btn.active {
+            background: var(--primary-container);
+            color: var(--primary);
+            border-color: var(--primary);
+        }
+
+        .lang-btn.share-btn {
+            background: var(--primary-container);
+            color: var(--primary);
+            border-color: var(--primary);
+            margin-left: 8px;
+            gap: 4px;
+        }
+
+        .lang-btn.share-btn:hover {
+            background: var(--primary);
+            color: white;
+        }
+
+        .logo-container {
+            display: flex;
+            justify-content: center;
+            margin-bottom: 8px;
+            cursor: pointer;
+            user-select: none;
+            transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1), filter 0.2s ease;
+        }
+
+        .logo-container:hover {
+            transform: scale(1.08);
+            filter: drop-shadow(0 4px 10px rgba(37, 99, 235, 0.25));
+        }
+
+        .logo-container:active {
+            transform: scale(0.95);
+        }
+
+        .logo-icon {
+            width: 44px;
+            height: 44px;
+            fill: none;
+            stroke: var(--primary);
+            stroke-width: 1.5;
+            stroke-linecap: round;
+            stroke-linejoin: round;
+        }
+
+        h1 {
+            font-size: 1.35rem;
+            font-weight: 700;
+            letter-spacing: -0.025em;
+            margin-bottom: 2px;
+        }
+
+        .subtitle {
+            font-size: 0.85rem;
+            color: var(--text-muted);
+        }
+
+        .tabs {
+            display: flex;
+            background-color: rgba(120, 120, 120, 0.08);
+            padding: 4px;
+            border-radius: var(--radius-md);
+            margin-bottom: 16px;
+            gap: 4px;
+        }
+
+        .tab-btn {
+            flex: 1;
+            padding: 8px;
+            border: none;
+            background-color: transparent;
+            color: var(--text-muted);
+            font-weight: 600;
+            font-size: 0.85rem;
+            border-radius: var(--radius-sm);
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+        }
+
+        .tab-btn.active {
+            background-color: var(--card-bg);
+            color: var(--primary);
+            box-shadow: var(--shadow);
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+            animation: fadeIn 0.2s ease-out;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(4px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .section-title {
+            font-size: 0.8rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: var(--text-muted);
+            margin-bottom: 8px;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .week-switcher {
+            display: flex;
+            background-color: rgba(120, 120, 120, 0.08);
+            padding: 2px;
+            border-radius: var(--radius-sm);
+            margin-bottom: 8px;
+            gap: 2px;
+        }
+
+        .week-btn {
+            flex: 1;
+            padding: 6px;
+            border: none;
+            background-color: transparent;
+            color: var(--text-muted);
+            font-weight: 600;
+            font-size: 0.75rem;
+            border-radius: calc(var(--radius-sm) - 2px);
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .week-btn.active {
+            background-color: var(--card-bg);
+            color: var(--primary);
+            box-shadow: var(--shadow);
+        }
+
+        .date-scroller {
+            display: flex;
+            gap: 4px;
+            margin-bottom: 16px;
+            width: 100%;
+        }
+
+        .date-card {
+            flex: 1;
+            min-width: 0;
+            background-color: var(--card-bg);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-sm);
+            padding: 6px 2px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            user-select: none;
+        }
+
+        .date-card .day-name {
+            font-size: 0.65rem;
+            text-transform: uppercase;
+            color: var(--text-muted);
+            display: block;
+            margin-bottom: 2px;
+        }
+
+        .date-card .day-num {
+            font-size: 0.9rem;
+            font-weight: 700;
+            display: block;
+        }
+
+        .date-card.active {
+            border-color: var(--primary);
+            background-color: var(--primary-container);
+            color: var(--primary);
+        }
+
+        .date-card.active .day-name {
+            color: var(--primary);
+        }
+
+        .date-card.past-day {
+            opacity: 0.5;
+        }
+
+        .form-section {
+            margin-bottom: 16px;
+        }
+
+        .location-grid {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 8px;
+        }
+
+        .location-card {
+            position: relative;
+            background-color: var(--card-bg);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-md);
+            padding: 10px 6px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+            user-select: none;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 44px;
+            min-width: 0;
+            padding-right: 28px;
+        }
+
+        .location-card input[type="radio"] {
+            position: absolute;
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+
+        .location-name {
+            font-size: 0.8rem;
+            font-weight: 600;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            width: 100%;
+            text-align: center;
+        }
+
+        .location-card:has(input[type="radio"]:checked) {
+            border-color: var(--primary);
+            background-color: var(--primary-container);
+            color: var(--primary);
+            transform: scale(0.98);
+        }
+
+        .btn-delete-location {
+            position: absolute;
+            right: 6px;
+            top: 50%;
+            transform: translateY(-50%);
+            background: none;
+            border: none;
+            color: var(--error);
+            font-size: 0.7rem;
+            cursor: pointer;
+            padding: 4px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 50%;
+            width: 18px;
+            height: 18px;
+            transition: background-color 0.2s, transform 0.2s;
+            z-index: 10;
+        }
+
+        .btn-delete-location:hover {
+            background-color: var(--error-bg);
+            transform: translateY(-50%) scale(1.1);
+        }
+
+        .btn-add-location {
+            background-color: transparent;
+            border: 1px dashed var(--primary);
+            border-radius: var(--radius-md);
+            color: var(--primary);
+            font-size: 0.8rem;
+            font-weight: 600;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 4px;
+            transition: all 0.2s ease;
+            min-height: 44px;
+            grid-column: span 2;
+        }
+
+        .btn-add-location:hover {
+            background-color: var(--primary-container);
+            border-style: solid;
+        }
+
+        .add-location-form {
+            display: none;
+            grid-column: span 2;
+            background-color: rgba(120, 120, 120, 0.08);
+            padding: 10px;
+            border-radius: var(--radius-md);
+            margin-top: 6px;
+            animation: slideDown 0.25s ease-out forwards;
+        }
+
+        @keyframes slideDown {
+            from { opacity: 0; transform: translateY(-8px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .add-location-form-inputs {
+            display: flex;
+            gap: 6px;
+            margin-bottom: 6px;
+        }
+
+        .add-location-input {
+            flex: 1;
+            padding: 6px 10px;
+            border: 1px solid var(--border);
+            border-radius: var(--radius-sm);
+            font-size: 0.85rem;
+            outline: none;
+            min-width: 0;
+            background-color: var(--card-bg);
+            color: var(--text);
+        }
+
+        .add-location-input:focus {
+            border-color: var(--primary);
+        }
+
+        .btn-add-confirm, .btn-add-cancel {
+            padding: 6px 10px;
+            border: none;
+            border-radius: var(--radius-sm);
+            font-size: 0.8rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+
+        .btn-add-confirm {
+            background-color: var(--primary);
+            color: white;
+        }
+
+        .btn-add-confirm:hover {
+            background-color: var(--primary-hover);
+        }
+
+        .btn-add-cancel {
+            background-color: rgba(120, 120, 120, 0.2);
+            color: var(--text);
+        }
+
+        .btn-navigation {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            background-color: var(--primary);
+            color: white !important;
+            text-decoration: none;
+            padding: 8px 12px;
+            border-radius: var(--radius-sm);
+            font-size: 0.75rem;
+            font-weight: 600;
+            width: 100%;
+            box-sizing: border-box;
+            margin-top: 8px;
+            transition: background-color 0.2s;
+        }
+
+        .btn-navigation:hover {
+            background-color: var(--primary-hover);
+        }
+
+        .time-grid {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 8px;
+        }
+
+        .time-card {
+            position: relative;
+            background-color: var(--card-bg);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-md);
+            padding: 12px 8px;
+            cursor: pointer;
+            transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+            user-select: none;
+            min-width: 0;
+        }
+
+        .time-card input[type="radio"] {
+            position: absolute;
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+
+        .time-label {
+            font-size: 0.85rem;
+            font-weight: 600;
+        }
+
+        .time-status {
+            font-size: 0.7rem;
+            color: var(--text-muted);
+            font-weight: 500;
+        }
+
+        @media (hover: hover) {
+            .location-card:hover, .time-card:hover:not(.disabled) {
+                border-color: var(--border-hover);
+                transform: translateY(-2px);
+                box-shadow: var(--shadow);
+            }
+        }
+
+        .time-card:has(input[type="radio"]:checked) {
+            border-color: var(--primary);
+            background-color: var(--primary-container);
+            color: var(--primary);
+        }
+
+        .time-card:has(input[type="radio"]:checked) .time-status {
+            color: var(--primary);
+        }
+
+        .time-card.disabled {
+            background-color: rgba(120, 120, 120, 0.08);
+            border-color: var(--border);
+            color: var(--text-muted);
+            cursor: not-allowed;
+            opacity: 0.6;
+        }
+
+        .time-card.shake {
+            animation: shake 0.4s ease;
+            border-color: var(--error) !important;
+        }
+
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            20%, 60% { transform: translateX(-4px); }
+            40%, 80% { transform: translateX(4px); }
+        }
+
+        .carts-container {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .cart-box {
+            background-color: rgba(120, 120, 120, 0.04);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-md);
+            padding: 12px;
+            position: relative;
+            transition: all 0.2s ease;
+        }
+
+        .cart-box.occupied-by-others {
+            background-color: rgba(120, 120, 120, 0.12);
+            opacity: 0.7;
+        }
+
+        .cart-header {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 0.75rem;
+            font-weight: 700;
+            color: var(--primary);
+            margin-bottom: 8px;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .cart-header-icon {
+            width: 16px;
+            height: 16px;
+            stroke: var(--primary);
+            stroke-width: 2;
+            fill: none;
+        }
+
+        .cart-lang-label {
+            font-size: 0.7rem;
+            font-weight: 600;
+            color: var(--text-muted);
+            margin-bottom: 6px;
+        }
+
+        .cart-lang-picker {
+            margin-bottom: 10px;
+        }
+
+        .trolley-group-picker {
+            display: flex;
+            gap: 6px;
+            width: 100%;
+        }
+
+        .trolley-card--compact {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 4px;
+            padding: 8px 4px 6px;
+            border: 2px solid var(--border);
+            border-radius: var(--radius-md);
+            background: var(--card-bg);
+            cursor: pointer;
+            user-select: none;
+            transition: border-color 0.18s ease, box-shadow 0.18s ease, transform 0.14s ease, background 0.18s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .trolley-card--compact:hover {
+            border-color: var(--border-hover);
+            transform: translateY(-1px);
+        }
+
+        .trolley-card--compact.active {
+            border-color: var(--primary);
+            background: var(--primary-container);
+            box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.16);
+        }
+
+        .trolley-card--compact.active::after {
+            content: '✓';
+            position: absolute;
+            top: 4px;
+            right: 6px;
+            font-size: 0.6rem;
+            font-weight: 800;
+            color: var(--primary);
+        }
+
+        .trolley-card--compact .trolley-mini-svg {
+            width: 20px;
+            height: 32px;
+        }
+
+        .trolley-card--compact .trolley-card-label {
+            font-size: 0.62rem;
+            font-weight: 700;
+            color: var(--text-muted);
+            text-align: center;
+            line-height: 1.1;
+        }
+
+        .trolley-card--compact.active .trolley-card-label {
+            color: var(--primary);
+        }
+
+        .trolley-card-badge {
+            position: absolute;
+            top: 4px;
+            left: 5px;
+            font-size: 0.52rem;
+            font-weight: 800;
+            letter-spacing: 0.03em;
+            padding: 1px 4px;
+            border-radius: 4px;
+            color: #fff;
+            line-height: 1.2;
+        }
+
+        .trolley-card--compact[data-group="ru"] .trolley-card-badge { background: #dc2626; }
+        .trolley-card--compact[data-group="ua"] .trolley-card-badge { background: #2563eb; }
+        .trolley-card--compact[data-group="de"] .trolley-card-badge { background: #16a34a; }
+        .trolley-card--compact[data-group="ru"] .trolley-poster { fill: #dc2626; }
+        .trolley-card--compact[data-group="ua"] .trolley-poster { fill: #2563eb; }
+        .trolley-card--compact[data-group="de"] .trolley-poster { fill: #16a34a; }
+
+        .input-group {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .input-field {
+            width: 100%;
+            padding: 10px 12px;
+            border: 1px solid var(--border);
+            border-radius: var(--radius-sm);
+            font-family: var(--font-sans);
+            font-size: 0.85rem;
+            background-color: var(--card-bg);
+            color: var(--text);
+            outline: none;
+            transition: all 0.2s ease;
+        }
+
+        .input-field:focus {
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px var(--primary-container);
+        }
+
+        .input-field:disabled {
+            background-color: rgba(120, 120, 120, 0.12);
+            color: var(--text-muted);
+            cursor: not-allowed;
+        }
+
+        .btn-submit {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 100%;
+            padding: 14px;
+            background-color: var(--primary);
+            color: white;
+            border: none;
+            border-radius: var(--radius-md);
+            font-family: var(--font-sans);
+            font-size: 0.95rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            position: relative;
+            overflow: hidden;
+            box-shadow: var(--shadow);
+            margin-top: 8px;
+        }
+
+        .btn-submit:hover:not(:disabled) {
+            background-color: var(--primary-hover);
+            transform: translateY(-1px);
+            box-shadow: var(--shadow-lg);
+        }
+
+        .btn-submit:disabled {
+            background-color: var(--border);
+            color: var(--text-muted);
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+
+        .spinner {
+            width: 18px;
+            height: 18px;
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            border-radius: 50%;
+            border-top-color: white;
+            animation: spin 0.8s linear infinite;
+            display: none;
+            margin-right: 6px;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .btn-submit.success {
+            background-color: var(--success) !important;
+            box-shadow: 0 4px 12px rgba(20, 108, 46, 0.3);
+        }
+
+        .schedule-board {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .board-card {
+            background-color: var(--card-bg);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-md);
+            padding: 12px;
+            box-shadow: var(--shadow);
+        }
+
+        .board-location-title {
+            font-size: 0.95rem;
+            font-weight: 700;
+            color: var(--primary);
+            margin-bottom: 8px;
+            border-bottom: 2px solid rgba(120, 120, 120, 0.08);
+            padding-bottom: 4px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .btn-show-map {
+            background-color: var(--primary-container);
+            border: none;
+            color: var(--primary);
+            padding: 4px 8px;
+            border-radius: var(--radius-sm);
+            font-size: 0.7rem;
+            font-weight: 600;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            transition: background-color 0.2s;
+        }
+
+        .btn-show-map:hover {
+            background-color: rgba(217, 227, 253, 0.8);
+        }
+
+        .board-slot {
+            display: flex;
+            flex-direction: column;
+            padding: 6px 0;
+            border-bottom: 1px dashed var(--border);
+        }
+
+        .board-slot:last-child {
+            border-bottom: none;
+            padding-bottom: 0;
+        }
+
+        .board-time-label {
+            font-size: 0.8rem;
+            font-weight: 700;
+            color: var(--text);
+            margin-bottom: 2px;
+        }
+
+        .board-carts {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 6px;
+        }
+
+        .board-cart-info {
+            background-color: rgba(120, 120, 120, 0.04);
+            border-radius: var(--radius-sm);
+            padding: 4px 6px;
+            font-size: 0.75rem;
+            min-width: 0;
+        }
+
+        .board-cart-info.empty {
+            background-color: var(--success-bg);
+            color: var(--success);
+            border: 1px solid rgba(20, 108, 46, 0.15);
+        }
+
+        .board-cart-title {
+            font-weight: 600;
+            margin-bottom: 1px;
+            display: block;
+        }
+
+        .cart-info-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 1px;
+        }
+
+        .btn-delete-booking {
+            background: none;
+            border: none;
+            color: var(--text-muted);
+            cursor: pointer;
+            padding: 0 4px;
+            font-size: 0.8rem;
+            line-height: 1;
+            border-radius: 4px;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .btn-delete-booking:hover {
+            color: #ef4444;
+            background-color: rgba(239, 68, 68, 0.1);
+        }
+
+        .board-names {
+            color: var(--text);
+            font-weight: 500;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            display: block;
+        }
+
+        .board-groups-container {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            margin-top: 4px;
+        }
+
+        .board-group-row {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+            padding: 6px 8px;
+            background-color: rgba(120, 120, 120, 0.02);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-sm);
+        }
+
+        .group-header {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            margin-bottom: 2px;
+        }
+
+        .group-badge {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.65rem;
+            font-weight: 800;
+            padding: 1px 5px;
+            border-radius: 4px;
+            text-transform: uppercase;
+        }
+
+        .group-badge.ru {
+            background-color: rgba(37, 99, 235, 0.1);
+            color: var(--primary);
+            border: 1px solid rgba(37, 99, 235, 0.2);
+        }
+
+        .group-badge.ua {
+            background-color: rgba(234, 179, 8, 0.1);
+            color: #a16207;
+            border: 1px solid rgba(234, 179, 8, 0.2);
+        }
+
+        .group-badge.de {
+            background-color: rgba(107, 114, 128, 0.1);
+            color: var(--text-muted);
+            border: 1px solid rgba(107, 114, 128, 0.2);
+        }
+
+        .refresh-row {
+            display: flex;
+            justify-content: flex-end;
+            margin-bottom: 8px;
+        }
+
+        .btn-refresh {
+            background: none;
+            border: none;
+            color: var(--primary);
+            font-size: 0.8rem;
+            font-weight: 600;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .toast-container {
+            margin-top: 12px;
+            display: none;
+            padding: 10px 14px;
+            border-radius: var(--radius-sm);
+            font-size: 0.85rem;
+            font-weight: 500;
+            animation: slideIn 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+            align-items: center;
+            gap: 6px;
+            position: relative;
+        }
+
+        .toast-container.success {
+            display: flex;
+            background-color: var(--success-bg);
+            color: var(--success);
+            border: 1px solid rgba(20, 108, 46, 0.2);
+        }
+
+        .toast-container.error {
+            display: flex;
+            background-color: var(--error-bg);
+            color: var(--error);
+            border: 1px solid rgba(179, 38, 30, 0.25);
+        }
+
+        @keyframes slideIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .modal-backdrop {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
+            z-index: 2000;
+            padding: clamp(8px, 3vw, 24px);
+            backdrop-filter: blur(2px);
+            overflow-y: auto;
+        }
+
+        .modal-content {
+            background-color: var(--card-bg);
+            border-radius: var(--radius-lg);
+            padding: 16px;
+            width: 100%;
+            max-width: 440px;
+            box-shadow: var(--shadow-lg);
+            animation: modalPop 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+            margin: auto 0;
+        }
+
+        @keyframes modalPop {
+            from { transform: scale(0.9) translateY(20px); opacity: 0; }
+            to { transform: scale(1) translateY(0); opacity: 1; }
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+
+        .modal-title {
+            font-size: 1rem;
+            font-weight: 700;
+        }
+
+        .btn-close-modal {
+            background: none;
+            border: none;
+            font-size: 1.15rem;
+            cursor: pointer;
+            color: var(--text-muted);
+            line-height: 1;
+        }
+
+        #mapContainer {
+            height: 280px;
+            width: 100%;
+            border-radius: var(--radius-md);
+            border: 1px solid var(--border);
+            z-index: 1;
+        }
+
+        .leaflet-tile-container img {
+            filter: var(--map-filter);
+        }
+
+        @media (max-height: 580px) {
+            #mapContainer {
+                height: 180px;
+            }
+        }
+
+        
+        /* ── Адаптивность для малых экранов ──────────────────────────────── */
+        @media (max-width: 420px) {
+            .container {
+                padding: clamp(8px, 3vw, 14px);
+                border-radius: var(--radius-md);
+            }
+            header h1 {
+                font-size: 1.1rem !important;
+            }
+            .subtitle {
+                font-size: 0.75rem !important;
+            }
+            .lang-switcher-container {
+                flex-wrap: wrap;
+                justify-content: center;
+                gap: 4px;
+            }
+            .lang-btn {
+                padding: 4px 8px !important;
+                font-size: 0.72rem !important;
+            }
+            .tab-btn {
+                font-size: 0.75rem;
+                padding: 6px 10px;
+            }
+            .section-title {
+                font-size: 0.85rem !important;
+            }
+            .board-slot {
+                gap: 6px;
+            }
+            .board-time-label {
+                font-size: 0.75rem !important;
+                min-width: 0 !important;
+            }
+            .cart-card {
+                min-width: 0 !important;
+                width: 100% !important;
+                font-size: 0.78rem;
+            }
+            .board-carts {
+                grid-template-columns: 1fr !important;
+                gap: 6px !important;
+            }
+            .week-day-cell {
+                min-width: 36px !important;
+                font-size: 0.7rem !important;
+            }
+            .week-day-cell .day-num {
+                font-size: 1rem !important;
+            }
+            .pwa-banner {
+                width: calc(100% - 16px);
+                bottom: 8px;
+                padding: 12px;
+            }
+        }
+
+        @media (max-width: 360px) {
+            .container {
+                padding: 8px;
+            }
+            .week-strip {
+                gap: 2px !important;
+            }
+            .week-day-cell {
+                min-width: 30px !important;
+            }
+        }
+
+        /* ── Safe area для iPhone с вырезом (notch) ──────────────────────── */
+        @supports (padding-top: env(safe-area-inset-top)) {
+            body {
+                padding-top: env(safe-area-inset-top);
+                padding-bottom: env(safe-area-inset-bottom);
+            }
+        }
+
+        /* PWA Banner Styles */
+        .pwa-banner {
+            position: fixed;
+            bottom: 16px;
+            left: 50%;
+            transform: translateX(-50%) translateY(100px);
+            width: calc(100% - 32px);
+            max-width: 440px;
+            background-color: var(--card-bg);
+            border: 1px solid var(--primary);
+            border-radius: var(--radius-lg);
+            padding: 16px;
+            box-shadow: var(--shadow-lg);
+            z-index: 9999;
+            display: none;
+            flex-direction: column;
+            gap: 12px;
+            transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.4s ease;
+            opacity: 0;
+        }
+
+        .pwa-banner.show {
+            display: flex;
+            transform: translateX(-50%) translateY(0);
+            opacity: 1;
+        }
+
+        .pwa-header {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .pwa-icon-wrapper {
+            background-color: var(--primary-container);
+            border-radius: var(--radius-md);
+            padding: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .pwa-icon {
+            width: 32px;
+            height: 32px;
+            fill: none;
+            stroke: var(--primary);
+            stroke-width: 1.8;
+        }
+
+        .pwa-title-box {
+            flex: 1;
+        }
+
+        .pwa-title {
+            font-size: 0.95rem;
+            font-weight: 700;
+        }
+
+        .pwa-subtitle {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+        }
+
+        .pwa-body {
+            font-size: 0.8rem;
+            line-height: 1.4;
+        }
+
+        .pwa-steps {
+            background-color: rgba(120, 120, 120, 0.05);
+            border-radius: var(--radius-sm);
+            padding: 8px 12px;
+            margin-top: 4px;
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .pwa-step {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .pwa-step-num {
+            background-color: var(--primary);
+            color: white;
+            border-radius: 50%;
+            width: 18px;
+            height: 18px;
+            font-size: 0.65rem;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .pwa-buttons {
+            display: flex;
+            gap: 8px;
+            justify-content: flex-end;
+            margin-top: 4px;
+        }
+
+        .pwa-btn-install {
+            background-color: var(--primary);
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: var(--radius-sm);
+            font-size: 0.8rem;
+            font-weight: 700;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+
+        .pwa-btn-install:hover {
+            background-color: var(--primary-hover);
+        }
+
+        .pwa-btn-close {
+            background-color: transparent;
+            border: 1px solid var(--border);
+            color: var(--text);
+            padding: 8px 16px;
+            border-radius: var(--radius-sm);
+            font-size: 0.8rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+
+        .pwa-btn-close:hover {
+            background-color: rgba(120, 120, 120, 0.08);
+        }
+
+        /* Info Helper Styles */
+        .btn-info-toggle {
+            background: none;
+            border: none;
+            color: var(--primary);
+            cursor: pointer;
+            padding: 4px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 50%;
+            width: 22px;
+            height: 22px;
+            transition: background-color 0.2s, color 0.2s;
+            margin-left: 6px;
+            vertical-align: middle;
+        }
+
+        .btn-info-toggle:hover {
+            background-color: var(--primary-container);
+        }
+
+        .btn-info-toggle svg {
+            width: 16px;
+            height: 16px;
+        }
+
+        .info-helper-box {
+            display: none;
+            background-color: var(--primary-container);
+            color: var(--primary);
+            border-left: 4px solid var(--primary);
+            border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+            padding: 8px 12px;
+            font-size: 0.75rem;
+            font-weight: 500;
+            margin-top: 6px;
+            margin-bottom: 10px;
+            animation: slideDown 0.2s ease-out forwards;
+            line-height: 1.4;
+            text-align: left;
+        }
+    </style>
+    <link rel="stylesheet" href="app-sync.css">
+</head>
+<body>
+
+    <div class="splash-screen" id="splashScreen">
+        <div class="splash-trolley-wrap">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 80 160" style="width:90px;height:180px;filter:drop-shadow(0 10px 28px rgba(22,163,74,0.25));" aria-label="Wird geladen...">
+              <style>
+                .sl-frame{fill:#2d3748}.sl-poster{fill:#16a34a}
+                .sl-pl{fill:rgba(255,255,255,.22)}.sl-pt{fill:rgba(255,255,255,.65)}
+                .sl-shelf{fill:#e2e8f0}
+                .sl-b1{fill:#3b82f6}.sl-b2{fill:#10b981}.sl-b3{fill:#ef4444}.sl-b4{fill:#f59e0b}
+                .sl-wo{fill:#1a202c;stroke:#4a5568;stroke-width:1}.sl-wi{fill:#718096}
+                .sl-ws{stroke:#718096;stroke-width:1;stroke-linecap:round}
+                @media(prefers-color-scheme:dark){
+                  .sl-frame{fill:#cbd5e0}.sl-shelf{fill:#4a5568}
+                  .sl-wo{fill:#e2e8f0;stroke:#a0aec0}.sl-wi{fill:#a0aec0}.sl-ws{stroke:#a0aec0}
+                }
+              </style>
+              <rect class="sl-frame" x="14" y="10" width="5" height="120" rx="2.5"/>
+              <rect class="sl-frame" x="61" y="10" width="5" height="120" rx="2.5"/>
+              <rect class="sl-frame" x="14" y="10" width="52" height="5" rx="2.5"/>
+              <rect class="sl-frame" x="14" y="55" width="52" height="4" rx="2"/>
+              <rect class="sl-frame" x="14" y="82" width="52" height="4" rx="2"/>
+              <rect class="sl-frame" x="14" y="109" width="52" height="4" rx="2"/>
+              <rect class="sl-frame" x="14" y="130" width="52" height="4" rx="2"/>
+              <rect class="sl-poster" x="18" y="14" width="44" height="38" rx="3"/>
+              <rect class="sl-pl" x="18" y="28" width="44" height="2" rx="1"/>
+              <rect class="sl-pt" x="22" y="33" width="36" height="3.5" rx="1.5"/>
+              <rect class="sl-pt" x="25" y="39" width="30" height="3" rx="1.5"/>
+              <rect class="sl-pt" x="28" y="45" width="24" height="2.5" rx="1.2"/>
+              <rect class="sl-shelf" x="18" y="56" width="44" height="22" rx="2"/>
+              <rect class="sl-b1" x="20" y="58" width="10" height="18" rx="1.5"/>
+              <rect class="sl-b2" x="32" y="59" width="8" height="17" rx="1.5"/>
+              <rect class="sl-b3" x="42" y="60" width="5" height="16" rx="1.2"/>
+              <rect class="sl-b4" x="49" y="59" width="7" height="17" rx="1.5"/>
+              <rect class="sl-b1" x="58" y="60" width="4" height="16" rx="1"/>
+              <rect class="sl-shelf" x="18" y="83" width="44" height="22" rx="2"/>
+              <rect class="sl-b2" x="20" y="85" width="9" height="17" rx="1.5"/>
+              <rect class="sl-b3" x="31" y="86" width="6" height="16" rx="1.2"/>
+              <rect class="sl-b4" x="39" y="85" width="9" height="17" rx="1.5"/>
+              <rect class="sl-b1" x="50" y="86" width="7" height="16" rx="1.2"/>
+              <rect class="sl-b3" x="59" y="86" width="3" height="15" rx="1"/>
+              <rect class="sl-shelf" x="18" y="110" width="44" height="17" rx="2"/>
+              <rect class="sl-b4" x="20" y="112" width="8" height="13" rx="1.5"/>
+              <rect class="sl-b1" x="30" y="113" width="6" height="12" rx="1.2"/>
+              <rect class="sl-b2" x="38" y="112" width="8" height="13" rx="1.5"/>
+              <rect class="sl-b3" x="48" y="113" width="5" height="12" rx="1.2"/>
+              <rect class="sl-b4" x="55" y="113" width="7" height="12" rx="1.5"/>
+              <circle class="sl-wo" cx="22" cy="142" r="10"/>
+              <circle class="sl-wi" cx="22" cy="142" r="5"/>
+              <line class="sl-ws" x1="22" y1="132" x2="22" y2="152"/>
+              <line class="sl-ws" x1="12" y1="142" x2="32" y2="142"/>
+              <line class="sl-ws" x1="15" y1="135" x2="29" y2="149"/>
+              <line class="sl-ws" x1="29" y1="135" x2="15" y2="149"/>
+              <circle class="sl-wo" cx="58" cy="142" r="10"/>
+              <circle class="sl-wi" cx="58" cy="142" r="5"/>
+              <line class="sl-ws" x1="58" y1="132" x2="58" y2="152"/>
+              <line class="sl-ws" x1="48" y1="142" x2="68" y2="142"/>
+              <line class="sl-ws" x1="51" y1="135" x2="65" y2="149"/>
+              <line class="sl-ws" x1="65" y1="135" x2="51" y2="149"/>
+              <rect class="sl-frame" x="38" y="130" width="4" height="18" rx="2"/>
+              <rect class="sl-frame" x="33" y="146" width="14" height="3.5" rx="1.75"/>
+            </svg>
+        </div>
+        <div class="splash-text" id="splashText">Plan wird synchronisiert…</div>
+    </div>
+
+    <div class="container" id="app">
+        <header>
+            <div class="logo-container" id="logoHome" onclick="switchTab('schedule')" style="cursor: pointer;" title="Zur Hauptseite (Zeitplan)">
+                <svg class="logo-icon" viewBox="0 0 24 24">
+                    <rect x="7" y="3" width="10" height="14" rx="1.5" />
+                    <line x1="12" y1="3" x2="12" y2="17" />
+                    <circle cx="6" cy="18" r="2" />
+                    <circle cx="18" cy="18" r="2" />
+                    <path d="M4 18h2M18 18h2" />
+                    <path d="M12 17v3h-3" />
+                </svg>
+            </div>
+            <div class="lang-switcher-container">
+                <button type="button" class="lang-btn" id="btnToggleFontSize" onclick="toggleFontSize()" title="Große Schrift (An/Aus)" style="margin-right: 6px; padding: 4px 8px; gap: 2px;">
+                    <span style="font-size: 0.85rem; font-weight: bold;">A<sup>+</sup></span>
+                </button>
+                <a href="index.html" class="lang-btn">RU</a>
+                <a href="index_ua.html" class="lang-btn">UA</a>
+                <a href="index_de.html" class="lang-btn active">DE</a>
+                <button type="button" class="lang-btn share-btn" id="btnHeaderInstall" onclick="showPWAInstallBanner()" title="App zum Startbildschirm hinzufügen" style="display:none;">
+                    <svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24" style="vertical-align:middle;"><path d="M12 16v-8m0 8l-3-3m3 3l3-3M5 20h14" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                    Installieren
+                </button>
+                <button type="button" class="lang-btn share-btn" onclick="shareApp()" title="Teilen">
+                    <svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24" style="vertical-align: middle;"><path d="M8.684 10.742l5.632-2.816m0 8.148l-5.632-2.816M21 12a3 3 0 11-6 0 3 3 0 016 0zm-12-6a3 3 0 11-6 0 3 3 0 016 0zm0 12a3 3 0 11-6 0 3 3 0 016 0z" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                    Teilen
+                </button>
+            </div>
+            <h1>Trolleydienst</h1>
+            <p class="subtitle">Stände in der Stadt Marburg, Deutschland</p>
+        </header>
+
+        <div class="tabs">
+            <button class="tab-btn active" id="btnTabSchedule" onclick="switchTab('schedule')">
+                <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                Zeitplan
+            </button>
+            <button class="tab-btn" id="btnTabYear" onclick="switchTab('year')">
+                <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2zM3 9h18" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                Jahr
+            </button>
+        </div>
+
+        <div class="form-section" id="dateSelectBlock">
+            <h2 class="section-title">
+                <span>
+                    Datum auswählen
+                    <button type="button" class="btn-info-toggle" onclick="toggleInfo('dateInfo')" title="Hilfe anzeigen">
+                        <svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z" fill="currentColor"/></svg>
+                    </button>
+                </span>
+                <button type="button" onclick="jumpToToday()" style="background:none; border:none; color:var(--primary); font-size:0.75rem; font-weight:700; cursor:pointer; padding: 4px 8px;">Heute</button>
+            </h2>
+            <div id="dateInfo" class="info-helper-box">
+                Wählen Sie im Umschalter eine Woche (Diese, Nächste oder Übernächste) und klicken Sie dann auf das gewünschte Datum in der Tagesleiste.
+            </div>
+            <div class="week-switcher">
+                <button type="button" class="week-btn" id="btnPrevWeek" onclick="switchWeek('prev')">Letzte Woche</button>
+                <button type="button" class="week-btn active" id="btnThisWeek" onclick="switchWeek('this')">Diese Woche</button>
+                <button type="button" class="week-btn" id="btnNextWeek" onclick="switchWeek('next')">Nächste Woche</button>
+                <button type="button" class="week-btn" id="btnWeekAfterNext" onclick="switchWeek('afterNext')">Übernächste Woche</button>
+            </div>
+            <div class="date-scroller" id="dateScroller">
+                <!-- Dates will be inserted by JS -->
+            </div>
+        </div>
+
+        <!-- TAB SCHEDULE -->
+        <div id="scheduleTabContent" class="tab-content active">
+            <div class="refresh-row" style="gap: 16px;">
+                <button type="button" class="btn-refresh" id="btnTopAddLocation" onclick="showAddLocationForm()">
+                    <span>+ Ort hinzufügen</span>
+                </button>
+                <button type="button" class="btn-refresh" onclick="onRefreshClick()">
+                    <svg id="refreshIcon" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" style="transition: transform 0.8s ease; margin-right: 4px;"><path d="M4 4v5h.582m15.356 2A8.001 8.001 0 1121.21 8H18" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                    Daten aktualisieren
+                </button>
+            </div>
+            <div class="schedule-board" id="scheduleBoard">
+                <!-- Unified schedule board injected by JS -->
+            </div>
+            
+
+        </div>
+
+        <div id="yearTabContent" class="tab-content">
+            <div class="trolley-filter" role="group" aria-label="Filter nach Trolley">
+                <button type="button" class="trolley-filter-btn active" data-group="all" aria-pressed="true" onclick="SyncCore.setTrolleyFilter('all')">
+                    <span class="trolley-filter-icon tf-all">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>
+                    </span>
+                    <span class="trolley-filter-label">Alle</span>
+                </button>
+                <button type="button" class="trolley-filter-btn" data-group="ru" aria-pressed="false" onclick="SyncCore.setTrolleyFilter('ru')">
+                    <span class="trolley-filter-icon" data-group="ru"></span>
+                    <span class="trolley-filter-badge">RU</span>
+                    <span class="trolley-filter-label">Russisch</span>
+                </button>
+                <button type="button" class="trolley-filter-btn" data-group="ua" aria-pressed="false" onclick="SyncCore.setTrolleyFilter('ua')">
+                    <span class="trolley-filter-icon" data-group="ua"></span>
+                    <span class="trolley-filter-badge">UA</span>
+                    <span class="trolley-filter-label">Ukrainisch</span>
+                </button>
+                <button type="button" class="trolley-filter-btn" data-group="de" aria-pressed="false" onclick="SyncCore.setTrolleyFilter('de')">
+                    <span class="trolley-filter-icon" data-group="de"></span>
+                    <span class="trolley-filter-badge">DE</span>
+                    <span class="trolley-filter-label">Deutsch</span>
+                </button>
+            </div>
+            <div id="yearGridRoot"></div>
+        </div>
+
+        <div id="toast" class="toast-container"></div>
+
+        <!-- PWA Install Banner -->
+        <div id="pwaInstallBanner" class="pwa-banner">
+            <div class="pwa-header">
+                <div class="pwa-icon-wrapper">
+                    <svg class="pwa-icon" viewBox="0 0 24 24">
+                        <rect x="7" y="3" width="10" height="14" rx="1.5" />
+                        <line x1="12" y1="3" x2="12" y2="17" />
+                        <circle cx="6" cy="18" r="2" />
+                        <circle cx="18" cy="18" r="2" />
+                        <path d="M4 18h2M18 18h2" />
+                        <path d="M12 17v3h-3" />
+                    </svg>
+                </div>
+                <div class="pwa-title-box">
+                    <h3 class="pwa-title">App installieren</h3>
+                    <p class="pwa-subtitle">Fügen Sie die App für schnellen Zugriff zum Startbildschirm hinzu!</p>
+                </div>
+            </div>
+            <div class="pwa-body" id="pwaBodyText">
+                <!-- filled by JS depending on platform -->
+            </div>
+            <div class="pwa-buttons">
+                <button type="button" class="pwa-btn-close" onclick="dismissPWAInstall()">Schließen</button>
+                <button type="button" class="pwa-btn-install" id="pwaInstallBtn" onclick="triggerPWAInstall()" style="display: none;">Installieren</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MAP MODAL -->
+    <div id="mapModal" class="modal-backdrop" style="display: none;" onclick="onModalBackdropClick(event)">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 class="modal-title" id="mapModalTitle">Standort des Standes</h3>
+                <button type="button" class="btn-close-modal" onclick="closeMapModal()">✖</button>
+            </div>
+            <div id="mapContainer"></div>
+            <div id="mapModalFooter" style="display: none; margin-top: 10px; flex-direction: column; gap: 8px;">
+                <div id="mapModalAddressPreview" style="font-size: 0.8rem; font-weight: 600; color: var(--text-muted); text-align: left; padding: 2px 0;">
+                    📍 Ziehen Sie den Marker, um einen Punkt auszuwählen...
+                </div>
+                <div style="display: flex; justify-content: flex-end; gap: 8px; width: 100%;">
+                    <button type="button" class="btn-add-cancel" style="padding: 6px 12px; width: auto;" onclick="closeMapModal()">Abbrechen</button>
+                    <button type="button" class="btn-add-confirm" style="padding: 6px 12px; width: auto; background-color: var(--primary); color: white;" onclick="confirmMapSelection()">Diesen Punkt auswählen</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Add Location Modal -->
+    <div id="addLocationForm" class="modal-backdrop" style="display: none;" onclick="onAddLocationModalBackdropClick(event)">
+        <div class="modal-content" style="max-width: 400px; width: 90%;">
+            <div class="modal-header">
+                <h3 class="modal-title" id="addLocModalTitle">Ort hinzufügen</h3>
+                <button type="button" class="btn-close-modal" onclick="hideAddLocationForm()" aria-label="Schließen">✖</button>
+            </div>
+            <div style="display: flex; flex-direction: column; gap: 12px; margin-top: 8px;">
+                <div>
+                    <label class="compact-label" id="addLocNameLabel" for="customLocationInput">Standortname</label>
+                    <input type="text" id="customLocationInput" class="input-field" placeholder="z.B. Bahnhof" autocomplete="off">
+                </div>
+                <div style="display: flex; align-items: center; justify-content: space-between; gap: 8px;">
+                    <button type="button" class="btn-show-map" style="padding: 8px 12px; font-size: 0.8rem; background-color: var(--primary-container); color: var(--primary); display: flex; align-items: center; gap: 4px;" onclick="openMapInSelectionMode()">
+                        📍 <span id="addLocMapBtnText">Auf Karte markieren</span>
+                    </button>
+                    <span id="tempCoordsLabel" style="font-size: 0.75rem; color: var(--text-muted); font-weight: 500;">
+                        Koordinaten nicht ausgewählt
+                    </span>
+                </div>
+                <button type="button" class="btn-submit" onclick="addNewLocation()" style="margin-top: 8px;">
+                    <span id="addLocConfirmBtnText">OK</span>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Quick Booking Modal -->
+    <div id="quickBookingModal" class="modal-backdrop" style="display: none;" onclick="onQuickBookingBackdropClick(event)">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 class="modal-title" id="qbModalTitle">Schnelle Schichtbuchung</h3>
+                <button type="button" class="btn-close-modal" onclick="closeQuickBookingModal()" aria-label="Schließen">✖</button>
+            </div>
+            <form id="quickBookingForm">
+                <div class="form-section-compact" style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px;">
+                    <div>
+                        <div style="display: flex; align-items: center; gap: 4px; margin-bottom: 4px;">
+                            <label class="compact-label" id="qbDateLabel" style="margin-bottom: 0;">Datum</label>
+                            <button type="button" class="btn-info-toggle" onclick="toggleInfo('qbDateInfo')" style="padding: 2px; height: 18px; display: inline-flex; align-items: center;">
+                                <svg viewBox="0 0 24 24" style="width: 14px; height: 14px;"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z" fill="currentColor"/></svg>
+                            </button>
+                        </div>
+                        <div id="qbDateInfo" class="info-helper-box" style="margin-top: 4px; margin-bottom: 6px;">Datum der Schicht (schreibgeschützt)</div>
+                        <input type="text" id="qbDate" class="input-field" disabled style="background-color: var(--primary-container); border-color: var(--border); opacity: 0.85; cursor: not-allowed;">
+                    </div>
+                    <div>
+                        <div style="display: flex; align-items: center; gap: 4px; margin-bottom: 4px;">
+                            <label class="compact-label" id="qbTimeLabel" style="margin-bottom: 0;">Uhrzeit</label>
+                            <button type="button" class="btn-info-toggle" onclick="toggleInfo('qbTimeInfo')" style="padding: 2px; height: 18px; display: inline-flex; align-items: center;">
+                                <svg viewBox="0 0 24 24" style="width: 14px; height: 14px;"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z" fill="currentColor"/></svg>
+                            </button>
+                        </div>
+                        <div id="qbTimeInfo" class="info-helper-box" style="margin-top: 4px; margin-bottom: 6px;">Schichtzeit. Sie können ein benutzerdefiniertes Intervall eingeben, z.B. 10:30 - 12:30.</div>
+                        <input type="text" id="qbTime" class="input-field" disabled style="background-color: var(--primary-container); border-color: var(--border); opacity: 0.85; cursor: not-allowed;" placeholder="z.B. 10:00 - 12:00">
+                    </div>
+                </div>
+                <div class="form-section-compact" style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px;">
+                    <div>
+                        <div style="display: flex; align-items: center; gap: 4px; margin-bottom: 4px;">
+                            <label class="compact-label" id="qbLocationLabel" style="margin-bottom: 0;">Standort</label>
+                            <button type="button" class="btn-info-toggle" onclick="toggleInfo('qbLocationInfo')" style="padding: 2px; height: 18px; display: inline-flex; align-items: center;">
+                                <svg viewBox="0 0 24 24" style="width: 14px; height: 14px;"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z" fill="currentColor"/></svg>
+                            </button>
+                        </div>
+                        <div id="qbLocationInfo" class="info-helper-box" style="margin-top: 4px; margin-bottom: 6px;">Ausgewählter Standort für den Dienst (schreibgeschützt)</div>
+                        <input type="text" id="qbLocation" class="input-field" disabled style="background-color: var(--primary-container); border-color: var(--border); opacity: 0.85; cursor: not-allowed;">
+                    </div>
+                    <div>
+                        <div style="display: flex; align-items: center; gap: 4px; margin-bottom: 4px;">
+                            <label class="compact-label" id="qbCartLabel" style="margin-bottom: 0;">Trolley</label>
+                            <button type="button" class="btn-info-toggle" onclick="toggleInfo('qbCartInfo')" style="padding: 2px; height: 18px; display: inline-flex; align-items: center;">
+                                <svg viewBox="0 0 24 24" style="width: 14px; height: 14px;"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z" fill="currentColor"/></svg>
+                            </button>
+                        </div>
+                        <div id="qbCartInfo" class="info-helper-box" style="margin-top: 4px; margin-bottom: 6px;">Trolley-Nummer für diese Schicht (schreibgeschützt)</div>
+                        <input type="text" id="qbCart" class="input-field" disabled style="background-color: var(--primary-container); border-color: var(--border); opacity: 0.85; cursor: not-allowed;">
+                    </div>
+                </div>
+                
+                <div class="form-section-compact">
+                    <div style="display: flex; align-items: center; gap: 4px; margin-bottom: 6px;">
+                        <label class="compact-label" id="qbLangLabel" style="margin-bottom: 0;">Sprache des Trolleys wählen</label>
+                        <button type="button" class="btn-info-toggle" onclick="toggleInfo('qbLangInfo')" style="padding: 2px; height: 18px; display: inline-flex; align-items: center;">
+                            <svg viewBox="0 0 24 24" style="width: 14px; height: 14px;"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z" fill="currentColor"/></svg>
+                        </button>
+                    </div>
+                    <div id="qbLangInfo" class="info-helper-box" style="margin-top: 4px; margin-bottom: 6px;">Wählen Sie die Sprache der Literatur, die an diesem Trolley präsentiert wird.</div>
+                    <div id="qbLangPicker"></div>
+                </div>
+
+                <div class="form-section-compact">
+                    <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px;">
+                        <div style="display: flex; align-items: center; gap: 4px;">
+                            <label class="compact-label" id="qbNamesLabel" style="margin-bottom: 0;">Verkündiger der Schicht</label>
+                            <button type="button" class="btn-info-toggle" onclick="toggleInfo('qbNamesInfo')" style="padding: 2px; height: 18px; display: inline-flex; align-items: center;">
+                                <svg viewBox="0 0 24 24" style="width: 14px; height: 14px;"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z" fill="currentColor"/></svg>
+                            </button>
+                        </div>
+                        <button type="button" id="qbAutofillBtn" onclick="autofillMyNames()" style="
+                            background-color: var(--primary-container);
+                            color: var(--primary);
+                            border: none;
+                            border-radius: 4px;
+                            padding: 2px 8px;
+                            font-size: 0.7rem;
+                            font-weight: bold;
+                            cursor: pointer;
+                            display: none;
+                        ">⚡ Meine Namen einfügen</button>
+                    </div>
+                    <div id="qbNamesInfo" class="info-helper-box" style="margin-top: 4px; margin-bottom: 6px;">Geben Sie die Namen von zwei Verkündigern für diesen Dienst an.</div>
+                    <input type="text" id="qbName1" class="input-field" placeholder="Verkündiger 1 (Name)" required autocomplete="off" style="margin-bottom: 8px;">
+                    <input type="text" id="qbName2" class="input-field" placeholder="Verkündiger 2 (Name)" autocomplete="off" style="margin-bottom: 8px;">
+                    
+                    <div style="display: flex; align-items: center; gap: 6px; margin-top: 6px; margin-bottom: 8px;">
+                        <input type="checkbox" id="qbRememberMyNames" style="width: 14px; height: 14px; cursor: pointer;">
+                        <label for="qbRememberMyNames" id="qbRememberMyNamesLabel" style="font-size: 0.75rem; color: var(--text-muted); cursor: pointer; user-select: none;">Diese Namen als meine speichern</label>
+                    </div>
+                </div>
+
+                <button type="submit" id="qbSubmitBtn" class="btn-submit">
+                    <span class="spinner" id="qbBtnSpinner" style="display: none; margin-right: 6px;"></span>
+                    <span id="qbBtnText">Schicht eintragen</span>
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Add Time Slot Modal -->
+    <div class="modal-backdrop" id="addTimeSlotModal" style="display: none;" onclick="onAddTimeSlotBackdropClick(event)">
+        <div class="modal-content" style="max-width: 380px; width: 90%;">
+            <div class="modal-header">
+                <h3 class="modal-title" id="atsModalTitle">Zeitintervall hinzufügen</h3>
+                <button type="button" class="btn-close-modal" onclick="closeAddTimeSlotModal()" aria-label="Schließen">✖</button>
+            </div>
+            <form id="addTimeSlotForm" onsubmit="submitCustomTimeSlot(event)">
+                <!-- Выбор "С" и "До" -->
+                <div class="form-section-compact" style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 16px;">
+                    <div>
+                        <label class="compact-label" id="atsFromLabel">Von (Anfang)</label>
+                        <select id="atsFromTime" class="input-field" style="cursor: pointer;"></select>
+                    </div>
+                    <div>
+                        <label class="compact-label" id="atsToLabel">Bis (Ende)</label>
+                        <select id="atsToTime" class="input-field" style="cursor: pointer;"></select>
+                    </div>
+                </div>
+                
+                <!-- Быстрый выбор (пресеты) -->
+                <div class="form-section-compact" style="margin-top: 16px;">
+                    <label class="compact-label" id="atsPresetsLabel">Schnellauswahl</label>
+                    <div id="atsPresetsList" style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 6px;">
+                        <!-- Пресеты будут сгенерированы динамически -->
+                    </div>
+                </div>
+                
+                <button type="submit" class="btn-primary" style="width: 100%; margin-top: 20px; border: none; border-radius: 12px; padding: 12px; font-weight: bold; background: var(--primary); color: #fff; cursor: pointer;" id="atsSubmitBtn">
+                    <span id="atsBtnText">Hinzufügen</span>
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+        <script>
+        function toggleInfo(infoId) {
+            const box = document.getElementById(infoId);
+            if (!box) return;
+            const isVisible = window.getComputedStyle(box).display === 'block';
+            box.style.display = isVisible ? 'none' : 'block';
+        }
+    </script>
+    <script src="trolley.js"></script>
+    <script src="app.js"></script>
+    <script src="app-sync.js"></script>
+</body>
+</html>
