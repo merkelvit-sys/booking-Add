@@ -3757,3 +3757,98 @@ function initFontSizeMode() {
   }
   updateFontSizeButtonState();
 }
+
+// ----------------------------------------------------------------------------
+// Переключение вкладок свайпами на мобильных устройствах
+// ----------------------------------------------------------------------------
+(function () {
+  let touchStartX = 0;
+  let touchStartY = 0;
+  let touchStartTime = 0;
+
+  function isModalVisible() {
+    const backdrops = document.querySelectorAll('.modal-backdrop');
+    for (let i = 0; i < backdrops.length; i++) {
+      const display = window.getComputedStyle(backdrops[i]).display;
+      if (display !== 'none') {
+        return true;
+      }
+    }
+    const activeModals = document.querySelectorAll('.modal.active, .modal.open, .day-editor-modal');
+    for (let i = 0; i < activeModals.length; i++) {
+      if (window.getComputedStyle(activeModals[i]).display !== 'none') {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  function isHorizontalScrollable(el) {
+    let cur = el;
+    while (cur && cur !== document.body) {
+      if (cur.id === 'dateScroller' || (cur.classList && (cur.classList.contains('date-scroller') || cur.classList.contains('leaflet-container')))) {
+        return true;
+      }
+      const style = window.getComputedStyle(cur);
+      if (style.overflowX === 'auto' || style.overflowX === 'scroll') {
+        if (cur.scrollWidth > cur.clientWidth) {
+          return true;
+        }
+      }
+      cur = cur.parentNode;
+    }
+    return false;
+  }
+
+  document.addEventListener('touchstart', function (e) {
+    if (window.innerWidth > 768) return; // Только для мобильных
+    if (isModalVisible()) return;
+
+    const targetTagName = e.target.tagName.toLowerCase();
+    if (targetTagName === 'input' || targetTagName === 'textarea' || targetTagName === 'select') {
+      return;
+    }
+
+    if (isHorizontalScrollable(e.target)) return;
+
+    const touch = e.touches[0];
+    touchStartX = touch.clientX;
+    touchStartY = touch.clientY;
+    touchStartTime = Date.now();
+  }, { passive: true });
+
+  document.addEventListener('touchend', function (e) {
+    if (window.innerWidth > 768) return;
+    if (!touchStartX || !touchStartY) return;
+
+    const touch = e.changedTouches[0];
+    const deltaX = touch.clientX - touchStartX;
+    const deltaY = touch.clientY - touchStartY;
+    const duration = Date.now() - touchStartTime;
+
+    touchStartX = 0;
+    touchStartY = 0;
+
+    if (duration > 500) return; // Свайп должен быть относительно быстрым
+
+    const threshold = 60;
+    if (Math.abs(deltaX) > threshold && Math.abs(deltaX) > Math.abs(deltaY) * 1.5) {
+      // Определяем текущую активную вкладку
+      const yearContent = document.getElementById('yearTabContent');
+      const isYearActive = yearContent && yearContent.classList.contains('active');
+      const currentActiveTab = isYearActive ? 'year' : 'schedule';
+
+      if (deltaX < 0) {
+        // Свайп влево -> на следующую вкладку (Schedule -> Year)
+        if (currentActiveTab === 'schedule') {
+          switchTab('year');
+        }
+      } else {
+        // Свайп вправо -> на предыдущую вкладку (Year -> Schedule)
+        if (currentActiveTab === 'year') {
+          switchTab('schedule');
+        }
+      }
+    }
+  }, { passive: true });
+})();
