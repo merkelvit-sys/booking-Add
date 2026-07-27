@@ -1143,6 +1143,70 @@ function loadCustomLocations() {
   }
 }
 
+window.updateLocationsFromBookings = function() {
+  let bookings = [];
+  try {
+    bookings = getBookings();
+  } catch (e) {
+    console.error(e);
+  }
+  
+  let bookingLocations = [];
+  bookings.forEach(function (b) {
+    if (b.location && b.location.trim()) {
+      let name = b.location.trim();
+      if (bookingLocations.indexOf(name) === -1) {
+        bookingLocations.push(name);
+      }
+    }
+  });
+  
+  let savedLocations = [];
+  try {
+    savedLocations = JSON.parse(localStorage.getItem('customLocations')) || [];
+  } catch (e) {}
+  
+  function getLocName(loc) {
+    return (typeof loc === 'string') ? loc : (loc && loc.name ? loc.name : '');
+  }
+  
+  let defaultNames = ["Hauptbahnhof", "Erlenring", "Schloß"];
+  let changed = false;
+  
+  let merged = [];
+  
+  DEFAULT_LOCATIONS.forEach(function (dl) {
+    merged.push(dl);
+  });
+  
+  savedLocations.forEach(function (loc) {
+    let name = getLocName(loc);
+    if (name && defaultNames.indexOf(name) === -1) {
+      let exists = merged.some(function (m) { return getLocName(m) === name; });
+      if (!exists) {
+        merged.push(loc);
+      }
+    }
+  });
+  
+  bookingLocations.forEach(function (name) {
+    if (defaultNames.indexOf(name) === -1) {
+      let exists = merged.some(function (m) { return getLocName(m) === name; });
+      if (!exists) {
+        merged.push({ name: name, lat: null, lng: null });
+        changed = true;
+      }
+    }
+  });
+  
+  if (changed) {
+    localStorage.setItem('customLocations', JSON.stringify(merged));
+    if (typeof loadCustomLocations === 'function') {
+      loadCustomLocations();
+    }
+  }
+};
+
 function toggleNoLocationsPlaceholder(show) {
   let placeholder = document.getElementById('noLocationsPlaceholder');
   if (show) {
