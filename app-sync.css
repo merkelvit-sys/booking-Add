@@ -1220,3 +1220,35 @@ html.large-font-mode .month-title {
         touch-action: manipulation !important;
     }
 }
+
+/* Compact Trolley language picker overrides */
+.trolley-picker {
+  display: flex !important;
+  gap: 8px !important;
+  justify-content: space-between !important;
+  margin-bottom: 12px !important;
+}
+.trolley-card {
+  flex: 1 !important;
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: center !important;
+  gap: 4px !important;
+  padding: 6px 10px !important;
+  border-radius: var(--radius-md, 12px) !important;
+}
+.trolley-card .trolley-svg {
+  max-height: 38px !important;
+  width: auto !important;
+  height: auto !important;
+}
+.trolley-card-label {
+  font-size: 0.65rem !important;
+  line-height: 1.1 !important;
+}
+.trolley-card-badge {
+  top: 3px !important;
+  left: 4px !important;
+  font-size: 0.5rem !important;
+  padding: 1px 3px !important;
+}
