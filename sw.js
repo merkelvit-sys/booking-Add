@@ -1,4 +1,4 @@
-const CACHE_NAME = 'service-schedule-v36'; // <-- v36: добавлен бесшовный авто-апдейт PWA
+const CACHE_NAME = 'service-schedule-v37'; // <-- v37: исправлена CORS-ошибка Vercel SSO в SW
 const ASSETS = [
   './',
   './index.html',
@@ -21,8 +21,18 @@ const ASSETS = [
 self.addEventListener('install', (e) => {
   e.waitUntil(
     caches.open(CACHE_NAME).then((cache) => {
-      // addAll с обработкой ошибок для внешних ресурсов
-      return Promise.allSettled(ASSETS.map(url => cache.add(url)));
+      return Promise.allSettled(
+        ASSETS.map((url) => {
+          const isRemote = url.startsWith('http') && !url.includes(self.location.hostname);
+          const options = isRemote ? { mode: 'cors' } : { credentials: 'same-origin' };
+          return fetch(url, options).then((res) => {
+            if (res.ok) {
+              return cache.put(url, res);
+            }
+            throw new Error('Fetch failed: ' + url);
+          });
+        })
+      );
     })
   );
   self.skipWaiting();
