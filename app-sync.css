@@ -140,6 +140,8 @@
     user-select: none;
     transition: transform 0.12s ease, box-shadow 0.12s ease;
     border: 1px solid transparent;
+    touch-action: manipulation;
+    pointer-events: auto;
 }
 .day-cell:hover {
     transform: translateY(-1px);
@@ -1191,5 +1193,30 @@ html.large-font-mode .month-title {
         background-color: hsl(14, 45%, 23%) !important;
         color: hsl(14, 85%, 75%) !important;
         border: 1px dashed hsl(14, 60%, 50%) !important;
+    }
+}
+
+/* PWA Day Editor Mobile Responsiveness & Z-Index */
+@media (max-width: 768px) {
+    /* Day editor modal layout on mobile screens */
+    #dayEditorModal,
+    .day-editor-modal {
+        z-index: 10000 !important;
+        pointer-events: auto !important;
+    }
+    #dayEditorModal .modal-content,
+    .day-editor-modal .modal-content {
+        max-width: 92% !important;
+        max-height: 85vh !important;
+        overflow-y: auto !important;
+    }
+    
+    /* Ensure the Year grid day cells and month blocks are touch-sensitive and not covered */
+    .year-grid,
+    .month-block,
+    .month-days,
+    .day-cell {
+        pointer-events: auto !important;
+        touch-action: manipulation !important;
     }
 }

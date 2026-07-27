@@ -1095,18 +1095,9 @@
             }
           });
 
-          // Tap vs Click handler (Touch support)
+          // Touch-friendly direct click handler
           cell.addEventListener("click", function (ev) {
-            var isTooltipActive = (yearTooltip.classList.contains("visible") && yearTooltip.dataset.activeDate === iso);
-            var isTouch = window.matchMedia("(pointer: coarse)").matches;
-            
-            if (isTouch && !isTooltipActive) {
-              ev.preventDefault();
-              ev.stopPropagation();
-              showTooltipForCell(ev.currentTarget, iso, status, rows, dayLangSet);
-              return;
-            }
-            goToDateFromYear(iso);
+            openDayEditor(iso);
           });
 
           days.appendChild(cell);
@@ -1230,7 +1221,7 @@
     var dict = I18N[getLang()];
     var modal = document.createElement("div");
     modal.id = "dayEditorModal";
-    modal.className = "modal-backdrop";
+    modal.className = "modal-backdrop day-editor-modal";
     modal.style.display = "none";
     modal.innerHTML =
       '<div class="modal-content">' +
@@ -1354,6 +1345,11 @@
   }
 
   function openDayEditor(date) {
+    var tooltip = document.getElementById("yearTooltip");
+    if (tooltip) {
+      tooltip.classList.remove("visible");
+      tooltip.removeAttribute("data-active-date");
+    }
     ensureDayEditor();
     var rows = scheduleIndex[date] || [];
     var c1 = rows.filter(function (r) { return (parseInt(r.cartNumber, 10) || 1) === 1; })[0] || { date: date, status: "available", trolley: "", description: "", note: "" };
