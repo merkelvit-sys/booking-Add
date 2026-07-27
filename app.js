@@ -768,13 +768,124 @@ window.addEventListener('DOMContentLoaded', () => {
   if ('serviceWorker' in navigator && window.location.protocol.startsWith('http')) {
     navigator.serviceWorker.register('sw.js')
       .then(reg => {
+        function showUpdateToast() {
+          if (document.getElementById('pwa-update-banner')) return;
+          const lang = (localStorage.getItem("preferredLanguage") || "ru").toLowerCase();
+          
+          let msg = "Доступно обновление!";
+          let btnText = "Обновить";
+          if (lang === "de") {
+            msg = "Update verfügbar!";
+            btnText = "Aktualisieren";
+          } else if (lang === "ua" || lang === "uk") {
+            msg = "Доступне оновлення!";
+            btnText = "Оновити";
+          }
+          
+          const banner = document.createElement('div');
+          banner.id = 'pwa-update-banner';
+          banner.style.cssText = `
+            position: fixed;
+            bottom: 24px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: #2563eb;
+            color: #fff;
+            padding: 12px 18px;
+            border-radius: 12px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.25);
+            z-index: 100000;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            font-family: system-ui, sans-serif;
+            font-size: 0.9rem;
+            font-weight: 600;
+            animation: slideUpUpdate 0.3s ease-out forwards;
+          `;
+          
+          const textSpan = document.createElement('span');
+          textSpan.textContent = msg;
+          
+          const btn = document.createElement('button');
+          btn.textContent = btnText;
+          btn.style.cssText = `
+            background: #fff;
+            color: #2563eb;
+            border: none;
+            padding: 6px 12px;
+            border-radius: 8px;
+            font-weight: bold;
+            cursor: pointer;
+            font-size: 0.8rem;
+            transition: opacity 0.2s;
+          `;
+          btn.addEventListener('click', () => {
+            window.location.reload();
+          });
+          
+          banner.appendChild(textSpan);
+          banner.appendChild(btn);
+          document.body.appendChild(banner);
+          
+          if (!document.getElementById('pwa-update-style')) {
+            const style = document.createElement('style');
+            style.id = 'pwa-update-style';
+            style.textContent = `
+              @keyframes slideUpUpdate {
+                from { transform: translate(-50%, 20px); opacity: 0; }
+                to { transform: translate(-50%, 0); opacity: 1; }
+              }
+            `;
+            document.head.appendChild(style);
+          }
+        }
+
+        function checkUpdate(registration) {
+          if (registration.waiting) {
+            showUpdateToast();
+            return;
+          }
+          if (registration.installing) {
+            registration.installing.addEventListener('statechange', (e) => {
+              if (e.target.state === 'installed' && navigator.serviceWorker.controller) {
+                showUpdateToast();
+              }
+            });
+          }
+        }
+
+        // Check current status on startup
+        checkUpdate(reg);
+
+        // Listen for new worker updates
         reg.addEventListener('updatefound', () => {
           const newWorker = reg.installing;
-          newWorker.addEventListener('statechange', () => {
-            if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
-              window.location.reload();
-            }
-          });
+          if (newWorker) {
+            newWorker.addEventListener('statechange', () => {
+              if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+                showUpdateToast();
+              }
+            });
+          }
+        });
+
+        // Trigger an update check immediately on init
+        reg.update().then(() => checkUpdate(reg)).catch(() => {});
+
+        // Keep polling for updates every 15 minutes
+        setInterval(() => {
+          reg.update().then(() => checkUpdate(reg)).catch(() => {});
+        }, 15 * 60 * 1000);
+
+        // Trigger update checks when returning to page or focusing window
+        document.addEventListener('visibilitychange', () => {
+          if (document.visibilityState === 'visible') {
+            reg.update().then(() => checkUpdate(reg)).catch(() => {});
+          }
+        });
+        window.addEventListener('focus', () => {
+          reg.update().then(() => checkUpdate(reg)).catch(() => {});
         });
       })
       .catch(err => console.log('Service Worker Failed', err));
