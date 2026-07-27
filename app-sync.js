@@ -561,6 +561,9 @@
   // renderScheduleTab() — списки дежурных (График)
   // renderYearGrid()   — цвета/иконки тележек (Год)
   function renderAllTabs() {
+    if (typeof window.updateLocationsFromBookings === "function") {
+      window.updateLocationsFromBookings();
+    }
     if (typeof renderBookingTab === "function") renderBookingTab();
     else if (typeof onLocationOrDateChange === "function") onLocationOrDateChange();
     if (typeof renderScheduleTab === "function") renderScheduleTab();
