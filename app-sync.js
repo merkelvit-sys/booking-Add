@@ -1243,14 +1243,6 @@
           '<div id="dayEditorBookingsList" style="font-size: 0.8rem; display: flex; flex-direction: column; gap: 6px;"></div>' +
         '</div>' +
         '<div class="editor-field"><label id="dayEditorStatusLabel">' + dict.statusLabel + '</label><div class="status-options" id="dayEditorStatus" data-lockable></div></div>' +
-        // Пикер тележки №1
-        '<div class="editor-field" id="trolleyPickerField1" data-lockable>' +
-          '<label id="dayEditorCart1Label" style="margin-bottom:8px;display:block;">📦 ' + dict.cart1Name + '</label>' +
-        '</div>' +
-        // Пикер тележки №2
-        '<div class="editor-field" id="trolleyPickerField2" data-lockable>' +
-          '<label id="dayEditorCart2Label" style="margin-bottom:8px;display:block;">📦 ' + dict.cart2Name + '</label>' +
-        '</div>' +
         '<div class="editor-field" data-lockable><label id="dayEditorDescLabel">' + dict.descLabel + '</label><textarea id="dayEditorDesc" maxlength="500"></textarea></div>' +
         '<div class="editor-field" data-lockable>' +
           '<label id="dayEditorNoteLabel">' + dict.noteLabel + ' <span id="dayEditorNoteBadge"></span></label>' +
@@ -1269,14 +1261,6 @@
       '</div>';
     document.body.appendChild(modal);
 
-    // Вставляем пикеры тележек (TrolleyUI.createPicker) для обеих тележек
-    var f1 = document.getElementById('trolleyPickerField1');
-    var f2 = document.getElementById('trolleyPickerField2');
-    if (window.TrolleyUI) {
-      if (f1) f1.appendChild(TrolleyUI.createPicker(dict.trolleys, null, function (g) { editorState.cart1Lang = g; }));
-      if (f2) f2.appendChild(TrolleyUI.createPicker(dict.trolleys, null, function (g) { editorState.cart2Lang = g; }));
-    }
-
     modal.addEventListener("click", function (e) { if (e.target === modal) SyncCore._closeDayEditor(); });
     document.getElementById("dayEditorCancel").addEventListener("click", function () { SyncCore._closeDayEditor(); });
     document.getElementById("dayEditorEdit").addEventListener("click", enterEditMode);
@@ -1289,8 +1273,6 @@
       if (lbl && dayTips[key]) lbl.appendChild(createInfoTip(dayTips[key]));
     }
     addDayTip("dayEditorStatusLabel", "status");
-    addDayTip("dayEditorCart1Label", "cartLang");
-    addDayTip("dayEditorCart2Label", "cartLang");
     addDayTip("dayEditorDescLabel", "description");
     addDayTip("dayEditorNoteLabel", "note");
   }
@@ -1363,12 +1345,7 @@
     editorState.cart1Lang = c1.trolley || "";
     editorState.cart2Lang = c2.trolley || "";
 
-    if (window.TrolleyUI) {
-      var p1 = document.querySelector('#trolleyPickerField1 .trolley-picker');
-      var p2 = document.querySelector('#trolleyPickerField2 .trolley-picker');
-      if (p1) TrolleyUI.setGroupPickerValue(p1, editorState.cart1Lang || null);
-      if (p2) TrolleyUI.setGroupPickerValue(p2, editorState.cart2Lang || null);
-    }
+
 
     document.getElementById("dayEditorDate").textContent = formatDateHuman(date);
 
