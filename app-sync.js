@@ -129,6 +129,118 @@
   }
   function pad(n) { return n < 10 ? "0" + n : "" + n; }
   function isoOf(date) { return date.getFullYear() + "-" + pad(date.getMonth() + 1) + "-" + pad(date.getDate()); }
+  
+  var hessenHolidaysCache = {};
+
+  function getEasterSunday(year) {
+    var a = year % 19;
+    var b = Math.floor(year / 100);
+    var c = year % 100;
+    var d = Math.floor(b / 4);
+    var e = b % 4;
+    var f = Math.floor((b + 8) / 25);
+    var g = Math.floor((b - f + 1) / 3);
+    var h = (19 * a + b - d - g + 15) % 30;
+    var i = Math.floor(c / 4);
+    var k = c % 4;
+    var l = (32 + 2 * e + 2 * i - h - k) % 7;
+    var m = Math.floor((a + 11 * h + 22 * l) / 451);
+    var month = Math.floor((h + l - 7 * m + 114) / 31);
+    var day = ((h + l - 7 * m + 114) % 31) + 1;
+    return new Date(year, month - 1, day);
+  }
+
+  function calculateHessenHolidays(year) {
+    var easter = getEasterSunday(year);
+    function addDays(date, days) {
+      var res = new Date(date);
+      res.setDate(res.getDate() + days);
+      return res;
+    }
+    function formatDate(date) {
+      var y = date.getFullYear();
+      var m = String(date.getMonth() + 1).padStart(2, '0');
+      var d = String(date.getDate()).padStart(2, '0');
+      return y + "-" + m + "-" + d;
+    }
+
+    var holidays = {};
+    holidays[year + "-01-01"] = { de: "Neujahr", ru: "Новый год", uk: "Новий рік", ua: "Новий рік" };
+    holidays[year + "-05-01"] = { de: "Tag der Arbeit", ru: "День труда", uk: "День праці", ua: "День праці" };
+    holidays[year + "-10-03"] = { de: "Tag der Deutschen Einheit", ru: "День немецкого единства", uk: "День німецької єдності", ua: "День німецької єдності" };
+    holidays[year + "-12-25"] = { de: "1. Weihnachtstag", ru: "Рождество (день 1)", uk: "Різдво (день 1)", ua: "Різдво (день 1)" };
+    holidays[year + "-12-26"] = { de: "2. Weihnachtstag", ru: "Рождество (день 2)", uk: "Різдво (день 2)", ua: "Різдво (день 2)" };
+
+    var karfreitag = addDays(easter, -2);
+    var ostermontag = addDays(easter, 1);
+    var christiHimmelfahrt = addDays(easter, 39);
+    var pfingstmontag = addDays(easter, 50);
+    var fronleichnam = addDays(easter, 60);
+
+    holidays[formatDate(karfreitag)] = { de: "Karfreitag", ru: "Страстная пятница", uk: "Страсна п’ятниця", ua: "Страсна п’ятниця" };
+    holidays[formatDate(ostermontag)] = { de: "Ostermontag", ru: "Пасхальный понедельник", uk: "Великодній понеділок", ua: "Великодній понеділок" };
+    holidays[formatDate(christiHimmelfahrt)] = { de: "Christi Himmelfahrt", ru: "Вознесение Господне", uk: "Вознесіння Господнє", ua: "Вознесіння Господнє" };
+    holidays[formatDate(pfingstmontag)] = { de: "Pfingstmontag", ru: "День Святого Духа", uk: "День Святого Духа", ua: "День Святого Духа" };
+    holidays[formatDate(fronleichnam)] = { de: "Fronleichnam", ru: "Праздник Тела и Крови Христовых", uk: "Свято Тіла і Крові Христових", ua: "Свято Тіла і Крові Христових" };
+
+    return holidays;
+  }
+
+  function getHolidaysForYear(year) {
+    if (!hessenHolidaysCache[year]) {
+      hessenHolidaysCache[year] = calculateHessenHolidays(year);
+      fetchHolidaysFromAPI(year);
+    }
+    return hessenHolidaysCache[year];
+  }
+
+  function fetchHolidaysFromAPI(year) {
+    var url = "https://date.nager.at/api/v3/PublicHolidays/" + year + "/DE";
+    fetch(url)
+      .then(function (res) {
+        if (!res.ok) throw new Error("HTTP_" + res.status);
+        return res.json();
+      })
+      .then(function (data) {
+        if (!Array.isArray(data)) return;
+        var apiHolidays = {};
+        data.forEach(function (h) {
+          var isGlobal = h.global || !h.counties;
+          var isHessen = h.counties && h.counties.indexOf("DE-HE") !== -1;
+          if (isGlobal || isHessen) {
+            apiHolidays[h.date] = {
+              de: h.localName,
+              en: h.name
+            };
+          }
+        });
+        
+        var calculated = calculateHessenHolidays(year);
+        var merged = {};
+        var allDates = Object.keys(Object.assign({}, calculated, apiHolidays));
+        allDates.forEach(function (date) {
+          var calcItem = calculated[date];
+          var apiItem = apiHolidays[date];
+          if (calcItem) {
+            merged[date] = calcItem;
+          } else if (apiItem) {
+            merged[date] = {
+              de: apiItem.de,
+              ru: apiItem.de,
+              uk: apiItem.de,
+              ua: apiItem.de
+            };
+          }
+        });
+        hessenHolidaysCache[year] = merged;
+        if (typeof renderAllTabs === "function") {
+          renderAllTabs();
+        }
+      })
+      .catch(function (err) {
+        console.warn("Failed to fetch holidays from API for year " + year + ", using calculated values.", err);
+      });
+  }
   function todayIso() { return isoOf(new Date()); }
   function formatDateHuman(iso) {
     var p = (iso || "").split("-");
@@ -851,6 +963,13 @@
           cell.setAttribute("tabindex", "0");
           cell.setAttribute("role", "gridcell");
 
+          var yearNum = parseInt(iso.split("-")[0], 10);
+          var yearHolidays = getHolidaysForYear(yearNum);
+          var holidayInfo = yearHolidays[iso];
+          if (holidayInfo) {
+            cell.classList.add("is-hessen-holiday");
+          }
+
           var anyNote = rows.some(function (r) { return r.description || r.note; });
           var noteText = "";
           var eventRow = rows.find(function (r) { return r.description || r.note; });
@@ -913,6 +1032,11 @@
           var statusText = dict.statuses[status];
 
           var fullAriaLabel = formattedDate + ". " + statusText;
+          if (holidayInfo) {
+            var holidayName = holidayInfo[lang] || holidayInfo.ua || holidayInfo.uk || holidayInfo.de;
+            var holidayWord = lang === 'uk' ? 'Свято' : (lang === 'de' ? 'Feiertag' : 'Праздник');
+            fullAriaLabel += ". " + holidayWord + ": " + holidayName;
+          }
           if (dayLangs.length) {
             fullAriaLabel += ", " + dayLangs.map(function (lg) { return dict.trolleys[lg]; }).join(" и ");
           }
@@ -1046,7 +1170,18 @@
         bookingsHTML += '</div>';
       }
 
+      var yearHolidays = getHolidaysForYear(parseInt(dateParts[0], 10));
+      var holidayInfo = yearHolidays[dateISO];
+      var holidayHTML = "";
+      if (holidayInfo) {
+        var holidayName = holidayInfo[lang] || holidayInfo.ua || holidayInfo.uk || holidayInfo.de;
+        holidayHTML = '<div class="year-tooltip-holiday" style="color:var(--error, #dc2626); font-weight:bold; font-size:0.75rem; margin-bottom:6px;">🎉 ' + holidayName + '</div>';
+      }
+
       var html = '<div class="year-tooltip-date">' + formattedDate + '</div>';
+      if (holidayHTML) {
+        html += holidayHTML;
+      }
       html += '<div class="year-tooltip-status status-' + status + '" style="font-weight:600; padding: 2px 6px; border-radius:4px; display:inline-block; font-size:0.75rem; margin-bottom:6px;">' + statusText + '</div>';
       if (bookingsHTML) {
         html += bookingsHTML;
@@ -1104,6 +1239,7 @@
           '<button type="button" class="btn-close-modal" onclick="SyncCore._closeDayEditor()">✖</button>' +
         '</div>' +
         '<div class="editor-date" id="dayEditorDate"></div>' +
+        '<div id="dayEditorHolidayNotice" style="display: none; margin-bottom: 12px;"></div>' +
         '<div class="day-editor-bookings-card" id="dayEditorBookingsCard" style="background: rgba(120,120,120,0.06); border: 1px solid var(--border); border-radius: var(--radius-md); padding: 12px; margin-bottom: 12px;">' +
           '<div style="font-weight: 700; font-size: 0.85rem; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center;">' +
             '<span>📋 Записи на этот день:</span>' +
@@ -1235,6 +1371,32 @@
     }
 
     document.getElementById("dayEditorDate").textContent = formatDateHuman(date);
+
+    var yearNum = parseInt(date.split("-")[0], 10);
+    var yearHolidays = getHolidaysForYear(yearNum);
+    var holidayInfo = yearHolidays[date];
+    var holidayNoticeEl = document.getElementById("dayEditorHolidayNotice");
+    if (holidayNoticeEl) {
+      if (holidayInfo) {
+        var lang = getLang();
+        var holidayName = holidayInfo[lang] || holidayInfo.ua || holidayInfo.uk || holidayInfo.de;
+        var prefix = lang === 'uk' ? '🎉 Свято (Гессен / Марбург): ' : (lang === 'de' ? '🎉 Feiertag (Hessen / Marburg): ' : '🎉 Праздник (Гессен / Марбург): ');
+        holidayNoticeEl.innerHTML = '<div class="hessen-holiday-banner" style="' +
+          'background-color: var(--error-bg, rgba(239, 68, 68, 0.1));' +
+          'color: var(--error, #ef4444);' +
+          'border: 1px solid rgba(239, 68, 68, 0.2);' +
+          'border-radius: var(--radius-sm, 6px);' +
+          'padding: 8px 12px;' +
+          'font-size: 0.85rem;' +
+          'font-weight: bold;' +
+          'text-align: center;' +
+          '">' + prefix + holidayName + '</div>';
+        holidayNoticeEl.style.display = "block";
+      } else {
+        holidayNoticeEl.style.display = "none";
+        holidayNoticeEl.innerHTML = "";
+      }
+    }
 
     var opts = document.getElementById("dayEditorStatus");
     opts.innerHTML = "";

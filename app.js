@@ -2829,10 +2829,44 @@ function renderScheduleBoard() {
     const pulseClass = isJustAdded ? " slot-just-added" : "";
     const pastClass = isPastDate ? " past-readonly-slot" : "";
 
+    const isSingle = hasNames && ((n1 && !n2) || (!n1 && n2));
+
     if (hasNames) {
       const deleteBtn = isPastDate
         ? `<span class="readonly-badge" style="font-size:0.65rem; color:var(--text-muted); font-weight:600; padding:1px 5px; border:1px solid var(--border); border-radius:4px;">Read-Only</span>`
-        : `<button type="button" class="btn-delete-booking" onclick="deleteBooking('${locName.replace(/'/g, "\\'")}', '${selectedDateISO}', '${(actualTime || time).replace(/'/g, "\\'")}', ${cartNum})" title="${S('deleteBooking')}" aria-label="${S('deleteBooking')}">🗑️</button>`;
+        : `<button type="button" class="btn-delete-booking" onclick="event.stopPropagation(); deleteBooking('${locName.replace(/'/g, "\\'")}', '${selectedDateISO}', '${(actualTime || time).replace(/'/g, "\\'")}', ${cartNum})" title="${S('deleteBooking')}" aria-label="${S('deleteBooking')}">🗑️</button>`;
+
+      const displayName = n1 || n2;
+
+      if (isSingle && !isPastDate) {
+        const partnerLabel = getLang() === 'uk' ? '1/2 (Потрібен напарник)' : (getLang() === 'de' ? '1/2 (Partner gesucht)' : '1/2 (Ищет напарника)');
+        const btnPartnerText = getLang() === 'uk' ? 'Напарник' : (getLang() === 'de' ? 'Partner' : 'Напарник');
+        return `
+          <div class="board-cart-info has-lang-${cls}${pulseClass} slot-has-space" 
+               tabindex="0" 
+               role="button" 
+               aria-label="${title}: ${displayName}. ${partnerLabel}"
+               onclick="openQuickBookingModal('${locName.replace(/'/g, "\\'")}', '${selectedDateISO}', '${time}', ${cartNum})"
+               onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault(); openQuickBookingModal('${locName.replace(/'/g, "\\'")}', '${selectedDateISO}', '${time}', ${cartNum});}">
+            <div class="cart-info-header">
+              <span class="board-cart-title">
+                <span class="day-trolley-icon" data-group="${cls}" aria-hidden="true">${icon}</span>
+                📦 ${title} ${badgeHTML}
+              </span>
+              ${deleteBtn}
+            </div>
+            <span class="board-names" title="${displayName}">${displayName} • <span class="partner-search-badge" style="
+              background-color: var(--primary-container, #e8f0fe);
+              color: var(--primary, #1a73e8);
+              padding: 2px 6px;
+              border-radius: 4px;
+              font-size: 0.72rem;
+              font-weight: 600;
+              display: inline-block;
+              margin-top: 2px;
+            ">+ ${btnPartnerText}</span></span>
+          </div>`;
+      }
 
       return `
         <div class="board-cart-info has-lang-${cls}${pulseClass}${pastClass}">
@@ -3055,8 +3089,16 @@ function autofillMyNames() {
   const n2 = localStorage.getItem('myPreacherName2') || "";
   const inp1 = document.getElementById('qbName1');
   const inp2 = document.getElementById('qbName2');
-  if (inp1) inp1.value = n1;
-  if (inp2) inp2.value = n2;
+  if (inp1 && inp2) {
+    if (inp1.disabled && !inp2.disabled) {
+      inp2.value = n1 || n2;
+    } else if (inp2.disabled && !inp1.disabled) {
+      inp1.value = n1 || n2;
+    } else {
+      inp1.value = n1;
+      inp2.value = n2;
+    }
+  }
 }
 
 function openQuickBookingModal(locName, dateISO, timeSlot, cartNum) {
@@ -3098,32 +3140,63 @@ function openQuickBookingModal(locName, dateISO, timeSlot, cartNum) {
   const activeLang = getLang() === 'uk' ? 'ua' : getLang();
   let prefillLang = activeLang;
   let isOccupied = false;
+  let isSingle = false;
 
   if (booking) {
     if (cartNum === 1 && (booking.name1 || booking.name2)) {
       name1Input.value = booking.name1 || "";
       name2Input.value = booking.name2 || "";
       prefillLang = (booking.cart1Lang || activeLang).toLowerCase();
-      isOccupied = true;
+      if (booking.name1 && booking.name2) {
+        isOccupied = true;
+      } else {
+        isSingle = true;
+      }
     } else if (cartNum === 2 && (booking.name3 || booking.name4)) {
       name1Input.value = booking.name3 || "";
       name2Input.value = booking.name4 || "";
       prefillLang = (booking.cart2Lang || activeLang).toLowerCase();
-      isOccupied = true;
+      if (booking.name3 && booking.name4) {
+        isOccupied = true;
+      } else {
+        isSingle = true;
+      }
     }
   }
+
+  const autofillBtn = document.getElementById('qbAutofillBtn');
+  const rememberCheckbox = document.getElementById('qbRememberMyNames');
 
   if (isOccupied) {
     name1Input.disabled = true;
     name2Input.disabled = true;
+    if (autofillBtn) autofillBtn.style.display = 'none';
+  } else if (isSingle) {
+    if (name1Input.value) {
+      name1Input.disabled = true;
+      name2Input.disabled = false;
+      name2Input.value = "";
+    } else {
+      name2Input.disabled = true;
+      name1Input.disabled = false;
+      name1Input.value = "";
+    }
+    const savedMyName1 = localStorage.getItem('myPreacherName1') || "";
+    const savedMyName2 = localStorage.getItem('myPreacherName2') || "";
+    if (savedMyName1 || savedMyName2) {
+      if (autofillBtn) autofillBtn.style.display = 'block';
+    } else {
+      if (autofillBtn) autofillBtn.style.display = 'none';
+    }
+    if (rememberCheckbox) {
+      rememberCheckbox.checked = false;
+    }
   } else {
     name1Input.disabled = false;
     name2Input.disabled = false;
     // Prefill names from localStorage (prioritize dedicated myPreacherNames)
     const savedMyName1 = localStorage.getItem('myPreacherName1') || "";
     const savedMyName2 = localStorage.getItem('myPreacherName2') || "";
-    const autofillBtn = document.getElementById('qbAutofillBtn');
-    const rememberCheckbox = document.getElementById('qbRememberMyNames');
 
     if (savedMyName1 || savedMyName2) {
       name1Input.value = savedMyName1;
@@ -3154,14 +3227,17 @@ function openQuickBookingModal(locName, dateISO, timeSlot, cartNum) {
     qbLangPicker.appendChild(window.TrolleyUI.createGroupPicker(labels, selectedQBLang, function (g) {
       selectedQBLang = g;
     }));
-    qbLangPicker.style.pointerEvents = isOccupied ? "none" : "auto";
+    qbLangPicker.style.pointerEvents = (isOccupied || isSingle) ? "none" : "auto";
   }
 
   modal.style.display = 'flex';
   document.body.style.overflow = 'hidden';
 
   setTimeout(() => {
-    if (!isOccupied && name1Input) {
+    if (isSingle) {
+      if (!name1Input.disabled) name1Input.focus();
+      else if (!name2Input.disabled) name2Input.focus();
+    } else if (!isOccupied && name1Input) {
       name1Input.focus();
     }
   }, 100);
@@ -3286,11 +3362,21 @@ async function submitQuickBooking(e) {
     return;
   }
 
-  const name1 = document.getElementById('qbName1').value.trim();
-  const name2 = document.getElementById('qbName2').value.trim();
+  const name1Input = document.getElementById('qbName1');
+  const name2Input = document.getElementById('qbName2');
+  const name1 = name1Input.value.trim();
+  const name2 = name2Input.value.trim();
 
-  if (!name1 || !name2) {
-    showToast(S(cartNum === 1 ? 'fillCart1' : 'fillCart2Names'), "error");
+  if (name1Input.disabled && !name2) {
+    showToast(getLang() === 'uk' ? 'Будь ласка, введіть ім\'я напарника' : (getLang() === 'de' ? 'Bitte geben Sie den Namen des Partners ein' : 'Пожалуйста, введите имя напарника'), "error");
+    return;
+  }
+  if (name2Input.disabled && !name1) {
+    showToast(getLang() === 'uk' ? 'Будь ласка, введіть ім\'я напарника' : (getLang() === 'de' ? 'Bitte geben Sie den Namen des Partners ein' : 'Пожалуйста, введите имя напарника'), "error");
+    return;
+  }
+  if (!name1Input.disabled && !name1) {
+    showToast(getLang() === 'uk' ? 'Будь ласка, введіть ім\'я першого вісника' : (getLang() === 'de' ? 'Bitte geben Sie den Namen des ersten Verkündigers ein' : 'Пожалуйста, введите имя первого возвещателя'), "error");
     return;
   }
 
@@ -3302,16 +3388,22 @@ async function submitQuickBooking(e) {
   // Сохраняем введенные имена в localStorage
   const rememberCheckbox = document.getElementById('qbRememberMyNames');
   if (rememberCheckbox && rememberCheckbox.checked) {
-    localStorage.setItem('myPreacherName1', name1);
-    localStorage.setItem('myPreacherName2', name2);
+    if (name1Input.disabled) {
+      localStorage.setItem('myPreacherName1', name2);
+    } else if (name2Input.disabled) {
+      localStorage.setItem('myPreacherName1', name1);
+    } else {
+      localStorage.setItem('myPreacherName1', name1);
+      localStorage.setItem('myPreacherName2', name2);
+    }
   }
   
   if (cartNum === 1) {
-    localStorage.setItem('pwaName1', name1);
-    localStorage.setItem('pwaName2', name2);
+    if (!name1Input.disabled) localStorage.setItem('pwaName1', name1);
+    if (!name2Input.disabled) localStorage.setItem('pwaName2', name2);
   } else {
-    localStorage.setItem('pwaName3', name1);
-    localStorage.setItem('pwaName4', name2);
+    if (!name1Input.disabled) localStorage.setItem('pwaName3', name1);
+    if (!name2Input.disabled) localStorage.setItem('pwaName4', name2);
   }
 
   // Обновляем инпуты в основном приложении (если они отображаются на вкладке "Запись" — легаси)
