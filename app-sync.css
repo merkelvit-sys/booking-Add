@@ -446,9 +446,11 @@
     display: none;
     position: absolute;
     top: calc(100% + 8px);
-    right: 0;
-    z-index: 2500;
-    width: min(300px, 82vw);
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 10005 !important;
+    width: max-content;
+    max-width: min(280px, 85vw);
     background-color: var(--card-bg, #fff);
     color: var(--text, #1e293b);
     border: 1px solid var(--border, #e2e8f0);
@@ -460,14 +462,35 @@
     font-weight: 500;
     line-height: 1.45;
     text-align: left;
-    white-space: pre-line;
+    white-space: normal;
+    word-wrap: break-word;
     animation: slideDown 0.18s ease-out forwards;
 }
 .info-tip.open .info-tip-pop { display: block; }
 
 @keyframes slideDown {
-    from { opacity: 0; transform: translateY(-6px); }
-    to { opacity: 1; transform: translateY(0); }
+    from { opacity: 0; transform: translateX(-50%) translateY(-6px); }
+    to { opacity: 1; transform: translateX(-50%) translateY(0); }
+}
+
+@media (max-width: 768px) {
+    .info-tip-pop {
+        position: fixed !important;
+        top: 50% !important;
+        left: 50% !important;
+        transform: translate(-50%, -50%) !important;
+        width: 85vw !important;
+        max-width: 280px !important;
+        box-shadow: 0 10px 45px rgba(0,0,0,0.25) !important;
+        white-space: normal !important;
+        word-wrap: break-word !important;
+        animation: tooltipFadeIn 0.2s ease-out forwards !important;
+    }
+}
+
+@keyframes tooltipFadeIn {
+    from { opacity: 0; transform: translate(-50%, -45%); }
+    to { opacity: 1; transform: translate(-50%, -50%); }
 }
 
 /* Result (success/error) modal */
@@ -1037,7 +1060,7 @@
 .year-tooltip {
     position: absolute;
     display: none;
-    z-index: 3000;
+    z-index: 10005 !important;
     background-color: var(--card-bg, #fff);
     border: 1px solid var(--border, #e2e8f0);
     border-radius: var(--radius-md, 12px);

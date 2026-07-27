@@ -1,4 +1,4 @@
-const CACHE_NAME = 'service-schedule-v35'; // <-- v13: добавлен mobile-web-app-capable meta
+const CACHE_NAME = 'service-schedule-v36'; // <-- v36: добавлен бесшовный авто-апдейт PWA
 const ASSETS = [
   './',
   './index.html',
@@ -38,9 +38,10 @@ self.addEventListener('activate', (e) => {
           }
         })
       );
+    }).then(() => {
+      return self.clients.claim();
     })
   );
-  self.clients.claim();
 });
 
 self.addEventListener('fetch', (e) => {
