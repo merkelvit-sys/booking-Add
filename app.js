@@ -3774,7 +3774,7 @@ function initFontSizeMode() {
         return true;
       }
     }
-    const activeModals = document.querySelectorAll('.modal.active, .modal.open, .day-editor-modal');
+    const activeModals = document.querySelectorAll('.modal.active, .modal.open, .day-editor-modal, #dayEditorModal');
     for (let i = 0; i < activeModals.length; i++) {
       if (window.getComputedStyle(activeModals[i]).display !== 'none') {
         return true;
@@ -3829,24 +3829,26 @@ function initFontSizeMode() {
     touchStartX = 0;
     touchStartY = 0;
 
-    if (duration > 500) return; // Свайп должен быть относительно быстрым
+    if (duration > 400) return; // Свайп должен быть быстрым (не дольше 400мс)
 
-    const threshold = 60;
-    if (Math.abs(deltaX) > threshold && Math.abs(deltaX) > Math.abs(deltaY) * 1.5) {
+    const threshold = 40; // Минимальная дистанция 40px
+    if (Math.abs(deltaX) >= threshold && Math.abs(deltaX) > Math.abs(deltaY)) {
       // Определяем текущую активную вкладку
       const yearContent = document.getElementById('yearTabContent');
       const isYearActive = yearContent && yearContent.classList.contains('active');
       const currentActiveTab = isYearActive ? 'year' : 'schedule';
 
       if (deltaX < 0) {
-        // Свайп влево -> на следующую вкладку (Schedule -> Year)
+        // Свайп влево 👈 -> на следующую вкладку (Schedule -> Year)
         if (currentActiveTab === 'schedule') {
-          switchTab('year');
+          const btn = document.getElementById('btnTabYear');
+          if (btn) btn.click();
         }
       } else {
-        // Свайп вправо -> на предыдущую вкладку (Year -> Schedule)
+        // Свайп вправо 👉 -> на предыдущую вкладку (Year -> Schedule)
         if (currentActiveTab === 'year') {
-          switchTab('schedule');
+          const btn = document.getElementById('btnTabSchedule');
+          if (btn) btn.click();
         }
       }
     }

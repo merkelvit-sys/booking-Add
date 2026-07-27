@@ -1274,4 +1274,15 @@ html.large-font-mode .month-title {
   left: 4px !important;
   font-size: 0.5rem !important;
   padding: 1px 3px !important;
+  border-radius: var(--radius-sm, 6px) !important;
+}
+
+/* Enable pan-y only, disabling horizontal swipe browser navigation behaviors */
+body, #app, .tab-content {
+    touch-action: pan-y;
+}
+
+/* Ensure horizontal scroll and panning areas remain fully functional */
+.date-scroller, .leaflet-container {
+    touch-action: auto !important;
 }
