@@ -15,7 +15,7 @@
       weekdays: ["Пн","Вт","Ср","Чт","Пт","Сб","Вс"],
       statuses: { available:"Служение", closed:"Выходной", event:"Событие", holiday:"Праздник", special:"Особое" },
       dayEditorTitle:"День служения", statusLabel:"Статус", descLabel:"Описание события", noteLabel:"Заметка", trolleyLabel:"Тележка", trolleyPlaceholder:"— выберите —", trolleys:{ru:"Русская",ua:"Украинская",de:"Немецкая"}, noTrolley:"Выберите тележку",
-      cart1Name:"Тележка №1 (Стенд 1)", cart2Name:"Тележка №2 (Стенд 2)", cart1Lang:"Язык тележки №1", cart2Lang:"Язык тележки №2",
+      cart1Name:"Тележка №1 (Стенд 1)", cart2Name:"Тележка №2 (Стенд 2)", cart1Lang:"Язык тележки №1", cart2Lang:"Язык тележки №2", bookingsTitle:"📋 Записи на этот день:", goToSchedule:"📅 В график", noBookings:"Записей на этот день нет (свободно)",
       preacher1:"Возвещатель 1 (ФИО)", preacher2:"Возвещатель 2 (ФИО)",
       save:"Сохранить", cancel:"Отмена", confirmDeleteYes:"Да, удалить", savedTitle:"Сохранено", errorTitle:"Ошибка", ok:"OK", daySaved:"Данные дня успешно сохранены!", saving:"Сохранение…", saved:"Данные сохранены", edit:"Редактировать", saveChanges:"Сохранить изменения", saveError:"Ошибка сохранения", saveVerifyFail:"Сервер не сохранил изменения. Пересоздайте Web App (Deploy → New version) с новым кодом google_script.txt.",
       offline:"Нет связи с сервером. Показан последний сохранённый график.",
@@ -41,8 +41,8 @@
       months: ["Січень","Лютий","Березень","Квітень","Травень","Червень","Липень","Серпень","Вересень","Жовтень","Листопад","Грудень"],
       weekdays: ["Пн","Вт","Ср","Чт","Пт","Сб","Нд"],
       statuses: { available:"Служіння", closed:"Вихідний", event:"Подія", holiday:"Свято", special:"Особливе" },
-      dayEditorTitle:"День служіння", statusLabel:"Статус", descLabel:"Опис події", noteLabel:"Примітка", trolleyLabel:"Тележка", trolleyPlaceholder:"— оберіть —", trolleys:{ru:"Російська",ua:"Українська",de:"Німецька"}, noTrolley:"Оберіть тележку",
-      cart1Name:"Тележка №1 (Стенд 1)", cart2Name:"Тележка №2 (Стенд 2)", cart1Lang:"Мова тележки №1", cart2Lang:"Мова тележки №2",
+      dayEditorTitle:"День служіння", statusLabel:"Статус", descLabel:"Опис події", noteLabel:"Примітка", trolleyLabel:"Візок", trolleyPlaceholder:"— оберіть —", trolleys:{ru:"Російська",ua:"Українська",de:"Німецька"}, noTrolley:"Оберіть візок",
+      cart1Name:"Візок №1 (Стенд 1)", cart2Name:"Візок №2 (Стенд 2)", cart1Lang:"Мова візка №1", cart2Lang:"Мова візка №2", bookingsTitle:"📋 Записи на цей день:", goToSchedule:"📅 До розкладу", noBookings:"Записів на цей день немає (вільно)",
       preacher1:"Возвіщувач 1 (ПІБ)", preacher2:"Возвіщувач 2 (ПІБ)",
       save:"Зберегти", cancel:"Скасувати", confirmDeleteYes:"Так, видалити", savedTitle:"Збережено", errorTitle:"Помилка", ok:"OK", daySaved:"Дані дня успішно збережено!", saving:"Збереження…", saved:"Дані збережено", edit:"Редагувати", saveChanges:"Зберегти зміни", saveError:"Помилка збереження", saveVerifyFail:"Сервер не зберіг зміни. Перевидіть Web App (Deploy → New version) з новим кодом google_script.txt.",
       offline:"Немає звʼязку із сервером. Показано останній збережений графік.",
@@ -69,6 +69,7 @@
       weekdays: ["Mo","Di","Mi","Do","Fr","Sa","So"],
       statuses: { available:"Dienst", closed:"Frei", event:"Veranstaltung", holiday:"Feiertag", special:"Besonderes" },
       dayEditorTitle:"Diensttag", statusLabel:"Status", descLabel:"Ereignisbeschreibung", noteLabel:"Notiz", trolleyLabel:"Trolley", trolleyPlaceholder:"— auswählen —", trolleys:{ru:"Russisch",ua:"Ukrainisch",de:"Deutsch"}, noTrolley:"Trolley auswählen",
+      cart1Name:"Trolley №1 (Stand 1)", cart2Name:"Trolley №2 (Stand 2)", cart1Lang:"Sprache Trolley №1", cart2Lang:"Sprache Trolley №2", bookingsTitle:"📋 Einträge für diesen Tag:", goToSchedule:"📅 Zum Zeitplan", noBookings:"Keine Einträge für diesen Tag (frei)",
       save:"Speichern", cancel:"Abbrechen", confirmDeleteYes:"Ja, löschen", savedTitle:"Gespeichert", errorTitle:"Fehler", ok:"OK", daySaved:"Daten des Tages erfolgreich gespeichert!", saving:"Speichern…", saved:"Daten gespeichert", edit:"Bearbeiten", saveChanges:"Änderungen speichern", saveError:"Speicherfehler", saveVerifyFail:"Server hat die Änderungen nicht gespeichert. Erstellen Sie die Web App neu (Deploy → New version) mit dem neuen Code google_script.txt.",
       offline:"Keine Verbindung zum Server. Letzter gespeicherter Plan wird angezeigt.",
       updated:"Plan aktualisiert", syncError:"Daten konnten nicht aktualisiert werden",
@@ -1236,8 +1237,8 @@
         '<div id="dayEditorHolidayNotice" style="display: none; margin-bottom: 12px;"></div>' +
         '<div class="day-editor-bookings-card" id="dayEditorBookingsCard" style="background: rgba(120,120,120,0.06); border: 1px solid var(--border); border-radius: var(--radius-md); padding: 12px; margin-bottom: 12px;">' +
           '<div style="font-weight: 700; font-size: 0.85rem; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center;">' +
-            '<span>📋 Записи на этот день:</span>' +
-            '<button type="button" id="btnGoToDateFromModal" class="btn-goto-date" style="background: var(--primary-container); color: var(--primary); border: 1px solid var(--primary); border-radius: var(--radius-sm); padding: 4px 8px; font-size: 0.75rem; font-weight: 700; cursor: pointer;">📅 В график</button>' +
+            '<span>' + (dict.bookingsTitle || '📋 Записи на этот день:') + '</span>' +
+            '<button type="button" id="btnGoToDateFromModal" class="btn-goto-date" style="background: var(--primary-container); color: var(--primary); border: 1px solid var(--primary); border-radius: var(--radius-sm); padding: 4px 8px; font-size: 0.75rem; font-weight: 700; cursor: pointer;">' + (dict.goToSchedule || '📅 В график') + '</button>' +
           '</div>' +
           '<div id="dayEditorBookingsList" style="font-size: 0.8rem; display: flex; flex-direction: column; gap: 6px;"></div>' +
         '</div>' +
@@ -1428,21 +1429,21 @@
         if (b.cart1Lang && (b.name1 || b.name2)) {
           var names1 = [b.name1, b.name2].filter(Boolean).join(" • ");
           bookingsHTML += '<div style="background: var(--card-bg); padding: 8px; border-radius: var(--radius-sm); border: 1px solid var(--border);">' +
-            '<div style="font-weight: 700; color: var(--primary);">🕒 ' + time + ' | 📍 ' + loc + ' (📦 №1 ' + b.cart1Lang.toUpperCase() + ')</div>' +
+            '<div style="font-weight: 700; color: var(--primary);">🕒 ' + time + ' | 📍 ' + loc + ' (📦 ' + (dict.cart1Name || 'Тележка №1 (Стенд 1)') + ' | ' + b.cart1Lang.toUpperCase() + ')</div>' +
             '<div style="color: var(--text); margin-top: 2px;">👥 ' + names1 + '</div>' +
             '</div>';
         }
         if (b.cart2Lang && (b.name3 || b.name4)) {
           var names2 = [b.name3, b.name4].filter(Boolean).join(" • ");
           bookingsHTML += '<div style="background: var(--card-bg); padding: 8px; border-radius: var(--radius-sm); border: 1px solid var(--border);">' +
-            '<div style="font-weight: 700; color: var(--primary);">🕒 ' + time + ' | 📍 ' + loc + ' (📦 №2 ' + b.cart2Lang.toUpperCase() + ')</div>' +
+            '<div style="font-weight: 700; color: var(--primary);">🕒 ' + time + ' | 📍 ' + loc + ' (📦 ' + (dict.cart2Name || 'Тележка №2 (Стенд 2)') + ' | ' + b.cart2Lang.toUpperCase() + ')</div>' +
             '<div style="color: var(--text); margin-top: 2px;">👥 ' + names2 + '</div>' +
             '</div>';
         }
       });
     }
     if (!bookingsHTML) {
-      bookingsHTML = '<div style="color: var(--text-muted); font-style: italic; padding: 4px 0;">Записей на этот день нет (свободно)</div>';
+      bookingsHTML = '<div style="color: var(--text-muted); font-style: italic; padding: 4px 0;">' + (dict.noBookings || 'Записей на этот день нет (свободно)') + '</div>';
     }
     var listEl = document.getElementById("dayEditorBookingsList");
     if (listEl) listEl.innerHTML = bookingsHTML;
@@ -1716,6 +1717,9 @@
     var err = validateDayForCart(day.cart1Lang, day.cart2Lang, day);
     if (err) return Promise.reject(new Error(err));
 
+    // Создаем снимок для возможного отката при сбое сети
+    var snapshot = yearSchedule.map(function (x) { return Object.assign({}, x); });
+
     // Локально обновляем обе тележки
     setYearCart(day.date, 1, day.cart1Lang);
     setYearCart(day.date, 2, day.cart2Lang);
@@ -1734,6 +1738,7 @@
         yearSchedule.push({ date: day.date, cartNumber: cn, trolley: cn === 1 ? day.cart1Lang : day.cart2Lang, status: day.status, description: day.description, note: day.note });
       }
     });
+    setSchedule(yearSchedule);
     saveCache(yearSchedule);
     // Перерисовываем ВСЕ вкладки (Запись/График/Год) из единого состояния,
     // чтобы правки дня в Годе мгновенно отражались и в Графике («и наоборот»).
@@ -1803,7 +1808,13 @@
           return true;
         });
       })
-      .catch(function (err) { throw err; });
+      .catch(function (err) {
+        // Сетевая ошибка или сбой валидации/проверки на сервере: откатываем состояние
+        setSchedule(snapshot);
+        saveCache(yearSchedule);
+        renderAllTabs();
+        throw err;
+      });
   }
 
   // ----- Экспорт глобального API -----

@@ -1510,7 +1510,7 @@
         </div>
 
         <div id="yearTabContent" class="tab-content">
-            <div class="trolley-filter" role="group" aria-label="Фільтр за тележками">
+            <div class="trolley-filter" role="group" aria-label="Фільтр за візками">
                 <button type="button" class="trolley-filter-btn active" data-group="all" aria-pressed="true" onclick="SyncCore.setTrolleyFilter('all')">
                     <span class="trolley-filter-icon tf-all">
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>
@@ -1656,19 +1656,19 @@
                     </div>
                     <div>
                         <div style="display: flex; align-items: center; gap: 4px; margin-bottom: 4px;">
-                            <label class="compact-label" id="qbCartLabel" style="margin-bottom: 0;">Тележка</label>
+                            <label class="compact-label" id="qbCartLabel" style="margin-bottom: 0;">Візок</label>
                             <button type="button" class="btn-info-toggle" onclick="toggleInfo('qbCartInfo')" style="padding: 2px; height: 18px; display: inline-flex; align-items: center;">
                                 <svg viewBox="0 0 24 24" style="width: 14px; height: 14px;"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z" fill="currentColor"/></svg>
                             </button>
                         </div>
-                        <div id="qbCartInfo" class="info-helper-box" style="margin-top: 4px; margin-bottom: 6px;">Номер стенду-тележки для цієї зміни (тільки для читання)</div>
+                        <div id="qbCartInfo" class="info-helper-box" style="margin-top: 4px; margin-bottom: 6px;">Номер стенду-візка для цієї зміни (тільки для читання)</div>
                         <input type="text" id="qbCart" class="input-field" disabled style="background-color: var(--primary-container); border-color: var(--border); opacity: 0.85; cursor: not-allowed;">
                     </div>
                 </div>
                 
                 <div class="form-section-compact">
                     <div style="display: flex; align-items: center; gap: 4px; margin-bottom: 6px;">
-                        <label class="compact-label" id="qbLangLabel" style="margin-bottom: 0;">Виберіть мову тележки</label>
+                        <label class="compact-label" id="qbLangLabel" style="margin-bottom: 0;">Виберіть мову візка</label>
                         <button type="button" class="btn-info-toggle" onclick="toggleInfo('qbLangInfo')" style="padding: 2px; height: 18px; display: inline-flex; align-items: center;">
                             <svg viewBox="0 0 24 24" style="width: 14px; height: 14px;"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z" fill="currentColor"/></svg>
                         </button>

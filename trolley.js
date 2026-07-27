@@ -205,7 +205,8 @@
 /* ===== Карточки выбора тележки в редакторе дня ===== */
 .trolley-picker {
   display: flex;
-  gap: 10px;
+  gap: 8px;
+  justify-content: space-between;
   margin-bottom: 12px;
 }
 .trolley-card {
@@ -213,8 +214,8 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 6px;
-  padding: 10px 6px 8px;
+  gap: 4px;
+  padding: 6px 10px;
   border: 2px solid var(--border, #e2e8f0);
   border-radius: var(--radius-md, 12px);
   background: var(--card-bg, #fff);
@@ -237,23 +238,23 @@
 .trolley-card.active::after {
   content: '✓';
   position: absolute;
-  top: 5px;
-  right: 7px;
-  font-size: 0.65rem;
+  top: 4px;
+  right: 6px;
+  font-size: 0.6rem;
   font-weight: 800;
   color: var(--primary, #2563eb);
 }
 .trolley-card .trolley-svg {
-  width: 44px;
-  height: 88px;
+  max-height: 38px;
+  width: auto;
   flex-shrink: 0;
 }
 .trolley-card-label {
-  font-size: 0.7rem;
+  font-size: 0.65rem;
   font-weight: 700;
   color: var(--text-muted, #64748b);
   text-align: center;
-  line-height: 1.2;
+  line-height: 1.1;
 }
 .trolley-card.active .trolley-card-label {
   color: var(--primary, #2563eb);
@@ -282,12 +283,12 @@
 /* Флаг/бейдж языка */
 .trolley-card-badge {
   position: absolute;
-  top: 5px;
-  left: 6px;
-  font-size: 0.56rem;
+  top: 3px;
+  left: 4px;
+  font-size: 0.5rem;
   font-weight: 800;
   letter-spacing: 0.03em;
-  padding: 2px 5px;
+  padding: 1px 3px;
   border-radius: 4px;
   color: #fff;
   line-height: 1;
