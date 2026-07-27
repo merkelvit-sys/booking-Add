@@ -1717,6 +1717,9 @@
     var err = validateDayForCart(day.cart1Lang, day.cart2Lang, day);
     if (err) return Promise.reject(new Error(err));
 
+    // Создаем снимок для возможного отката при сбое сети
+    var snapshot = yearSchedule.map(function (x) { return Object.assign({}, x); });
+
     // Локально обновляем обе тележки
     setYearCart(day.date, 1, day.cart1Lang);
     setYearCart(day.date, 2, day.cart2Lang);
@@ -1735,6 +1738,7 @@
         yearSchedule.push({ date: day.date, cartNumber: cn, trolley: cn === 1 ? day.cart1Lang : day.cart2Lang, status: day.status, description: day.description, note: day.note });
       }
     });
+    setSchedule(yearSchedule);
     saveCache(yearSchedule);
     // Перерисовываем ВСЕ вкладки (Запись/График/Год) из единого состояния,
     // чтобы правки дня в Годе мгновенно отражались и в Графике («и наоборот»).
@@ -1804,7 +1808,13 @@
           return true;
         });
       })
-      .catch(function (err) { throw err; });
+      .catch(function (err) {
+        // Сетевая ошибка или сбой валидации/проверки на сервере: откатываем состояние
+        setSchedule(snapshot);
+        saveCache(yearSchedule);
+        renderAllTabs();
+        throw err;
+      });
   }
 
   // ----- Экспорт глобального API -----

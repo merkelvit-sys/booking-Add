@@ -556,6 +556,17 @@ function getAcceptLang() {
   return getLang(); // ru | uk | de
 }
 
+function safeGetLocalStorageJSON(key, fallback) {
+  try {
+    const val = localStorage.getItem(key);
+    if (!val) return fallback;
+    return JSON.parse(val) || fallback;
+  } catch (e) {
+    console.error('[Storage Error] Failed to parse localStorage key:', key, e);
+    return fallback;
+  }
+}
+
 // Перевод по ключу с подстановкой {placeholder}
 function S(key, vars) {
   const table = I18N[getLang()] || I18N.ru;
@@ -1101,7 +1112,7 @@ function shareApp() {
 // Локации (места служения)
 // ----------------------------------------------------------------------------
 function loadCustomLocations() {
-  let savedLocations = JSON.parse(localStorage.getItem('customLocations'));
+  let savedLocations = safeGetLocalStorageJSON('customLocations', null);
 
   const hasMarktplatz = savedLocations && savedLocations.some(loc => {
     const name = typeof loc === 'string' ? loc : loc.name;
@@ -1161,10 +1172,7 @@ window.updateLocationsFromBookings = function() {
     }
   });
   
-  let savedLocations = [];
-  try {
-    savedLocations = JSON.parse(localStorage.getItem('customLocations')) || [];
-  } catch (e) {}
+  let savedLocations = safeGetLocalStorageJSON('customLocations', []);
   
   function getLocName(loc) {
     return (typeof loc === 'string') ? loc : (loc && loc.name ? loc.name : '');
@@ -1234,7 +1242,7 @@ function renderTimeGrid() {
   // timeGrid is a legacy element — in the current UI, time slots
   // are rendered inside the schedule board per-location.
   // Still update timeslotsList so the board can use DEFAULT_TIMES.
-  const savedCustomTimes = JSON.parse(localStorage.getItem('customTimes')) || [];
+  const savedCustomTimes = safeGetLocalStorageJSON('customTimes', []);
   timeslotsList = [...DEFAULT_TIMES, ...savedCustomTimes];
   if (!grid) {
     onLocationOrDateChange();
@@ -1355,7 +1363,7 @@ function addNewTime() {
     return;
   }
 
-  let savedCustomTimes = JSON.parse(localStorage.getItem('customTimes')) || [];
+  let savedCustomTimes = safeGetLocalStorageJSON('customTimes', []);
   savedCustomTimes.push(timeFormatted);
   savedCustomTimes.sort();
 
@@ -1368,7 +1376,7 @@ function addNewTime() {
 }
 
 function removeCustomTime(time) {
-  let savedCustomTimes = JSON.parse(localStorage.getItem('customTimes')) || [];
+  let savedCustomTimes = safeGetLocalStorageJSON('customTimes', []);
   savedCustomTimes = savedCustomTimes.filter(t => t !== time);
   localStorage.setItem('customTimes', JSON.stringify(savedCustomTimes));
 
@@ -1462,7 +1470,7 @@ function addNewLocation() {
 
 function addNewLocationWithCoords(name, coords) {
   let isDuplicate = false;
-  let savedLocations = JSON.parse(localStorage.getItem('customLocations')) || [];
+  let savedLocations = safeGetLocalStorageJSON('customLocations', []);
   isDuplicate = savedLocations.some(loc => {
     const n = typeof loc === 'string' ? loc : loc.name;
     return n.toLowerCase() === name.toLowerCase();
@@ -1561,7 +1569,7 @@ function insertLocationCardUI(locName) {
 }
 
 function removeCustomLocation(locName) {
-  let savedLocations = JSON.parse(localStorage.getItem('customLocations')) || [];
+  let savedLocations = safeGetLocalStorageJSON('customLocations', []);
   savedLocations = savedLocations.filter(loc => (typeof loc === 'string' ? loc !== locName : loc.name !== locName));
   localStorage.setItem('customLocations', JSON.stringify(savedLocations));
 
@@ -1828,7 +1836,7 @@ function getCoordsForLocation(locName) {
   const defaultLoc = DEFAULT_LOCATIONS.find(l => l.name === locName);
   if (defaultLoc) return [defaultLoc.lat, defaultLoc.lng];
 
-  const savedLocations = JSON.parse(localStorage.getItem('customLocations')) || [];
+  const savedLocations = safeGetLocalStorageJSON('customLocations', []);
   const loc = savedLocations.find(l => (typeof l === 'object' && l.name === locName));
   if (loc && loc.lat && loc.lng) {
     return [loc.lat, loc.lng];
@@ -2495,12 +2503,12 @@ async function fetchDataFromSpreadsheet() {
 // Цвет и иконка строго соответствуют языку КОНКРЕТНОЙ тележки из базы.
 // ----------------------------------------------------------------------------
 function getCustomSlotsFor(date, location) {
-  const all = JSON.parse(localStorage.getItem('customEmptySlots')) || [];
+  const all = safeGetLocalStorageJSON('customEmptySlots', []);
   return all.filter(x => x.date === date && x.location === location).map(x => x.time);
 }
 
 function addCustomSlotFor(date, location, time) {
-  const all = JSON.parse(localStorage.getItem('customEmptySlots')) || [];
+  const all = safeGetLocalStorageJSON('customEmptySlots', []);
   if (!all.some(x => x.date === date && x.location === location && x.time === time)) {
     all.push({ date, location, time });
     localStorage.setItem('customEmptySlots', JSON.stringify(all));
@@ -2761,7 +2769,7 @@ function renderScheduleBoard() {
     }
   }
 
-  const savedLocations = JSON.parse(localStorage.getItem('customLocations')) || [];
+  const savedLocations = safeGetLocalStorageJSON('customLocations', []);
   if (savedLocations.length === 0) {
     board.innerHTML = `<div style="text-align: center; padding: 20px; color: var(--text-muted);">${S('noLocations')}</div>`;
     return;
