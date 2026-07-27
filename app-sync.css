@@ -1178,3 +1178,18 @@ html.large-font-mode .month-weekdays span {
 html.large-font-mode .month-title {
   font-size: 0.95rem;
 }
+
+/* Hessen Holiday Styling in Year Grid */
+.day-cell.is-hessen-holiday {
+    background-color: hsl(14, 85%, 93%) !important;
+    color: hsl(14, 85%, 35%) !important;
+    border: 1px dashed hsl(14, 80%, 65%) !important;
+}
+
+@media (prefers-color-scheme: dark) {
+    .day-cell.is-hessen-holiday {
+        background-color: hsl(14, 45%, 23%) !important;
+        color: hsl(14, 85%, 75%) !important;
+        border: 1px dashed hsl(14, 60%, 50%) !important;
+    }
+}
