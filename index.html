@@ -2,6 +2,27 @@
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
+    <script>
+        (function() {
+            var currentLang = "ru";
+            var pref = localStorage.getItem("preferredLanguage");
+            if (!pref) {
+                var navLang = (navigator.language || navigator.userLanguage || "ru").toLowerCase();
+                if (navLang.indexOf("de") === 0) {
+                    pref = "de";
+                } else if (navLang.indexOf("uk") === 0 || navLang.indexOf("ua") === 0) {
+                    pref = "ua";
+                } else {
+                    pref = "ru";
+                }
+                localStorage.setItem("preferredLanguage", pref);
+            }
+            if (pref !== currentLang) {
+                if (pref === "de") window.location.replace("index_de.html");
+                else if (pref === "ua") window.location.replace("index_ua.html");
+            }
+        })();
+    </script>
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <title>Запись на служение — Марбург</title>
     
@@ -1444,9 +1465,9 @@
                 <button type="button" class="lang-btn" id="btnToggleFontSize" onclick="toggleFontSize()" title="Крупный шрифт (Вкл/Выкл)" style="margin-right: 6px; padding: 4px 8px; gap: 2px;">
                     <span style="font-size: 0.85rem; font-weight: bold;">A<sup>+</sup></span>
                 </button>
-                <a href="index.html" class="lang-btn active">RU</a>
-                <a href="index_ua.html" class="lang-btn">UA</a>
-                <a href="index_de.html" class="lang-btn">DE</a>
+                <a href="index.html" onclick="localStorage.setItem('preferredLanguage', 'ru')" class="lang-btn active">RU</a>
+                <a href="index_ua.html" onclick="localStorage.setItem('preferredLanguage', 'ua')" class="lang-btn">UA</a>
+                <a href="index_de.html" onclick="localStorage.setItem('preferredLanguage', 'de')" class="lang-btn">DE</a>
                 <button type="button" class="lang-btn share-btn" id="btnHeaderInstall" onclick="showPWAInstallBanner()" title="Установить приложение на рабочий стол" style="display:none;">
                     <svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24" style="vertical-align:middle;"><path d="M12 16v-8m0 8l-3-3m3 3l3-3M5 20h14" stroke-linecap="round" stroke-linejoin="round"/></svg>
                     Установить
