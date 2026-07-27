@@ -17,9 +17,15 @@
                 }
                 localStorage.setItem("preferredLanguage", pref);
             }
-            if (pref !== currentLang) {
-                if (pref === "ru") window.location.replace("index.html");
-                else if (pref === "ua") window.location.replace("index_ua.html");
+            if (window.location.protocol.startsWith('http')) {
+                if (pref !== currentLang) {
+                    if (pref === "ru") window.location.replace("index.html");
+                    else if (pref === "ua") window.location.replace("index_ua.html");
+                }
+                var link = document.createElement('link');
+                link.rel = 'manifest';
+                link.href = 'manifest_de.json';
+                document.head.appendChild(link);
             }
         })();
     </script>
@@ -28,7 +34,7 @@
     
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
     
-    <link rel="manifest" href="manifest_de.json">
+
     <link rel="apple-touch-icon" href="icon-192.png">
     <link rel="icon" type="image/svg+xml" href="icon.svg">
     <meta name="apple-mobile-web-app-capable" content="yes">
