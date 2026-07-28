@@ -3911,6 +3911,9 @@ function initFontSizeMode() {
     return false;
   }
 
+  const SVG_DOWN = '<svg class="scroll-icon-svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M19 12l-7 7-7-7"/></svg>';
+  const SVG_UP = '<svg class="scroll-icon-svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V5M5 12l7-7 7 7"/></svg>';
+
   function initQuickScrollButton() {
     let btn = document.getElementById('quickScrollBtn');
     if (!btn) {
@@ -3918,7 +3921,7 @@ function initFontSizeMode() {
       btn.id = 'quickScrollBtn';
       btn.className = 'quick-scroll-btn hidden';
       btn.setAttribute('aria-label', 'Scroll navigation');
-      btn.innerHTML = '<span class="scroll-icon">⬇️</span>';
+      btn.innerHTML = SVG_DOWN;
       document.body.appendChild(btn);
     } else if (btn.parentElement !== document.body) {
       document.body.appendChild(btn);
@@ -3948,10 +3951,12 @@ function initFontSizeMode() {
 
       if (scrollTop < 100) {
         isScrollingDown = true;
-        btn.innerHTML = '<span class="scroll-icon">⬇️</span>';
+        btn.innerHTML = SVG_DOWN;
+        btn.setAttribute('aria-label', 'Scroll to bottom');
       } else {
         isScrollingDown = false;
-        btn.innerHTML = '<span class="scroll-icon">⬆️</span>';
+        btn.innerHTML = SVG_UP;
+        btn.setAttribute('aria-label', 'Scroll to top');
       }
     }
 

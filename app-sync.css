@@ -1556,7 +1556,7 @@ body, #app, .tab-content {
     }
 }
 
-/* ── Smart Floating Scroll Button ────────────────────────────── */
+/* ── Premium Floating Scroll Button ───────────────────────────── */
 #quickScrollBtn,
 .quick-scroll-btn {
   position: fixed !important;
@@ -1565,24 +1565,31 @@ body, #app, .tab-content {
   width: 48px !important;
   height: 48px !important;
   border-radius: 50% !important;
-  background: rgba(37, 99, 235, 0.65) !important;
-  backdrop-filter: blur(8px) !important;
-  -webkit-backdrop-filter: blur(8px) !important;
+  background: linear-gradient(135deg, rgba(37, 99, 235, 0.75), rgba(29, 78, 216, 0.85)) !important;
+  backdrop-filter: blur(12px) !important;
+  -webkit-backdrop-filter: blur(12px) !important;
   color: #ffffff !important;
-  border: 1.5px solid rgba(255, 255, 255, 0.3) !important;
-  box-shadow: 0 4px 18px rgba(0, 0, 0, 0.25) !important;
+  border: 1px solid rgba(255, 255, 255, 0.35) !important;
+  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.35), 0 2px 8px rgba(37, 99, 235, 0.3), inset 0 1px 1px rgba(255, 255, 255, 0.4) !important;
   cursor: pointer !important;
   z-index: 999999 !important;
   display: flex !important;
   align-items: center !important;
   justify-content: center !important;
-  font-size: 1.3rem !important;
-  opacity: 0.65 !important;
-  transition: opacity 0.25s ease, transform 0.25s ease, background-color 0.2s, box-shadow 0.2s !important;
+  opacity: 0.72 !important;
+  transition: opacity 0.25s ease, transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1), background 0.25s ease, box-shadow 0.25s ease !important;
   touch-action: manipulation !important;
   -webkit-tap-highlight-color: transparent !important;
   user-select: none !important;
   transform: translateZ(0) !important;
+}
+
+.quick-scroll-btn .scroll-icon-svg {
+  width: 22px;
+  height: 22px;
+  stroke-width: 2.6;
+  transition: transform 0.25s ease;
+  filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.4));
 }
 
 @media (max-width: 600px) {
@@ -1592,28 +1599,36 @@ body, #app, .tab-content {
     bottom: calc(20px + env(safe-area-inset-bottom, 0px)) !important;
     width: 46px !important;
     height: 46px !important;
-    font-size: 1.2rem !important;
+  }
+  .quick-scroll-btn .scroll-icon-svg {
+    width: 20px;
+    height: 20px;
   }
 }
 
 #quickScrollBtn:hover,
-#quickScrollBtn:focus-visible,
-#quickScrollBtn:active {
+#quickScrollBtn:focus-visible {
   opacity: 1 !important;
-  background: var(--primary, #2563eb) !important;
-  transform: scale(1.08) translateZ(0) !important;
-  box-shadow: 0 8px 28px rgba(0, 0, 0, 0.45) !important;
+  background: linear-gradient(135deg, rgba(37, 99, 235, 0.95), rgba(29, 78, 216, 1)) !important;
+  transform: translateY(-2px) scale(1.06) translateZ(0) !important;
+  box-shadow: 0 12px 32px rgba(15, 23, 42, 0.45), 0 4px 14px rgba(37, 99, 235, 0.5), inset 0 1px 1px rgba(255, 255, 255, 0.6) !important;
+}
+
+#quickScrollBtn:hover .scroll-icon-svg {
+  transform: scale(1.1);
 }
 
 #quickScrollBtn:active {
-  transform: scale(0.92) translateZ(0) !important;
+  opacity: 1 !important;
+  transform: translateY(0) scale(0.94) translateZ(0) !important;
+  box-shadow: 0 4px 14px rgba(15, 23, 42, 0.3) !important;
 }
 
 #quickScrollBtn.hidden,
 .quick-scroll-btn.hidden {
   opacity: 0 !important;
   pointer-events: none !important;
-  transform: scale(0.6) translateZ(0) !important;
+  transform: scale(0.5) translateZ(0) !important;
 }
 
 /* ── Tooltips & Popovers Clamping & Mobile Positioning ──────── */
