@@ -442,55 +442,35 @@
 .info-tip-btn:hover,
 .info-tip-btn:focus-visible { background-color: var(--primary-container, rgba(37,99,235,0.12)); outline: none; }
 .info-tip-btn svg { width: 16px; height: 16px; }
+
 .info-tip-pop {
     display: none;
     position: absolute;
-    top: calc(100% + 8px);
-    left: 50%;
-    transform: translateX(-50%);
-    z-index: 10005 !important;
-    width: max-content;
-    max-width: min(280px, 85vw);
+    top: calc(100% + 6px);
+    left: 0;
+    z-index: 100010 !important;
+    width: 270px;
+    max-width: calc(100vw - 48px);
     background-color: var(--card-bg, #fff);
     color: var(--text, #1e293b);
     border: 1px solid var(--border, #e2e8f0);
     border-left: 4px solid var(--primary, #2563eb);
     border-radius: var(--radius-sm, 8px);
-    box-shadow: var(--shadow-lg, 0 10px 30px rgba(0,0,0,0.18));
+    box-shadow: 0 10px 30px rgba(0,0,0,0.25);
     padding: 10px 12px;
-    font-size: 0.8rem;
+    font-size: 0.78rem;
     font-weight: 500;
     line-height: 1.45;
     text-align: left;
     white-space: normal;
     word-wrap: break-word;
-    animation: slideDown 0.18s ease-out forwards;
+    animation: popoverFadeIn 0.18s ease-out forwards;
 }
 .info-tip.open .info-tip-pop { display: block; }
 
-@keyframes slideDown {
-    from { opacity: 0; transform: translateX(-50%) translateY(-6px); }
-    to { opacity: 1; transform: translateX(-50%) translateY(0); }
-}
-
-@media (max-width: 768px) {
-    .info-tip-pop {
-        position: fixed !important;
-        top: 50% !important;
-        left: 50% !important;
-        transform: translate(-50%, -50%) !important;
-        width: 85vw !important;
-        max-width: 280px !important;
-        box-shadow: 0 10px 45px rgba(0,0,0,0.25) !important;
-        white-space: normal !important;
-        word-wrap: break-word !important;
-        animation: tooltipFadeIn 0.2s ease-out forwards !important;
-    }
-}
-
-@keyframes tooltipFadeIn {
-    from { opacity: 0; transform: translate(-50%, -45%); }
-    to { opacity: 1; transform: translate(-50%, -50%); }
+@keyframes popoverFadeIn {
+    from { opacity: 0; transform: translateY(-4px); }
+    to { opacity: 1; transform: translateY(0); }
 }
 
 /* Result (success/error) modal */
@@ -991,6 +971,85 @@
 }
 .year-btn:hover:not(.active) {
     background-color: rgba(0, 0, 0, 0.05);
+}
+
+/* Изоляция и высокий z-index для цифры дня во вкладке «Год» */
+.day-cell {
+    position: relative !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    overflow: hidden !important;
+}
+
+.day-cell .day-number,
+.day-cell .day-num {
+    position: relative !important;
+    z-index: 3 !important;
+    font-weight: 700 !important;
+    font-size: 0.85rem !important;
+    color: var(--text, #ffffff) !important;
+    text-shadow: 0 1px 3px rgba(0, 0, 0, 0.85) !important;
+    pointer-events: none !important;
+}
+
+/* Цветные бейджи тележек с иконками в углу ячейки дня */
+.day-cell .day-badge,
+.day-cell .day-lang-dots {
+    position: absolute !important;
+    top: 2px !important;
+    right: 2px !important;
+    display: flex !important;
+    flex-direction: row !important;
+    gap: 2px !important;
+    z-index: 2 !important;
+    opacity: 0.95;
+    pointer-events: none !important;
+}
+
+.day-cell .day-lang-dot,
+.day-cell .cart-icon {
+    position: relative;
+    width: 10px !important;
+    height: 12px !important;
+    border-radius: 2px !important;
+    border: none !important;
+    flex: 0 0 auto;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+.day-cell .day-lang-dot.dot-ru { background-color: rgba(244, 63, 94, 0.25); }
+.day-cell .day-lang-dot.dot-ua { background-color: rgba(14, 165, 233, 0.25); }
+.day-cell .day-lang-dot.dot-de { background-color: rgba(234, 179, 8, 0.25); }
+
+.day-cell .day-lang-dot .day-trolley-icon,
+.day-cell .status-icon {
+    display: block !important;
+    width: 8px !important;
+    height: 10px !important;
+    max-width: 10px !important;
+    max-height: 10px !important;
+    z-index: 2 !important;
+}
+
+/* Бедж особого события / заметки в нижнем правом углу */
+.day-cell .event-alert-badge,
+.day-cell .attention-badge,
+.day-cell .has-note-badge {
+    position: absolute !important;
+    bottom: 2px !important;
+    right: 2px !important;
+    top: auto !important;
+    left: auto !important;
+    font-size: 0.6rem !important;
+    font-weight: 900 !important;
+    width: 12px !important;
+    height: 12px !important;
+    line-height: 12px !important;
+    border-radius: 50% !important;
+    z-index: 2 !important;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.5) !important;
 }
 
 .legend-item.status-filter-btn {
@@ -1534,8 +1593,53 @@ body, #app, .tab-content {
 }
 
 #quickScrollBtn.hidden,
-.quick-scroll-btn.hidden {
+.quick-scroll-btn.hidden,
+body[style*="overflow: hidden"] #quickScrollBtn,
+.modal-backdrop:not([style*="display: none"]) ~ #quickScrollBtn,
+#quickBookingModal:not([style*="display: none"]) ~ #quickScrollBtn,
+#dayEditorModal:not([style*="display: none"]) ~ #quickScrollBtn,
+#addLocationForm:not([style*="display: none"]) ~ #quickScrollBtn,
+#langConfirmOverlay:not([style*="display: none"]) ~ #quickScrollBtn {
   opacity: 0 !important;
   pointer-events: none !important;
   transform: scale(0.6) translateZ(0) !important;
+}
+
+/* ── Tooltips & Popovers Clamping & Mobile Positioning ──────── */
+.year-tooltip {
+  max-width: calc(100vw - 32px) !important;
+  word-wrap: break-word !important;
+  white-space: normal !important;
+}
+
+/* ── Sync Toast Banner & Save Button Feedback ───────────────── */
+.sync-toast-banner {
+    position: fixed;
+    top: 20px;
+    left: 50%;
+    transform: translateX(-50%) translateY(-30px);
+    background: #1e293b;
+    color: #ffffff;
+    padding: 10px 18px;
+    border-radius: var(--radius-md, 12px);
+    font-size: 0.88rem;
+    font-weight: 700;
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.3);
+    z-index: 100010 !important;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.25s ease, transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+}
+
+.sync-toast-banner.show {
+    opacity: 1;
+    pointer-events: auto;
+    transform: translateX(-50%) translateY(0);
+}
+
+.btn-saved-success {
+    background-color: var(--success, #16a34a) !important;
+    color: #ffffff !important;
+    border-color: var(--success, #16a34a) !important;
 }

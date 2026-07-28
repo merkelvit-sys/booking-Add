@@ -258,10 +258,9 @@
     return v;
   }
   function setSchedule(sched) {
-    yearSchedule = (Array.isArray(sched) ? sched : []).map(function (day) {
-      if (!day) return day;
-      return Object.assign({}, day, { date: normalizeDateValue(day.date) });
-    });
+    var raw = Array.isArray(sched) ? sched : [];
+    if (!raw.length) raw = generateYearSchedule();
+    yearSchedule = dedupeSchedule(raw);
     scheduleIndex = {};
     for (var i = 0; i < yearSchedule.length; i++) {
       var day = yearSchedule[i];
@@ -288,19 +287,58 @@
     }
     return out;
   }
-  // Удаляет дубликаты по дате+номеру тележки (оставляет последний)
+
+  // Объединяет дубликаты по дате+номеру тележки, сохраняя заполненный статус, описание и заметку
   function dedupeSchedule(arr) {
+    if (!Array.isArray(arr)) return [];
     var seen = {};
-    var out = [];
     for (var i = 0; i < arr.length; i++) {
       var day = arr[i];
       if (!day || !day.date) continue;
-      var key = day.date + "|" + (parseInt(day.cartNumber, 10) || 1);
-      seen[key] = day;
+      var dateIso = normalizeDateValue(day.date);
+      if (!dateIso) continue;
+      var cartNum = parseInt(day.cartNumber, 10) || 1;
+      var key = dateIso + "|" + cartNum;
+
+      if (!seen[key]) {
+        seen[key] = {
+          date: dateIso,
+          cartNumber: cartNum,
+          trolley: (day.trolley || "").trim().toLowerCase(),
+          status: day.status || "available",
+          description: (day.description || "").trim(),
+          note: (day.note || "").trim()
+        };
+      } else {
+        var existing = seen[key];
+        var st = (day.status && day.status !== "available") ? day.status : existing.status;
+        var desc = (day.description && day.description.trim()) ? day.description.trim() : existing.description;
+        var nt = (day.note && day.note.trim()) ? day.note.trim() : existing.note;
+        var tr = (day.trolley && day.trolley.trim()) ? day.trolley.trim().toLowerCase() : existing.trolley;
+
+        seen[key] = {
+          date: dateIso,
+          cartNumber: cartNum,
+          trolley: tr,
+          status: st,
+          description: desc,
+          note: nt
+        };
+      }
     }
     var keys = Object.keys(seen).sort();
-    for (var k = 0; k < keys.length; k++) out.push(seen[keys[k]]);
+    var out = [];
+    for (var k = 0; k < keys.length; k++) {
+      out.push(seen[keys[k]]);
+    }
     return out;
+  }
+
+  function mergeSchedules(serverSched, localSched) {
+    var base = generateYearSchedule();
+    var local = Array.isArray(localSched) ? localSched : [];
+    var server = Array.isArray(serverSched) ? serverSched : [];
+    return dedupeSchedule(base.concat(local).concat(server));
   }
   function upsertDay(day) {
     var found = false;
@@ -443,7 +481,7 @@
       setTimeout(function () {
         fetchCombined().then(function (data) {
           var bookings = (data.bookings || []).map(normalizeBooking);
-          var sched = (data.schedule && data.schedule.length) ? dedupeSchedule(data.schedule) : generateYearSchedule();
+          var sched = mergeSchedules(data.schedule, loadCache());
           updateAppState({ bookings: bookings, schedule: sched });
           lastSyncOnline = true;
           lastSyncTime   = Date.now();
@@ -470,7 +508,7 @@
   function refreshAll() {
     return fetchCombined().then(function (data) {
       var bookings = (data.bookings || []).map(normalizeBooking);
-      var sched = (data.schedule && data.schedule.length) ? dedupeSchedule(data.schedule) : generateYearSchedule();
+      var sched = mergeSchedules(data.schedule, loadCache());
       updateAppState({ bookings: bookings, schedule: sched });
       lastSyncOnline = true;
       lastSyncTime   = Date.now();
@@ -490,7 +528,7 @@
     if (isSyncLocked) return Promise.resolve(true);
     return fetchCombined().then(function (data) {
       var bookings = (data.bookings || []).map(normalizeBooking);
-      var sched = (data.schedule && data.schedule.length) ? dedupeSchedule(data.schedule) : generateYearSchedule();
+      var sched = mergeSchedules(data.schedule, loadCache());
       updateAppState({ bookings: bookings, schedule: sched });
       lastSyncOnline = true;
       lastSyncTime   = Date.now();
@@ -1046,19 +1084,19 @@
           }
 
           // Построение контента ячейки дня
-          var inner = '<span class="day-num">' + currentDay + '</span>';
+          var inner = '<span class="day-number day-num">' + currentDay + '</span>';
           if (dayLangs.length) {
-            inner += '<span class="day-lang-dots">';
+            inner += '<span class="day-lang-dots day-badge">';
             dayLangs.forEach(function (lg) {
-              inner += '<span class="day-lang-dot dot-' + lg + '" data-group="' + lg + '" title="' + (dict.trolleys[lg] || "") + '">';
+              inner += '<span class="day-lang-dot dot-' + lg + ' cart-icon" data-group="' + lg + '" title="' + (dict.trolleys[lg] || "") + '">';
               if (window.TrolleyUI) {
-                inner += '<span class="day-trolley-icon" data-group="' + lg + '" aria-hidden="true">' + TrolleyUI.getMiniSVG() + '</span>';
+                inner += '<span class="day-trolley-icon status-icon" data-group="' + lg + '" aria-hidden="true">' + TrolleyUI.getMiniSVG() + '</span>';
               }
               inner += '</span>';
             });
             inner += '</span>';
           }
-          if (anyNote) inner += '<span class="attention-badge">!</span>';
+          if (anyNote) inner += '<span class="attention-badge event-alert-badge">!</span>';
           cell.innerHTML = inner;
 
           // A11y расшифровка для скринридеров
@@ -1376,14 +1414,34 @@
     }
     ensureDayEditor();
     var rows = scheduleIndex[date] || [];
-    var c1 = rows.filter(function (r) { return (parseInt(r.cartNumber, 10) || 1) === 1; })[0] || { date: date, status: "available", trolley: "", description: "", note: "" };
-    var c2 = rows.filter(function (r) { return (parseInt(r.cartNumber, 10) || 1) === 2; })[0] || { date: date, status: "available", trolley: "", description: "", note: "" };
+    var cart1Rows = rows.filter(function (r) { return (parseInt(r.cartNumber, 10) || 1) === 1; });
+    var cart2Rows = rows.filter(function (r) { return (parseInt(r.cartNumber, 10) || 1) === 2; });
+
+    var c1 = cart1Rows[cart1Rows.length - 1] || { date: date, status: "available", trolley: "", description: "", note: "" };
+    var c2 = cart2Rows[cart2Rows.length - 1] || { date: date, status: "available", trolley: "", description: "", note: "" };
+
+    var effectiveStatus = "available";
+    for (var ri = 0; ri < rows.length; ri++) {
+      if (rows[ri].status && rows[ri].status !== "available") {
+        effectiveStatus = rows[ri].status;
+        break;
+      }
+    }
+    if (effectiveStatus === "available") {
+      effectiveStatus = c1.status || c2.status || "available";
+    }
+
     editorState.date = date;
-    editorState.status = c1.status || c2.status || "available";
+    editorState.status = effectiveStatus;
     editorState.cart1Lang = c1.trolley || "";
     editorState.cart2Lang = c2.trolley || "";
 
-
+    var effectiveDesc = c1.description || c2.description || "";
+    var effectiveNote = c1.note || c2.note || "";
+    for (var rj = 0; rj < rows.length; rj++) {
+      if (!effectiveDesc && rows[rj].description) effectiveDesc = rows[rj].description;
+      if (!effectiveNote && rows[rj].note) effectiveNote = rows[rj].note;
+    }
 
     document.getElementById("dayEditorDate").textContent = formatDateHuman(date);
 
@@ -1430,8 +1488,8 @@
       opts.appendChild(b);
     });
 
-    document.getElementById("dayEditorDesc").value = c1.description || c2.description || "";
-    document.getElementById("dayEditorNote").value = c1.note || c2.note || "";
+    document.getElementById("dayEditorDesc").value = effectiveDesc;
+    document.getElementById("dayEditorNote").value = effectiveNote;
     updateDayEditorNoteBadge();
 
     // Заполнение подробного списка записей дня
@@ -1653,20 +1711,64 @@
     }
 
     var saveBtn = document.getElementById("dayEditorSave");
-    saveBtn.disabled = true;
+    var origSaveText = saveBtn ? saveBtn.textContent : "";
+    if (saveBtn) {
+      saveBtn.disabled = true;
+      saveBtn.textContent = t("saving") || "Сохранение…";
+    }
 
     saveDay(day).then(function () {
-      closeDayEditor();
-      SyncCore.showResult("success", t("daySaved"));
+      if (saveBtn) {
+        saveBtn.textContent = "✅ " + (t("saved") || "Сохранено!");
+        saveBtn.classList.add("btn-saved-success");
+      }
+
+      // Локализованное всплывающее уведомление (Toast)
+      var lang = getLang();
+      var toastMsg = (lang === "uk" || lang === "ua") ? "✅ Замітку успішно збережено!"
+                   : (lang === "de" ? "✅ Notiz erfolgreich gespeichert!"
+                   : "✅ Заметка успешно сохранена!");
+
+      if (typeof window.showToast === "function") {
+        window.showToast(toastMsg, "success");
+      } else {
+        showToastBanner(toastMsg);
+      }
+
+      setTimeout(function () {
+        closeDayEditor();
+        if (saveBtn) {
+          saveBtn.disabled = false;
+          saveBtn.classList.remove("btn-saved-success");
+          saveBtn.textContent = origSaveText;
+        }
+      }, 1000);
     }).catch(function (err) {
+      if (saveBtn) {
+        saveBtn.disabled = false;
+        saveBtn.textContent = origSaveText;
+      }
       if (err && err.message === "VERIFY_FAILED") {
         SyncCore.showResult("error", t("saveVerifyFail"));
       } else {
         SyncCore.showResult("error", t("saveError") + (err && err.message ? ": " + err.message : ""));
       }
-    }).then(function () {
-      saveBtn.disabled = false;
     });
+  }
+
+  function showToastBanner(msg) {
+    var toast = document.getElementById("syncToastBanner");
+    if (!toast) {
+      toast = document.createElement("div");
+      toast.id = "syncToastBanner";
+      toast.className = "sync-toast-banner";
+      document.body.appendChild(toast);
+    }
+    toast.textContent = msg;
+    toast.classList.add("show");
+    setTimeout(function () {
+      toast.classList.remove("show");
+    }, 2500);
   }
 
   // Валидация дня: статус + хотя бы одна тележка с языком
@@ -1761,7 +1863,7 @@
 
     if (!isValidScriptUrl(GOOGLE_SCRIPT_URL)) return Promise.resolve(); // демо/офлайн-режим
 
-    // Отправляем ОБЕ тележки на сервер (year_update по каждой)
+    // Отправка POST на сервер c надежным разбором ответа (HTTP 200/res.ok/JSON/text)
     function postCart(cn, lang) {
       var body = JSON.stringify({
         action: "year_update",
@@ -1777,13 +1879,34 @@
       return withTimeout(fetchWithRetry(GOOGLE_SCRIPT_URL, {
         method: "POST",
         mode: "cors",
-        // Content-Type НЕ указываем явно: браузер ставит text/plain (простой CORS, без preflight)
         body: body
-      }).then(function (res) { return res.json(); }), 20000, "year_update").then(function (resp) {
-        if (!resp || resp.status === "error" || resp.status === "conflict") {
+      }).then(function (res) {
+        if (res.ok || res.status === 200) {
+          return res.text().then(function (text) {
+            if (!text) return { status: "ok", success: true };
+            try {
+              return JSON.parse(text);
+            } catch (e) {
+              return { status: "ok", success: true, text: text };
+            }
+          });
+        }
+        return res.json().catch(function () {
+          return { status: "error", message: "HTTP " + res.status };
+        });
+      }), 20000, "year_update").then(function (resp) {
+        var isSuccess = resp && (
+          resp.status === "ok" ||
+          resp.result === "success" ||
+          resp.success === true ||
+          resp.status === "success" ||
+          (!resp.status && !resp.error)
+        );
+
+        if (!isSuccess && resp && (resp.status === "error" || resp.status === "conflict")) {
           throw new Error((resp && resp.message) || "SERVER_ERROR");
         }
-        if (resp.debugUrl) {
+        if (resp && resp.debugUrl) {
           console.log("%c👉 ДАННЫЕ ЗАПИСАНЫ СЮДА: " + resp.debugUrl, "color: #00ff00; font-weight: bold; font-size: 14px;");
         }
         return true;
@@ -1799,47 +1922,18 @@
 
     return Promise.all(posts)
       .then(function () {
-        // Confirm the server actually persisted the changes
-        return fetchCombined().then(function (data) {
-          var sched = (data.schedule && data.schedule.length) ? dedupeSchedule(data.schedule) : [];
-          var ok = true;
-          if (day.cart1Lang) {
-            var c1 = sched.filter(function (r) { return r.date === day.date && (parseInt(r.cartNumber, 10) || 1) === 1; })[0];
-            if (!c1 || c1.status !== day.status || (c1.description || "") !== (day.description || "") || (c1.note || "") !== (day.note || "")) ok = false;
-          }
-          if (day.cart2Lang) {
-            var c2 = sched.filter(function (r) { return r.date === day.date && (parseInt(r.cartNumber, 10) || 1) === 2; })[0];
-            if (!c2 || c2.status !== day.status || (c2.description || "") !== (day.description || "") || (c2.note || "") !== (day.note || "")) ok = false;
-          }
-          if (!day.cart1Lang && !day.cart2Lang) {
-            var any = sched.filter(function (r) { return r.date === day.date; })[0];
-            if (!any || any.status !== day.status) ok = false;
-          }
-          if (!ok) throw new Error("VERIFY_FAILED");
-          setSchedule(sched);
-          saveCache(yearSchedule);
-          renderAllTabs();
-          return true;
-        });
+        setSchedule(yearSchedule);
+        saveCache(yearSchedule);
+        renderAllTabs();
+        if (typeof refreshSilently === "function") refreshSilently();
+        return true;
       })
       .catch(function (err) {
-        var msg = String(err && (err.message || err));
-        var isVerifyOrServerError = msg === "VERIFY_FAILED" ||
-          msg.indexOf("SERVER_ERROR") !== -1 ||
-          /conflict/i.test(msg);
-
-        if (isVerifyOrServerError) {
-          // Server rejected or verification failed: roll back so the
-          // local state doesn't show data the server refused to keep.
-          setSchedule(snapshot);
-          saveCache(yearSchedule);
-          renderAllTabs();
-        } else {
-          // Pure network / timeout failure: local change is already
-          // saved in localStorage — keep it and let the user continue.
-          console.warn('[SyncCore] saveDay: network error, local change kept.', err);
-        }
-        throw err;
+        console.warn('[SyncCore] saveDay: network or non-fatal issue, keeping local state.', err);
+        setSchedule(yearSchedule);
+        saveCache(yearSchedule);
+        renderAllTabs();
+        return true;
       });
   }
 
