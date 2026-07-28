@@ -81,6 +81,7 @@ const I18N = {
     btnSuccess: "Успешно!",
     btnSubmit: "Записать смену",
     networkSendError: "Ошибка сети при отправке данных",
+    savedLocally: "Сохранено локально. Синхронизируется при появлении сети.",
     bookingConflict: "Эта тележка на данное время уже забронирована!",
 
     confirmDelete: "Вы уверены, что хотите удалить эту запись?",
@@ -255,6 +256,7 @@ const I18N = {
     btnSuccess: "Успішно!",
     btnSubmit: "Записати зміну",
     networkSendError: "Помилка мережі при надсиланні даних",
+    savedLocally: "Збережено локально. Синхронізується при появі мережі.",
     bookingConflict: "Ця теліжка на цей час вже заброньована!",
 
     confirmDelete: "Ви впевнені, що хочете видалити цей запис?",
@@ -429,6 +431,7 @@ const I18N = {
     btnSuccess: "Erfolgreich!",
     btnSubmit: "Schicht eintragen",
     networkSendError: "Netzwerkfehler beim Senden der Daten.",
+    savedLocally: "Lokal gespeichert. Wird synchronisiert, sobald die Verbindung wiederhergestellt ist.",
     bookingConflict: "Dieser Trolley ist für diese Zeit bereits gebucht!",
 
     confirmDelete: "Sind Sie sicher, dass Sie diesen Eintrag löschen möchten?",
@@ -3710,12 +3713,30 @@ async function submitQuickBooking(e) {
     }, 1500);
 
   } catch (err) {
-    console.error('Network or JS error during quick booking:', err);
-    showToast(S('networkSendError'), "error");
-    justAddedSlot = null;
-    if (btn) btn.disabled = false;
-    if (spinner) spinner.style.display = 'none';
-    if (btnText) btnText.textContent = S('quickBookSave');
+    // Offline-first: keep local changes, show a soft informational toast.
+    // Do NOT roll back the booking — it is already saved in localStorage via
+    // addBookingRecord / saveCachedBookings and visible in the UI.
+    console.warn('Network error during quick booking (kept locally):', err);
+    if (navigator.onLine === false || /fetch|network|timeout/i.test(String(err))) {
+      // Network is down — booking stays local, user is informed
+      showToast(S('savedLocally'), "info");
+      if (btn) btn.classList.add('success');
+      if (spinner) spinner.style.display = 'none';
+      if (btnText) btnText.textContent = S('btnSuccess');
+      setTimeout(function () {
+        if (btn) { btn.classList.remove('success'); btn.disabled = false; }
+        if (btnText) btnText.textContent = S('quickBookSave');
+        closeQuickBookingModal();
+        setTimeout(function () { justAddedSlot = null; renderScheduleBoard(); }, 1500);
+      }, 1500);
+    } else {
+      // Unexpected JS error — revert booking to avoid inconsistent state
+      showToast(S('networkSendError'), "error");
+      justAddedSlot = null;
+      if (btn) btn.disabled = false;
+      if (spinner) spinner.style.display = 'none';
+      if (btnText) btnText.textContent = S('quickBookSave');
+    }
   }
 }
 
