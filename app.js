@@ -1075,44 +1075,60 @@ function selectDate(dateISO) {
 // ----------------------------------------------------------------------------
 // API И КЭШИРОВАНИЕ ПОГОДЫ ДЛЯ МАРБУРГА (Open-Meteo API + 3h localStorage cache)
 // ----------------------------------------------------------------------------
-const MARBURG_WEATHER_CACHE_KEY = 'marburg_weather_cache';
-const MARBURG_WEATHER_CACHE_TTL = 3 * 60 * 60 * 1000; // 3 часа в мс
+function getCurrentAppLang() {
+  if (window.AppState && AppState.language) {
+    const l = String(AppState.language).toLowerCase();
+    if (l === 'uk' || l === 'ua') return 'ua';
+    if (l === 'de') return 'de';
+    if (l === 'ru') return 'ru';
+  }
+  if (typeof getLang === 'function') {
+    const l = getLang();
+    if (l === 'uk' || l === 'ua') return 'ua';
+    if (l === 'de') return 'de';
+    return 'ru';
+  }
+  const docLang = (document.documentElement.lang || 'ru').toLowerCase();
+  if (docLang.indexOf('uk') === 0 || docLang.indexOf('ua') === 0) return 'ua';
+  if (docLang.indexOf('de') === 0) return 'de';
+  return 'ru';
+}
 
 const WEATHER_CODE_MAP = {
-  0:  { ru: '☀️ Ясно', de: '☀️ Sonnig', ua: '☀️ Ясно' },
-  1:  { ru: '🌤️ Облачно', de: '🌤️ Bewölkt', ua: '🌤️ Хмарно' },
-  2:  { ru: '🌤️ Облачно', de: '🌤️ Bewölkt', ua: '🌤️ Хмарно' },
-  3:  { ru: '🌤️ Облачно', de: '🌤️ Bewölkt', ua: '🌤️ Хмарно' },
-  45: { ru: '🌫️ Туман', de: '🌫️ Nebel', ua: '🌫️ Туман' },
-  48: { ru: '🌫️ Туман', de: '🌫️ Nebel', ua: '🌫️ Туман' },
-  51: { ru: '🌧️ Дождь', de: '🌧️ Regen', ua: '🌧️ Дощ' },
-  53: { ru: '🌧️ Дождь', de: '🌧️ Regen', ua: '🌧️ Дощ' },
-  55: { ru: '🌧️ Дождь', de: '🌧️ Regen', ua: '🌧️ Дощ' },
-  56: { ru: '🌧️ Дождь', de: '🌧️ Regen', ua: '🌧️ Дощ' },
-  57: { ru: '🌧️ Дождь', de: '🌧️ Regen', ua: '🌧️ Дощ' },
-  61: { ru: '🌧️ Дождь', de: '🌧️ Regen', ua: '🌧️ Дощ' },
-  63: { ru: '🌧️ Дождь', de: '🌧️ Regen', ua: '🌧️ Дощ' },
-  65: { ru: '🌧️ Дождь', de: '🌧️ Regen', ua: '🌧️ Дощ' },
-  66: { ru: '🌧️ Дождь', de: '🌧️ Regen', ua: '🌧️ Дощ' },
-  67: { ru: '🌧️ Дождь', de: '🌧️ Regen', ua: '🌧️ Дощ' },
-  71: { ru: '❄️ Снег', de: '❄️ Schnee', ua: '❄️ Сніг' },
-  73: { ru: '❄️ Снег', de: '❄️ Schnee', ua: '❄️ Сніг' },
-  75: { ru: '❄️ Снег', de: '❄️ Schnee', ua: '❄️ Сніг' },
-  77: { ru: '❄️ Снег', de: '❄️ Schnee', ua: '❄️ Сніг' },
-  80: { ru: '🌧️ Дождь', de: '🌧️ Regen', ua: '🌧️ Дощ' },
-  81: { ru: '🌧️ Дождь', de: '🌧️ Regen', ua: '🌧️ Дощ' },
-  82: { ru: '🌧️ Дождь', de: '🌧️ Regen', ua: '🌧️ Дощ' },
-  85: { ru: '❄️ Снег', de: '❄️ Schnee', ua: '❄️ Сніг' },
-  86: { ru: '❄️ Снег', de: '❄️ Schnee', ua: '❄️ Сніг' },
-  95: { ru: '🌩️ Гроза', de: '🌩️ Gewitter', ua: '🌩️ Гроза' },
-  96: { ru: '🌩️ Гроза', de: '🌩️ Gewitter', ua: '🌩️ Гроза' },
-  99: { ru: '🌩️ Гроза', de: '🌩️ Gewitter', ua: '🌩️ Гроза' }
+  0:  { ru: '☀️ Ясно', de: '☀️ Sonnig', ua: '☀️ Ясно', uk: '☀️ Ясно' },
+  1:  { ru: '🌤️ Облачно', de: '🌤️ Bewölkt', ua: '🌤️ Хмарно', uk: '🌤️ Хмарно' },
+  2:  { ru: '🌤️ Облачно', de: '🌤️ Bewölkt', ua: '🌤️ Хмарно', uk: '🌤️ Хмарно' },
+  3:  { ru: '🌤️ Облачно', de: '🌤️ Bewölkt', ua: '🌤️ Хмарно', uk: '🌤️ Хмарно' },
+  45: { ru: '🌫️ Туман', de: '🌫️ Nebel', ua: '🌫️ Туман', uk: '🌫️ Туман' },
+  48: { ru: '🌫️ Туман', de: '🌫️ Nebel', ua: '🌫️ Туман', uk: '🌫️ Туман' },
+  51: { ru: '🌧️ Дождь', de: '🌧️ Regen', ua: '🌧️ Дощ', uk: '🌧️ Дощ' },
+  53: { ru: '🌧️ Дождь', de: '🌧️ Regen', ua: '🌧️ Дощ', uk: '🌧️ Дощ' },
+  55: { ru: '🌧️ Дождь', de: '🌧️ Regen', ua: '🌧️ Дощ', uk: '🌧️ Дощ' },
+  56: { ru: '🌧️ Дождь', de: '🌧️ Regen', ua: '🌧️ Дощ', uk: '🌧️ Дощ' },
+  57: { ru: '🌧️ Дождь', de: '🌧️ Regen', ua: '🌧️ Дощ', uk: '🌧️ Дощ' },
+  61: { ru: '🌧️ Дождь', de: '🌧️ Regen', ua: '🌧️ Дощ', uk: '🌧️ Дощ' },
+  63: { ru: '🌧️ Дождь', de: '🌧️ Regen', ua: '🌧️ Дощ', uk: '🌧️ Дощ' },
+  65: { ru: '🌧️ Дождь', de: '🌧️ Regen', ua: '🌧️ Дощ', uk: '🌧️ Дощ' },
+  66: { ru: '🌧️ Дождь', de: '🌧️ Regen', ua: '🌧️ Дощ', uk: '🌧️ Дощ' },
+  67: { ru: '🌧️ Дождь', de: '🌧️ Regen', ua: '🌧️ Дощ', uk: '🌧️ Дощ' },
+  71: { ru: '❄️ Снег', de: '❄️ Schnee', ua: '❄️ Сніг', uk: '❄️ Сніг' },
+  73: { ru: '❄️ Снег', de: '❄️ Schnee', ua: '❄️ Сніг', uk: '❄️ Сніг' },
+  75: { ru: '❄️ Снег', de: '❄️ Schnee', ua: '❄️ Сніг', uk: '❄️ Сніг' },
+  77: { ru: '❄️ Снег', de: '❄️ Schnee', ua: '❄️ Сніг', uk: '❄️ Сніг' },
+  80: { ru: '🌧️ Дождь', de: '🌧️ Regen', ua: '🌧️ Дощ', uk: '🌧️ Дощ' },
+  81: { ru: '🌧️ Дождь', de: '🌧️ Regen', ua: '🌧️ Дощ', uk: '🌧️ Дощ' },
+  82: { ru: '🌧️ Дождь', de: '🌧️ Regen', ua: '🌧️ Дощ', uk: '🌧️ Дощ' },
+  85: { ru: '❄️ Снег', de: '❄️ Schnee', ua: '❄️ Сніг', uk: '❄️ Сніг' },
+  86: { ru: '❄️ Снег', de: '❄️ Schnee', ua: '❄️ Сніг', uk: '❄️ Сніг' },
+  95: { ru: '🌩️ Гроза', de: '🌩️ Gewitter', ua: '🌩️ Гроза', uk: '🌩️ Гроза' },
+  96: { ru: '🌩️ Гроза', de: '🌩️ Gewitter', ua: '🌩️ Гроза', uk: '🌩️ Гроза' },
+  99: { ru: '🌩️ Гроза', de: '🌩️ Gewitter', ua: '🌩️ Гроза', uk: '🌩️ Гроза' }
 };
 
 function getWeatherDescription(code, lang) {
-  const l = (lang || (window.AppState && AppState.language) || 'ru').toLowerCase();
-  const entry = WEATHER_CODE_MAP[code] || { ru: '🌤️ Погода', de: '🌤️ Wetter', ua: '🌤️ Погода' };
-  return entry[l] || entry.ru;
+  const l = (lang || getCurrentAppLang()).toLowerCase();
+  const entry = WEATHER_CODE_MAP[code] || { ru: '🌤️ Погода', de: '🌤️ Wetter', ua: '🌤️ Погода', uk: '🌤️ Погода' };
+  return entry[l] || entry.ua || entry.uk || entry.ru;
 }
 
 async function fetchMarburgWeatherData() {
@@ -1179,7 +1195,7 @@ async function updateScheduleWeatherWidget(isoDate) {
   }
 
   const targetISO = isoDate || selectedDateISO || new Date().toISOString().slice(0, 10);
-  const lang = (window.AppState && AppState.language) ? AppState.language.toLowerCase() : 'ru';
+  const lang = getCurrentAppLang();
 
   const todayObj = new Date();
   todayObj.setHours(0, 0, 0, 0);
@@ -1189,13 +1205,15 @@ async function updateScheduleWeatherWidget(isoDate) {
   const outOfRangeMsg = {
     ru: '🌡️ Прогноз погоды доступен на ближайшие 7 дней',
     de: '🌡️ Wettervorhersage für die nächsten 7 Tage verfügbar',
-    ua: '🌡️ Прогноз погоди доступний на найближчі 7 днів'
+    ua: '🌡️ Прогноз погоди доступний на найближчі 7 днів',
+    uk: '🌡️ Прогноз погоди доступний на найближчі 7 днів'
   };
 
   const cityLabels = {
     ru: '🌡️ Марбург',
     de: '🌡️ Marburg',
-    ua: '🌡️ Марбург'
+    ua: '🌡️ Марбург',
+    uk: '🌡️ Марбург'
   };
 
   if (diffDays < 0 || diffDays > 7) {
