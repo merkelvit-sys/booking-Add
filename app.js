@@ -3898,13 +3898,11 @@ function initFontSizeMode() {
   let isScrollDownDirection = true;
 
   function isAnyModalOpen() {
-    const backdrops = document.querySelectorAll('.modal-backdrop, .lang-confirm-overlay');
-    for (let i = 0; i < backdrops.length; i++) {
-      if (window.getComputedStyle(backdrops[i]).display !== 'none') return true;
-    }
-    const activeModals = document.querySelectorAll('.modal.active, .modal.open, .day-editor-modal, #dayEditorModal, #quickBookingModal');
-    for (let i = 0; i < activeModals.length; i++) {
-      if (window.getComputedStyle(activeModals[i]).display !== 'none') return true;
+    if (document.body.style.overflow === 'hidden') return true;
+    const modals = document.querySelectorAll('.modal-backdrop, .lang-confirm-overlay, .modal, .day-editor-modal, #dayEditorModal, #quickBookingModal, #addLocationForm, #addTimeSlotModal');
+    for (let i = 0; i < modals.length; i++) {
+      const style = window.getComputedStyle(modals[i]);
+      if (style.display !== 'none' && style.visibility !== 'hidden') return true;
     }
     return false;
   }
@@ -3978,4 +3976,11 @@ function initFontSizeMode() {
 
   window.addEventListener('scroll', updateScrollButton, { passive: true });
   window.addEventListener('resize', updateScrollButton, { passive: true });
+
+  if (typeof MutationObserver !== 'undefined') {
+    const observer = new MutationObserver(function () {
+      updateScrollButton();
+    });
+    observer.observe(document.body, { attributes: true, attributeFilter: ['style', 'class'] });
+  }
 })();
