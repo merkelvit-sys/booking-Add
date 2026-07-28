@@ -703,7 +703,11 @@
     linkBookingToYear(rec.date, slot.cart1Lang, slot.cart2Lang);
   }
 
-  // Безопасное добавление с откатом локального кэша при сетевой ошибке.
+  // Offline-first: applies the booking locally immediately, then tries the server
+  // in the background. Network/timeout failures do NOT roll back local data —
+  // the record stays in AppState and localStorage so the user sees their booking
+  // even without internet. Only hard server logic errors (conflict / server-side
+  // validation failure) trigger a rollback and re-render.
   function addBookingRecordSafe(rec, serverCreatePromiseFactory) {
     isSyncLocked = true;
     var snapshot = (AppState.bookings || []).map(function (x) { return Object.assign({}, x); });
@@ -724,22 +728,39 @@
 
     return p.then(function (result) {
       isSyncLocked = false;
+      // Hard server logic errors — rollback and propagate so the caller can show
+      // a specific message (conflict, validation failure, etc.)
       if (result && (result.status === "error" || result.status === "conflict")) {
         throw new Error(result.message || "SERVER_ERROR");
       }
       return result;
     }).catch(function (err) {
       isSyncLocked = false;
-      AppState.bookings = snapshot;
-      try { databaseBookings = snapshot; } catch (e) {}
-      saveCachedBookings(snapshot);
-      var originalSlot = snapshot.find(function (x) {
-        return x.location === rec.location && x.date === rec.date && x.time === rec.time;
-      });
-      var c1Lang = originalSlot ? originalSlot.cart1Lang : "";
-      var c2Lang = originalSlot ? originalSlot.cart2Lang : "";
-      linkBookingToYear(rec.date, c1Lang, c2Lang);
-      renderAllTabs();
+      var msg = String(err && (err.message || err));
+      var isServerLogicError = msg === "SERVER_ERROR" ||
+        /conflict/i.test(msg) ||
+        (msg.indexOf("SERVER_ERROR") !== -1);
+
+      if (isServerLogicError) {
+        // Server explicitly rejected the booking (conflict / bad data): roll back
+        // so the UI doesn’t show an invalid record.
+        AppState.bookings = snapshot;
+        try { databaseBookings = snapshot; } catch (e) {}
+        saveCachedBookings(snapshot);
+        var originalSlot = snapshot.find(function (x) {
+          return x.location === rec.location && x.date === rec.date && x.time === rec.time;
+        });
+        var c1Lang = originalSlot ? originalSlot.cart1Lang : "";
+        var c2Lang = originalSlot ? originalSlot.cart2Lang : "";
+        linkBookingToYear(rec.date, c1Lang, c2Lang);
+        renderAllTabs();
+        throw err;
+      }
+
+      // Network / timeout error: keep the local booking as-is (offline-first).
+      // The background sync will push it to the server when connectivity returns.
+      console.warn('[SyncCore] addBookingRecordSafe: network error, booking kept locally.', err);
+      // Re-throw so that submitQuickBooking’s catch can show the soft toast.
       throw err;
     });
   }
@@ -1761,7 +1782,7 @@
 
     return Promise.all(posts)
       .then(function () {
-        // Подтверждаем, что сервер действительно записал изменения
+        // Confirm the server actually persisted the changes
         return fetchCombined().then(function (data) {
           var sched = (data.schedule && data.schedule.length) ? dedupeSchedule(data.schedule) : [];
           var ok = true;
@@ -1774,7 +1795,6 @@
             if (!c2 || c2.status !== day.status || (c2.description || "") !== (day.description || "") || (c2.note || "") !== (day.note || "")) ok = false;
           }
           if (!day.cart1Lang && !day.cart2Lang) {
-            // День без тележки (выходной/праздник): сверяем хотя бы одну строку по статусу
             var any = sched.filter(function (r) { return r.date === day.date; })[0];
             if (!any || any.status !== day.status) ok = false;
           }
@@ -1786,10 +1806,22 @@
         });
       })
       .catch(function (err) {
-        // Сетевая ошибка или сбой валидации/проверки на сервере: откатываем состояние
-        setSchedule(snapshot);
-        saveCache(yearSchedule);
-        renderAllTabs();
+        var msg = String(err && (err.message || err));
+        var isVerifyOrServerError = msg === "VERIFY_FAILED" ||
+          msg.indexOf("SERVER_ERROR") !== -1 ||
+          /conflict/i.test(msg);
+
+        if (isVerifyOrServerError) {
+          // Server rejected or verification failed: roll back so the
+          // local state doesn't show data the server refused to keep.
+          setSchedule(snapshot);
+          saveCache(yearSchedule);
+          renderAllTabs();
+        } else {
+          // Pure network / timeout failure: local change is already
+          // saved in localStorage — keep it and let the user continue.
+          console.warn('[SyncCore] saveDay: network error, local change kept.', err);
+        }
         throw err;
       });
   }
