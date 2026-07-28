@@ -3899,88 +3899,87 @@ function initFontSizeMode() {
 
   function isAnyModalOpen() {
     if (document.body.style.overflow === 'hidden') return true;
-    const modals = document.querySelectorAll('.modal-backdrop, .lang-confirm-overlay, .modal, .day-editor-modal, #dayEditorModal, #quickBookingModal, #addLocationForm, #addTimeSlotModal');
-    for (let i = 0; i < modals.length; i++) {
-      const style = window.getComputedStyle(modals[i]);
-      if (style.display !== 'none' && style.visibility !== 'hidden') return true;
+    const backdrops = document.querySelectorAll('.modal-backdrop:not([style*="display: none"]), .lang-confirm-overlay:not([style*="display: none"])');
+    for (let i = 0; i < backdrops.length; i++) {
+      const style = window.getComputedStyle(backdrops[i]);
+      if (style.display !== 'none' && style.visibility !== 'hidden' && style.opacity !== '0') return true;
     }
+    const dayModal = document.getElementById('dayEditorModal');
+    if (dayModal && window.getComputedStyle(dayModal).display !== 'none') return true;
+    const quickModal = document.getElementById('quickBookingModal');
+    if (quickModal && window.getComputedStyle(quickModal).display !== 'none') return true;
+
     return false;
   }
 
-  function getScrollButton() {
+  function initQuickScrollButton() {
     let btn = document.getElementById('quickScrollBtn');
     if (!btn) {
       btn = document.createElement('button');
       btn.id = 'quickScrollBtn';
       btn.className = 'quick-scroll-btn hidden';
       btn.setAttribute('aria-label', 'Scroll navigation');
-      btn.innerHTML = `<svg id="quickScrollIcon" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M19 14l-7 7m0 0l-7-7m7 7V3" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
+      btn.innerHTML = '<span class="scroll-icon">⬇️</span>';
       document.body.appendChild(btn);
     } else if (btn.parentElement !== document.body) {
       document.body.appendChild(btn);
     }
-    return btn;
-  }
 
-  function updateScrollButton() {
-    const btn = getScrollButton();
-    const icon = document.getElementById('quickScrollIcon');
-    if (!btn) return;
+    let isScrollingDown = true;
 
-    if (isAnyModalOpen()) {
-      btn.classList.add('hidden');
-      return;
-    }
+    function updateScrollButton() {
+      if (!btn) return;
 
-    const scrollTop = window.scrollY || document.documentElement.scrollTop || 0;
-    const scrollHeight = document.documentElement.scrollHeight || document.body.scrollHeight || 0;
-    const clientHeight = window.innerHeight || document.documentElement.clientHeight || 0;
-    const maxScroll = scrollHeight - clientHeight;
-
-    if (maxScroll <= 20) {
-      btn.classList.add('hidden');
-      return;
-    }
-
-    if (scrollTop < 120) {
-      // Пользователь вверху страницы -> показываем стрелку вниз ⬇️
-      isScrollDownDirection = true;
-      if (icon) {
-        icon.innerHTML = `<path d="M19 14l-7 7m0 0l-7-7m7 7V3" stroke-linecap="round" stroke-linejoin="round"/>`;
+      if (isAnyModalOpen()) {
+        btn.classList.add('hidden');
+        return;
       }
-    } else {
-      // Пользователь проскроллил вниз -> показываем стрелку вверх ⬆️
-      isScrollDownDirection = false;
-      if (icon) {
-        icon.innerHTML = `<path d="M5 10l7-7m0 0l7 7m-7-7v18" stroke-linecap="round" stroke-linejoin="round"/>`;
-      }
-    }
 
-    btn.classList.remove('hidden');
-  }
-
-  window.handleQuickScroll = function () {
-    if (isScrollDownDirection) {
+      const scrollTop = window.scrollY || document.documentElement.scrollTop || 0;
       const scrollHeight = document.documentElement.scrollHeight || document.body.scrollHeight || 0;
-      window.scrollTo({ top: scrollHeight, behavior: 'smooth' });
-    } else {
-      window.scrollTo({ top: 0, behavior: 'smooth' });
+      const clientHeight = window.innerHeight || document.documentElement.clientHeight || 0;
+      const maxScroll = scrollHeight - clientHeight;
+
+      if (maxScroll < 100) {
+        btn.classList.add('hidden');
+        return;
+      }
+
+      btn.classList.remove('hidden');
+
+      if (scrollTop < 200) {
+        isScrollingDown = true;
+        btn.innerHTML = '<span class="scroll-icon">⬇️</span>';
+      } else {
+        isScrollingDown = false;
+        btn.innerHTML = '<span class="scroll-icon">⬆️</span>';
+      }
     }
-  };
 
-  document.addEventListener('DOMContentLoaded', function () {
-    const btn = getScrollButton();
-    btn.onclick = window.handleQuickScroll;
+    btn.onclick = function () {
+      const scrollHeight = document.documentElement.scrollHeight || document.body.scrollHeight || 0;
+      const clientHeight = window.innerHeight || document.documentElement.clientHeight || 0;
+      const maxScroll = scrollHeight - clientHeight;
+      if (isScrollingDown) {
+        window.scrollTo({ top: maxScroll, behavior: 'smooth' });
+      } else {
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      }
+    };
+
+    window.addEventListener('scroll', updateScrollButton, { passive: true });
+    window.addEventListener('resize', updateScrollButton, { passive: true });
+
+    if (typeof MutationObserver !== 'undefined') {
+      const observer = new MutationObserver(function () {
+        updateScrollButton();
+      });
+      observer.observe(document.body, { attributes: true, attributeFilter: ['style', 'class'] });
+    }
+
     updateScrollButton();
-  });
-
-  window.addEventListener('scroll', updateScrollButton, { passive: true });
-  window.addEventListener('resize', updateScrollButton, { passive: true });
-
-  if (typeof MutationObserver !== 'undefined') {
-    const observer = new MutationObserver(function () {
-      updateScrollButton();
-    });
-    observer.observe(document.body, { attributes: true, attributeFilter: ['style', 'class'] });
   }
+
+  document.addEventListener('DOMContentLoaded', initQuickScrollButton);
+  initQuickScrollButton();
 })();
