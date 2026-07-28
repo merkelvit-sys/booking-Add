@@ -733,6 +733,11 @@
       if (result && (result.status === "error" || result.status === "conflict")) {
         throw new Error(result.message || "SERVER_ERROR");
       }
+      // ── Fix: re-render after server confirms so UI reflects canonical data ──
+      // The optimistic render (line above) ran while the modal was still visible.
+      // This second render fires after the server roundtrip and lets the caller's
+      // setTimeout(closeModal) reveal an already-updated Schedule/Year view.
+      renderAllTabs();
       return result;
     }).catch(function (err) {
       isSyncLocked = false;
