@@ -206,8 +206,8 @@
 
 /* Затемнённые (отфильтрованные) дни в годовом графике */
 .day-cell.day-dimmed {
-    opacity: 0.3;
-    filter: saturate(0.5);
+    opacity: 0.35;
+    filter: none !important;
 }
 .day-cell.day-dimmed .day-lang-dot { display: none; }
 
@@ -1688,4 +1688,53 @@ div[id*="vercel-toolbar"] {
     position: absolute !important;
     left: -9999px !important;
     top: -9999px !important;
+}
+
+/* ── Marburg Weather Widget ──────────────────────────────────── */
+.schedule-weather-widget {
+  width: 100%;
+}
+
+.weather-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: rgba(30, 58, 138, 0.35) !important;
+  border: 1px solid rgba(59, 130, 246, 0.4) !important;
+  border-radius: 14px;
+  padding: 10px 16px;
+  margin: 10px 0 14px 0;
+  font-weight: 600;
+  font-size: 0.92rem;
+  color: #f8fafc !important;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.25);
+  backdrop-filter: blur(8px);
+}
+
+.weather-card .weather-city-temp {
+  color: #60a5fa !important;
+  font-weight: 700;
+  letter-spacing: 0.2px;
+}
+
+.weather-card .weather-desc {
+  color: #f1f5f9 !important;
+  font-weight: 600;
+}
+
+.weather-card-out-of-range {
+  justify-content: center;
+  background: rgba(30, 41, 59, 0.5) !important;
+  border-color: rgba(148, 163, 184, 0.25) !important;
+  color: #cbd5e1 !important;
+  font-weight: 500;
+  font-size: 0.88rem;
+}
+
+@media (max-width: 480px) {
+  .weather-card {
+    font-size: 0.85rem;
+    padding: 8px 12px;
+    margin: 8px 0 12px 0;
+  }
 }
