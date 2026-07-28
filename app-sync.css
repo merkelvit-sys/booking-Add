@@ -1593,12 +1593,7 @@ body, #app, .tab-content {
 }
 
 #quickScrollBtn.hidden,
-.quick-scroll-btn.hidden,
-.modal-backdrop:not([style*="display: none"]) ~ #quickScrollBtn,
-#quickBookingModal:not([style*="display: none"]) ~ #quickScrollBtn,
-#dayEditorModal:not([style*="display: none"]) ~ #quickScrollBtn,
-#addLocationForm:not([style*="display: none"]) ~ #quickScrollBtn,
-#langConfirmOverlay:not([style*="display: none"]) ~ #quickScrollBtn {
+.quick-scroll-btn.hidden {
   opacity: 0 !important;
   pointer-events: none !important;
   transform: scale(0.6) translateZ(0) !important;
