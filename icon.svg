@@ -1,0 +1,66 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <defs>
+    <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#3b82f6;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#2563eb;stop-opacity:1" />
+    </linearGradient>
+  </defs>
+  <rect width="512" height="512" rx="112" fill="url(#bgGrad)" />
+  <g transform="translate(166, 76) scale(2.25)" shape-rendering="geometricPrecision">
+    <style>
+      .sl-frame{fill:#2d3748}
+      .sl-poster{fill:#ffffff}
+      .sl-pl{fill:rgba(255,255,255,.32)}
+      .sl-pt{fill:rgba(255,255,255,.85)}
+      .sl-shelf{fill:#e2e8f0}
+      .sl-b1{fill:#ffffff}.sl-b2{fill:#10b981}.sl-b3{fill:#ef4444}.sl-b4{fill:#f59e0b}
+      .sl-wo{fill:#1a202c;stroke:#4a5568;stroke-width:1}
+      .sl-wi{fill:#718096}
+      .sl-ws{stroke:#718096;stroke-width:1;stroke-linecap:round}
+    </style>
+    <rect class="sl-frame" x="14" y="10" width="5" height="120" rx="2.5"/>
+    <rect class="sl-frame" x="61" y="10" width="5" height="120" rx="2.5"/>
+    <rect class="sl-frame" x="14" y="10" width="52" height="5" rx="2.5"/>
+    <rect class="sl-frame" x="14" y="55" width="52" height="4" rx="2"/>
+    <rect class="sl-frame" x="14" y="82" width="52" height="4" rx="2"/>
+    <rect class="sl-frame" x="14" y="109" width="52" height="4" rx="2"/>
+    <rect class="sl-frame" x="14" y="130" width="52" height="4" rx="2"/>
+    <rect class="sl-poster" x="18" y="14" width="44" height="38" rx="3"/>
+    <rect class="sl-pl" x="18" y="28" width="44" height="2" rx="1"/>
+    <rect class="sl-pt" x="22" y="33" width="36" height="3.5" rx="1.5"/>
+    <rect class="sl-pt" x="25" y="39" width="30" height="3" rx="1.5"/>
+    <rect class="sl-pt" x="28" y="45" width="24" height="2.5" rx="1.2"/>
+    <rect class="sl-shelf" x="18" y="56" width="44" height="22" rx="2"/>
+    <rect class="sl-b1" x="20" y="58" width="10" height="18" rx="1.5"/>
+    <rect class="sl-b2" x="32" y="59" width="8" height="17" rx="1.5"/>
+    <rect class="sl-b3" x="42" y="60" width="5" height="16" rx="1.2"/>
+    <rect class="sl-b4" x="49" y="59" width="7" height="17" rx="1.5"/>
+    <rect class="sl-b1" x="58" y="60" width="4" height="16" rx="1"/>
+    <rect class="sl-shelf" x="18" y="83" width="44" height="22" rx="2"/>
+    <rect class="sl-b2" x="20" y="85" width="9" height="17" rx="1.5"/>
+    <rect class="sl-b3" x="31" y="86" width="6" height="16" rx="1.2"/>
+    <rect class="sl-b4" x="39" y="85" width="9" height="17" rx="1.5"/>
+    <rect class="sl-b1" x="50" y="86" width="7" height="16" rx="1.2"/>
+    <rect class="sl-b3" x="59" y="86" width="3" height="15" rx="1"/>
+    <rect class="sl-shelf" x="18" y="110" width="44" height="17" rx="2"/>
+    <rect class="sl-b4" x="20" y="112" width="8" height="13" rx="1.5"/>
+    <rect class="sl-b1" x="30" y="113" width="6" height="12" rx="1.2"/>
+    <rect class="sl-b2" x="38" y="112" width="8" height="13" rx="1.5"/>
+    <rect class="sl-b3" x="48" y="113" width="5" height="12" rx="1.2"/>
+    <rect class="sl-b4" x="55" y="113" width="7" height="12" rx="1.5"/>
+    <circle class="sl-wo" cx="22" cy="142" r="10"/>
+    <circle class="sl-wi" cx="22" cy="142" r="5"/>
+    <line class="sl-ws" x1="22" y1="132" x2="22" y2="152"/>
+    <line class="sl-ws" x1="12" y1="142" x2="32" y2="142"/>
+    <line class="sl-ws" x1="15" y1="135" x2="29" y2="149"/>
+    <line class="sl-ws" x1="29" y1="135" x2="15" y2="149"/>
+    <circle class="sl-wo" cx="58" cy="142" r="10"/>
+    <circle class="sl-wi" cx="58" cy="142" r="5"/>
+    <line class="sl-ws" x1="58" y1="132" x2="58" y2="152"/>
+    <line class="sl-ws" x1="48" y1="142" x2="68" y2="142"/>
+    <line class="sl-ws" x1="51" y1="135" x2="65" y2="149"/>
+    <line class="sl-ws" x1="65" y1="135" x2="51" y2="149"/>
+    <rect class="sl-frame" x="38" y="130" width="4" height="18" rx="2"/>
+    <rect class="sl-frame" x="33" y="146" width="14" height="3.5" rx="1.75"/>
+  </g>
+</svg>
