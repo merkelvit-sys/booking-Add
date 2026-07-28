@@ -15,6 +15,16 @@ const I18N = {
     errCritical: "Критическая ошибка JS:\nСообщение: {msg}\nФайл: {file}\nСтрока: {line}",
     errUnhandled: "Необработанная ошибка (Promise):\nОписание: {reason}",
 
+    authTitle: "Доступ к расписанию",
+    authDesc: "Введите ваш email для авторизации. Доступ предоставляется только активным пользователям.",
+    authPlaceholder: "your@email.com",
+    authSubmit: "Войти",
+    authError: "Email не найден или не активен.",
+    authNetworkError: "Ошибка сети. Попробуйте ещё раз.",
+    authLoading: "Проверка...",
+    authLogout: "Выйти",
+    authWelcome: "Добро пожаловать, {name}!",
+
     pwaIos: `<div class="pwa-steps">
         <div class="pwa-step"><span class="pwa-step-num">1</span><span>Нажмите кнопку <strong>«Поделиться»</strong> (квадрат со стрелкой вверх) в меню Safari.</span></div>
         <div class="pwa-step"><span class="pwa-step-num">2</span><span>Прокрутите меню вниз и выберите <strong>«На экран «Домой»»</strong>.</span></div>
@@ -603,7 +613,7 @@ function bookingMatchesGroup(b, g) {
 // ----------------------------------------------------------------------------
 // Константы и состояние
 // ----------------------------------------------------------------------------
-const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwsBLJvAwCZCc2IGZ2M6XBOODm_YsXxgnKl2RllYOMg0Vi-eDq4AKspqIUtZJbbdj7Y/exec";
+const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwV6YsBIC2XhuugMp_qTd2kHd55MP0ZJAJhXf93YiWqs66k90zeULNhooVXs03o2DaH/exec";
 // Вы можете указать прямую постоянную ссылку на ваше приложение ниже, чтобы кнопка «Поделиться» отправляла именно её.
 // Если оставить пустым "", ссылка будет определяться автоматически на основе текущего адреса страницы с очисткой preview-адресов.
 const SHARE_APP_URL = "";
@@ -614,6 +624,144 @@ let previousActiveElement = null;
 let selectedQBLang = "";
 let databaseBookings = [];
 let currentWeekOffset = 0;
+
+// Auth state
+let authUser = null;
+const AUTH_KEY = "authUser";
+
+function getAuthUser() {
+  try {
+    const raw = localStorage.getItem(AUTH_KEY);
+    if (!raw) return null;
+    return JSON.parse(raw);
+  } catch (e) {
+    return null;
+  }
+}
+
+function setAuthUser(user) {
+  if (user) {
+    localStorage.setItem(AUTH_KEY, JSON.stringify(user));
+  } else {
+    localStorage.removeItem(AUTH_KEY);
+  }
+  authUser = user;
+  updateAuthUI();
+}
+
+function updateAuthUI() {
+  const logoutBtn = document.getElementById("btnLogout");
+  if (logoutBtn) {
+    logoutBtn.style.display = authUser ? "inline-flex" : "none";
+  }
+}
+
+function isAuthenticated() {
+  return authUser !== null && authUser.email !== undefined;
+}
+
+function handleLogout() {
+  setAuthUser(null);
+  showAuthModal();
+  showToast("Вы вышли из системы", "success");
+}
+
+function showAuthModal() {
+  const modal = document.getElementById("authModal");
+  if (modal) {
+    modal.style.display = "flex";
+    const emailInput = document.getElementById("authEmail");
+    const errorEl = document.getElementById("authError");
+    const submitBtn = document.getElementById("authSubmitBtn");
+    if (emailInput) emailInput.value = "";
+    if (errorEl) errorEl.textContent = "";
+    if (submitBtn) submitBtn.disabled = false;
+    const spinner = document.getElementById("authSpinner");
+    const btnText = document.getElementById("authBtnText");
+    if (spinner) spinner.style.display = "none";
+    if (btnText) btnText.textContent = S("authSubmit");
+    if (emailInput) emailInput.focus();
+  }
+}
+
+function hideAuthModal() {
+  const modal = document.getElementById("authModal");
+  if (modal) modal.style.display = "none";
+}
+
+async function handleAuthSubmit(event) {
+  event.preventDefault();
+  const emailInput = document.getElementById("authEmail");
+  const errorEl = document.getElementById("authError");
+  const submitBtn = document.getElementById("authSubmitBtn");
+  const spinner = document.getElementById("authSpinner");
+  const btnText = document.getElementById("authBtnText");
+
+  const email = emailInput ? emailInput.value.trim().toLowerCase() : "";
+  if (!email) {
+    if (errorEl) errorEl.textContent = S("authError");
+    return;
+  }
+
+  if (submitBtn) submitBtn.disabled = true;
+  if (spinner) spinner.style.display = "inline-block";
+  if (btnText) btnText.textContent = S("authLoading");
+  if (errorEl) errorEl.textContent = "";
+
+  const url = GOOGLE_SCRIPT_URL + "?action=checkAuth&email=" + encodeURIComponent(email) + "&key=jw_144000";
+
+  const doFetch = async () => {
+    const fetcher = (window.SyncCore && SyncCore.fetchWithRetry) ? SyncCore.fetchWithRetry : fetch;
+    const response = await fetcher(url, { cache: "no-store" });
+    if (!response.ok) throw new Error("HTTP_" + response.status);
+    return response.json();
+  };
+
+  try {
+    const data = await withRetry(doFetch, 3, [1000, 3000, 5000]);
+
+    if (data.status === "success" && data.user) {
+      setAuthUser(data.user);
+      hideAuthModal();
+      showToast(S("authWelcome", { name: data.user.name || data.user.email }), "success");
+      if (typeof renderAllTabs === "function") renderAllTabs();
+    } else {
+      if (errorEl) errorEl.textContent = data.message || S("authError");
+      if (submitBtn) submitBtn.disabled = false;
+      if (spinner) spinner.style.display = "none";
+      if (btnText) btnText.textContent = S("authSubmit");
+    }
+  } catch (err) {
+    if (errorEl) errorEl.textContent = S("authNetworkError");
+    if (submitBtn) submitBtn.disabled = false;
+    if (spinner) spinner.style.display = "none";
+    if (btnText) btnText.textContent = S("authSubmit");
+  }
+}
+
+function withRetry(fn, maxAttempts, retryDelays) {
+  maxAttempts = maxAttempts || 3;
+  retryDelays = retryDelays || [1000, 3000, 5000];
+  function attempt(n) {
+    return fn().catch(function (err) {
+      if (n < maxAttempts) {
+        return new Promise(function (resolve) {
+          setTimeout(function () { resolve(attempt(n + 1)); }, retryDelays[n - 1] || 5000);
+        });
+      }
+      throw err;
+    });
+  }
+  return attempt(1);
+}
+
+function requireAuth() {
+  if (!isAuthenticated()) {
+    showAuthModal();
+    return false;
+  }
+  return true;
+}
 
 // Единый источник записей графика. app-sync.js (строгий режим IIFE) не может
 // писать в глобальную `databaseBookings`, поэтому он хранит данные в
@@ -765,6 +913,13 @@ function showPWAInstallBanner() {
 // Инициализация приложения
 // ----------------------------------------------------------------------------
 window.addEventListener('DOMContentLoaded', () => {
+  // Auth check: show modal if not authenticated
+  authUser = getAuthUser();
+  updateAuthUI();
+  if (!isAuthenticated()) {
+    showAuthModal();
+  }
+
   // Регистрация Service Worker с автоматическим обновлением кэша.
   // SW работает только на http(s):// (secure context). При открытии через file://
   // (origin 'null') регистрация невозможна — пропускаем, чтобы не было ошибки.
@@ -2338,6 +2493,8 @@ function onModalBackdropClick(e) {
 async function handleFormSubmit(e) {
   e.preventDefault();
 
+  if (!requireAuth()) return;
+
   const selectedLocation = getSelectedLocation();
   const selectedTime = getSelectedTime();
 
@@ -3279,7 +3436,7 @@ function renderScheduleBoard() {
           <span class="day-trolley-icon" data-group="${cls}" aria-hidden="true">${icon}</span>
           📦 ${S('cartLabel')} №${cartNum}
         </span>
-        <span class="board-names">+ ${S('quickBookBtn')}</span>
+        <span class="board-names">${S('quickBookBtn')}</span>
       </div>`;
   }
 
@@ -3399,9 +3556,67 @@ function showToast(msg, type) {
 function toggleInfo(infoId) {
   const box = document.getElementById(infoId);
   if (!box) return;
-  const isVisible = window.getComputedStyle(box).display === 'block';
-  box.style.display = isVisible ? 'none' : 'block';
+  if (box.closest('#quickBookingForm')) {
+    const isOpen = box.classList.contains('qb-tooltip-open');
+    if (isOpen) {
+      box.classList.remove('qb-tooltip-open');
+    } else {
+      closeAllQBTooltips();
+      box.classList.add('qb-tooltip-open');
+    }
+  } else {
+    const isVisible = window.getComputedStyle(box).display === 'block';
+    box.style.display = isVisible ? 'none' : 'block';
+  }
 }
+
+function closeAllQBTooltips() {
+  const open = document.querySelectorAll('#quickBookingForm .info-helper-box.qb-tooltip-open');
+  for (let i = 0; i < open.length; i++) {
+    open[i].classList.remove('qb-tooltip-open');
+  }
+}
+
+document.addEventListener('click', function(e) {
+  if (e.target.closest && e.target.closest('#quickBookingForm')) return;
+  const open = document.querySelectorAll('#quickBookingForm .info-helper-box.qb-tooltip-open');
+  for (let i = 0; i < open.length; i++) {
+    open[i].classList.remove('qb-tooltip-open');
+  }
+});
+
+document.addEventListener('keydown', function(e) {
+  if (e.key === 'Escape') {
+    const open = document.querySelectorAll('#quickBookingForm .info-helper-box.qb-tooltip-open');
+    for (let i = 0; i < open.length; i++) {
+      open[i].classList.remove('qb-tooltip-open');
+    }
+  }
+});
+
+document.addEventListener('mouseover', function(e) {
+  const btn = e.target.closest ? e.target.closest('#quickBookingForm .btn-info-toggle') : null;
+  if (!btn) return;
+  const onclick = btn.getAttribute('onclick') || '';
+  const match = onclick.match(/toggleInfo\(['"]([^'"]+)['"]\)/);
+  if (!match) return;
+  const box = document.getElementById(match[1]);
+  if (box && !box.classList.contains('qb-tooltip-open')) {
+    box.classList.add('qb-tooltip-hover');
+  }
+});
+
+document.addEventListener('mouseout', function(e) {
+  const btn = e.target.closest ? e.target.closest('#quickBookingForm .btn-info-toggle') : null;
+  if (!btn) return;
+  const onclick = btn.getAttribute('onclick') || '';
+  const match = onclick.match(/toggleInfo\(['"]([^'"]+)['"]\)/);
+  if (!match) return;
+  const box = document.getElementById(match[1]);
+  if (box) {
+    box.classList.remove('qb-tooltip-hover');
+  }
+});
 
 function jumpToToday() {
   currentWeekOffset = 0;
@@ -3633,6 +3848,7 @@ function closeQuickBookingModal() {
   const qbLangPicker = document.getElementById("qbLangPicker");
   if (qbLangPicker) qbLangPicker.innerHTML = "";
   selectedQBLang = "";
+  closeAllQBTooltips();
 
   document.body.style.overflow = '';
 
@@ -3713,6 +3929,8 @@ function handleQuickBookingKeydown(e) {
 
 async function submitQuickBooking(e) {
   e.preventDefault();
+
+  if (!requireAuth()) return;
 
   const modal = document.getElementById('quickBookingModal');
   if (!modal) return;

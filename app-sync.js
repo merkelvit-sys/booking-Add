@@ -383,33 +383,46 @@
 
   // ----- Сетевой слой -----
 
-  // Обёртка fetch с Exponential Backoff:
-  // при ошибках 429 / 500 / 503 (перегрузка сервера) или потере сети
-  // автоматически повторяет запрос: 1 с → 3 с → 5 с (до maxAttempts попыток).
-  function fetchWithRetry(url, opts, maxAttempts, retryDelays) {
+// Строит URL запроса к Google Apps Script строго на основе GOOGLE_SCRIPT_URL.
+// Каждый вызов конструирует URL заново, добавляя ключ и параметр защиты от кэширования.
+// Перенаправленные URL (script.googleusercontent.com) НЕ сохраняются и НЕ повторно используются.
+function buildApiUrl() {
+  var base = GOOGLE_SCRIPT_URL;
+  var sep = base.indexOf("?") === -1 ? "?" : "&";
+  return base + sep + "key=" + encodeURIComponent(API_KEY) + "&_t=" + Date.now();
+}
+
+// Обёртка fetch с Exponential Backoff:
+// при ошибках 429 / 500 / 503 (перегрузка сервера) или потере сети
+// автоматически повторяет запрос: 1 с → 3 с → 5 с (до maxAttempts попыток).
+// Каждая попытка строит URL заново через buildApiUrl(), чтобы никогда
+// не повторно использовать перенаправленный URL (script.googleusercontent.com).
+  function fetchWithRetry(urlBuilder, opts, maxAttempts, retryDelays) {
     maxAttempts = maxAttempts || 3;
     retryDelays = retryDelays || [1000, 3000, 5000];
     function attempt(n) {
-      return fetch(url, opts || {}).then(function (res) {
-        // Повторяем при перегрузке сервера (Google Apps Script → 429/500)
-        if ((res.status === 429 || res.status === 500 || res.status === 503) && n < maxAttempts) {
-          return new Promise(function (resolve) {
-            setTimeout(function () { resolve(attempt(n + 1)); }, retryDelays[n - 1] || 5000);
-          });
-        }
-        return res;
-      }).catch(function (err) {
-        // Пробрасываем оригинальную ошибку (CORS-ошибки исчезнут после удаления Content-Type)
-        if (n < maxAttempts) {
-          return new Promise(function (resolve) {
-            setTimeout(function () { resolve(attempt(n + 1)); }, retryDelays[n - 1] || 5000);
-          });
-        }
-        throw err; // пробрасываем оригинальную ошибку без маскировки
-      });
-    }
-    return attempt(1);
+      var url = (typeof urlBuilder === "function") ? urlBuilder() : urlBuilder;
+      var fetchOpts = Object.assign({}, opts, { cache: "no-store" });
+      return fetch(url, fetchOpts).then(function (res) {
+      // Повторяем при перегрузке сервера (Google Apps Script → 429/500)
+      if ((res.status === 429 || res.status === 500 || res.status === 503) && n < maxAttempts) {
+        return new Promise(function (resolve) {
+          setTimeout(function () { resolve(attempt(n + 1)); }, retryDelays[n - 1] || 5000);
+        });
+      }
+      return res;
+    }).catch(function (err) {
+      // Пробрасываем оригинальную ошибку (CORS-ошибки исчезнут после удаления Content-Type)
+      if (n < maxAttempts) {
+        return new Promise(function (resolve) {
+          setTimeout(function () { resolve(attempt(n + 1)); }, retryDelays[n - 1] || 5000);
+        });
+      }
+      throw err; // пробрасываем оригинальную ошибку без маскировки
+    });
   }
+  return attempt(1);
+}
 
   // Ограничивает время ожидания промиса: если сервер «висит» и не отвечает,
   // запрос не подвешивает интерфейс (модальное окно) навсегда — пробрасываем ошибку.
@@ -430,8 +443,7 @@
 
   function fetchCombined() {
     if (!isValidScriptUrl(GOOGLE_SCRIPT_URL)) return Promise.reject(new Error("NO_URL"));
-    var url = GOOGLE_SCRIPT_URL + "?key=" + encodeURIComponent(API_KEY);
-    return fetchWithRetry(url, { cache: "no-store" }).then(function (res) {
+    return fetchWithRetry(buildApiUrl, { cache: "no-store" }).then(function (res) {
       if (!res.ok) throw new Error("HTTP_" + res.status);
       return res.json();
     }).then(function (data) {
@@ -542,7 +554,24 @@
   }
 
   function startAutoSync() {
-    if (autoTimer === null) autoTimer = setInterval(refreshSilently, SYNC_INTERVAL_MS);
+    if (autoTimer === null) autoTimer = setInterval(function () {
+      if (isSyncLocked) return Promise.resolve(true);
+      var url = GOOGLE_SCRIPT_URL + "?key=" + encodeURIComponent(API_KEY) + "&_t=" + Date.now();
+      return fetchWithRetry(url, { cache: "no-store" }).then(function (res) {
+        if (!res.ok) throw new Error("HTTP_" + res.status);
+        return res.json();
+      }).then(function (data) {
+        if (data && data.status === "error") throw new Error(data.message || "SERVER_ERROR");
+        var bookings = Array.isArray(data.bookings) ? data.bookings : (Array.isArray(data) ? data : []);
+        var sched = Array.isArray(data.schedule) ? data.schedule : [];
+        var normalizedBookings = (bookings || []).map(normalizeBooking);
+        var mergedSched = mergeSchedules(sched, loadCache());
+        updateAppState({ bookings: normalizedBookings, schedule: mergedSched });
+        lastSyncOnline = true;
+        lastSyncTime = Date.now();
+        updateSyncBadge();
+      }).catch(function () { lastSyncOnline = false; updateSyncBadge(); });
+    }, SYNC_INTERVAL_MS);
   }
   function stopAutoSync() {
     if (autoTimer !== null) { clearInterval(autoTimer); autoTimer = null; }
@@ -690,6 +719,9 @@
   // Безопасное удаление с откатом локального кэша при сетевой ошибке.
   // offline=true -> не трогаем сервер, просто убираем локально (приложение остаётся рабочим).
   function removeBookingSafe(b, serverDeletePromiseFactory) {
+    if (typeof window.isAuthenticated === "function" && !window.isAuthenticated()) {
+      return Promise.resolve(false);
+    }
     isSyncLocked = true;
     var cn = parseInt(b.cartNumber, 10);
     if (!(cn === 1 || cn === 2)) cn = 1;
@@ -759,6 +791,9 @@
   // even without internet. Only hard server logic errors (conflict / server-side
   // validation failure) trigger a rollback and re-render.
   function addBookingRecordSafe(rec, serverCreatePromiseFactory) {
+    if (typeof window.isAuthenticated === "function" && !window.isAuthenticated()) {
+      return Promise.resolve(false);
+    }
     isSyncLocked = true;
     var snapshot = (AppState.bookings || []).map(function (x) { return Object.assign({}, x); });
 
@@ -823,6 +858,9 @@
   // Тонкая обёртка для обратной совместимости (демо-режим app.js):
   // из плоского payload делает две пер-картовые записи и добавляет локально.
   function addBooking(payload) {
+    if (typeof window.isAuthenticated === "function" && !window.isAuthenticated()) {
+      return;
+    }
     var recs = [];
     if ((payload.name1 || payload.name2) && payload.cart1Lang) {
       recs.push({ date: payload.date, time: payload.time, location: payload.location,
@@ -1876,7 +1914,7 @@
         description: day.description || "",
         note: day.note || ""
       });
-      return withTimeout(fetchWithRetry(GOOGLE_SCRIPT_URL, {
+      return withTimeout(fetchWithRetry(buildApiUrl, {
         method: "POST",
         mode: "cors",
         body: body
