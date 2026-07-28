@@ -3646,8 +3646,10 @@ async function submitQuickBooking(e) {
 
         setTimeout(() => {
           justAddedSlot = null;
-          renderScheduleBoard();
-        }, 1500);
+          // Re-render BOTH tabs so the new booking is visible immediately
+          if (window.SyncCore && SyncCore.renderAllTabs) SyncCore.renderAllTabs();
+          else renderScheduleBoard();
+        }, 300);
       }, 1500);
     }, 1000);
     return;
@@ -3706,10 +3708,20 @@ async function submitQuickBooking(e) {
 
       closeQuickBookingModal();
 
-      setTimeout(() => {
-        justAddedSlot = null;
-        renderScheduleBoard();
-      }, 1500);
+      // ── Fix: force immediate re-render of ALL tabs (Schedule + Year) ──────
+      // addBookingRecordSafe already updated AppState optimistically, but the
+      // modal was blocking the view. Re-render now that the modal is gone.
+      justAddedSlot = null;
+      if (window.SyncCore && SyncCore.renderAllTabs) SyncCore.renderAllTabs();
+      else renderScheduleBoard();
+
+      // ── Fix: background re-fetch to sync confirmed server state ──────────
+      // Use refreshSilently so the UI stays responsive (no spinner, no toast).
+      // This corrects any server-side deduplication or field normalisations
+      // that differ from the locally-built optimistic record.
+      if (window.SyncCore && SyncCore.refreshSilently) {
+        SyncCore.refreshSilently();
+      }
     }, 1500);
 
   } catch (err) {
@@ -3727,7 +3739,10 @@ async function submitQuickBooking(e) {
         if (btn) { btn.classList.remove('success'); btn.disabled = false; }
         if (btnText) btnText.textContent = S('quickBookSave');
         closeQuickBookingModal();
-        setTimeout(function () { justAddedSlot = null; renderScheduleBoard(); }, 1500);
+        // ── Fix: re-render all tabs so offline booking appears immediately ──
+        justAddedSlot = null;
+        if (window.SyncCore && SyncCore.renderAllTabs) SyncCore.renderAllTabs();
+        else renderScheduleBoard();
       }, 1500);
     } else {
       // Unexpected JS error — revert booking to avoid inconsistent state
