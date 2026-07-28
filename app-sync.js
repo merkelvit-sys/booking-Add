@@ -1084,19 +1084,19 @@
           }
 
           // Построение контента ячейки дня
-          var inner = '<span class="day-num">' + currentDay + '</span>';
+          var inner = '<span class="day-number day-num">' + currentDay + '</span>';
           if (dayLangs.length) {
-            inner += '<span class="day-lang-dots">';
+            inner += '<span class="day-lang-dots day-badge">';
             dayLangs.forEach(function (lg) {
-              inner += '<span class="day-lang-dot dot-' + lg + '" data-group="' + lg + '" title="' + (dict.trolleys[lg] || "") + '">';
+              inner += '<span class="day-lang-dot dot-' + lg + ' cart-icon" data-group="' + lg + '" title="' + (dict.trolleys[lg] || "") + '">';
               if (window.TrolleyUI) {
-                inner += '<span class="day-trolley-icon" data-group="' + lg + '" aria-hidden="true">' + TrolleyUI.getMiniSVG() + '</span>';
+                inner += '<span class="day-trolley-icon status-icon" data-group="' + lg + '" aria-hidden="true">' + TrolleyUI.getMiniSVG() + '</span>';
               }
               inner += '</span>';
             });
             inner += '</span>';
           }
-          if (anyNote) inner += '<span class="attention-badge">!</span>';
+          if (anyNote) inner += '<span class="attention-badge event-alert-badge">!</span>';
           cell.innerHTML = inner;
 
           // A11y расшифровка для скринридеров

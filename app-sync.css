@@ -973,6 +973,85 @@
     background-color: rgba(0, 0, 0, 0.05);
 }
 
+/* Изоляция и высокий z-index для цифры дня во вкладке «Год» */
+.day-cell {
+    position: relative !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    overflow: hidden !important;
+}
+
+.day-cell .day-number,
+.day-cell .day-num {
+    position: relative !important;
+    z-index: 3 !important;
+    font-weight: 700 !important;
+    font-size: 0.85rem !important;
+    color: var(--text, #ffffff) !important;
+    text-shadow: 0 1px 3px rgba(0, 0, 0, 0.85) !important;
+    pointer-events: none !important;
+}
+
+/* Цветные бейджи тележек с иконками в углу ячейки дня */
+.day-cell .day-badge,
+.day-cell .day-lang-dots {
+    position: absolute !important;
+    top: 2px !important;
+    right: 2px !important;
+    display: flex !important;
+    flex-direction: row !important;
+    gap: 2px !important;
+    z-index: 2 !important;
+    opacity: 0.95;
+    pointer-events: none !important;
+}
+
+.day-cell .day-lang-dot,
+.day-cell .cart-icon {
+    position: relative;
+    width: 10px !important;
+    height: 12px !important;
+    border-radius: 2px !important;
+    border: none !important;
+    flex: 0 0 auto;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+.day-cell .day-lang-dot.dot-ru { background-color: rgba(244, 63, 94, 0.25); }
+.day-cell .day-lang-dot.dot-ua { background-color: rgba(14, 165, 233, 0.25); }
+.day-cell .day-lang-dot.dot-de { background-color: rgba(234, 179, 8, 0.25); }
+
+.day-cell .day-lang-dot .day-trolley-icon,
+.day-cell .status-icon {
+    display: block !important;
+    width: 8px !important;
+    height: 10px !important;
+    max-width: 10px !important;
+    max-height: 10px !important;
+    z-index: 2 !important;
+}
+
+/* Бедж особого события / заметки в нижнем правом углу */
+.day-cell .event-alert-badge,
+.day-cell .attention-badge,
+.day-cell .has-note-badge {
+    position: absolute !important;
+    bottom: 2px !important;
+    right: 2px !important;
+    top: auto !important;
+    left: auto !important;
+    font-size: 0.6rem !important;
+    font-weight: 900 !important;
+    width: 12px !important;
+    height: 12px !important;
+    line-height: 12px !important;
+    border-radius: 50% !important;
+    z-index: 2 !important;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.5) !important;
+}
+
 .legend-item.status-filter-btn {
     background: none;
     border: 1px solid transparent;
