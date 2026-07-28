@@ -586,9 +586,9 @@ function S(key, vars) {
 
 // Локализованные подписи языков тележки (для карточек-пикеров RU/UA/DE)
 const LANG_LABELS = {
-  ru: { ru: "🇷🇺 Русская", ua: "🇺🇦 Украинская", de: "🇩🇪 Немецкая" },
-  uk: { ru: "🇷🇺 Російська", ua: "🇺🇦 Українська", de: "🇩🇪 Німецька" },
-  de: { ru: "🇷🇺 Russisch", ua: "🇺🇦 Ukrainisch", de: "🇩🇪 Deutsch" }
+  ru: { ru: "Русская", ua: "Украинская", de: "Немецкая" },
+  uk: { ru: "Російська", ua: "Українська", de: "Німецька" },
+  de: { ru: "Russisch", ua: "Ukrainisch", de: "Deutsch" }
 };
 
 function getTrolleyLabels() {

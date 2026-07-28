@@ -1653,20 +1653,64 @@
     }
 
     var saveBtn = document.getElementById("dayEditorSave");
-    saveBtn.disabled = true;
+    var origSaveText = saveBtn ? saveBtn.textContent : "";
+    if (saveBtn) {
+      saveBtn.disabled = true;
+      saveBtn.textContent = t("saving") || "Сохранение…";
+    }
 
     saveDay(day).then(function () {
-      closeDayEditor();
-      SyncCore.showResult("success", t("daySaved"));
+      if (saveBtn) {
+        saveBtn.textContent = "✅ " + (t("saved") || "Сохранено!");
+        saveBtn.classList.add("btn-saved-success");
+      }
+
+      // Локализованное всплывающее уведомление (Toast)
+      var lang = getLang();
+      var toastMsg = (lang === "uk" || lang === "ua") ? "✅ Зміни успішно збережено!"
+                   : (lang === "de" ? "✅ Änderungen erfolgreich gespeichert!"
+                   : "✅ Изменения успешно сохранены!");
+
+      if (typeof window.showToast === "function") {
+        window.showToast(toastMsg, "success");
+      } else {
+        showToastBanner(toastMsg);
+      }
+
+      setTimeout(function () {
+        closeDayEditor();
+        if (saveBtn) {
+          saveBtn.disabled = false;
+          saveBtn.classList.remove("btn-saved-success");
+          saveBtn.textContent = origSaveText;
+        }
+      }, 1000);
     }).catch(function (err) {
+      if (saveBtn) {
+        saveBtn.disabled = false;
+        saveBtn.textContent = origSaveText;
+      }
       if (err && err.message === "VERIFY_FAILED") {
         SyncCore.showResult("error", t("saveVerifyFail"));
       } else {
         SyncCore.showResult("error", t("saveError") + (err && err.message ? ": " + err.message : ""));
       }
-    }).then(function () {
-      saveBtn.disabled = false;
     });
+  }
+
+  function showToastBanner(msg) {
+    var toast = document.getElementById("syncToastBanner");
+    if (!toast) {
+      toast = document.createElement("div");
+      toast.id = "syncToastBanner";
+      toast.className = "sync-toast-banner";
+      document.body.appendChild(toast);
+    }
+    toast.textContent = msg;
+    toast.classList.add("show");
+    setTimeout(function () {
+      toast.classList.remove("show");
+    }, 2500);
   }
 
   // Валидация дня: статус + хотя бы одна тележка с языком
