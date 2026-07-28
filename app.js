@@ -3898,8 +3898,7 @@ function initFontSizeMode() {
   let isScrollDownDirection = true;
 
   function isAnyModalOpen() {
-    if (document.body.style.overflow === 'hidden') return true;
-    const backdrops = document.querySelectorAll('.modal-backdrop:not([style*="display: none"]), .lang-confirm-overlay:not([style*="display: none"])');
+    const backdrops = document.querySelectorAll('.modal-backdrop, .lang-confirm-overlay');
     for (let i = 0; i < backdrops.length; i++) {
       const style = window.getComputedStyle(backdrops[i]);
       if (style.display !== 'none' && style.visibility !== 'hidden' && style.opacity !== '0') return true;
@@ -3940,14 +3939,14 @@ function initFontSizeMode() {
       const clientHeight = window.innerHeight || document.documentElement.clientHeight || 0;
       const maxScroll = scrollHeight - clientHeight;
 
-      if (maxScroll < 100) {
+      if (maxScroll <= 5) {
         btn.classList.add('hidden');
         return;
       }
 
       btn.classList.remove('hidden');
 
-      if (scrollTop < 200) {
+      if (scrollTop < 100) {
         isScrollingDown = true;
         btn.innerHTML = '<span class="scroll-icon">⬇️</span>';
       } else {
