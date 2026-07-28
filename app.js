@@ -3982,3 +3982,32 @@ function initFontSizeMode() {
   document.addEventListener('DOMContentLoaded', initQuickScrollButton);
   initQuickScrollButton();
 })();
+
+// Принудительное удаление Vercel Toolbar из DOM
+(function removeVercelToolbar() {
+  function purge() {
+    const selectors = [
+      '#vercel-toolbar',
+      'vercel-live-feedback',
+      '[data-vercel-toolbar]',
+      'iframe[id*="vercel-toolbar"]',
+      'iframe[src*="vercel.live"]',
+      'iframe[src*="vercel.com/toolbar"]',
+      'div[class*="vercel-toolbar"]',
+      'div[id*="vercel-toolbar"]'
+    ];
+    selectors.forEach(function (sel) {
+      document.querySelectorAll(sel).forEach(function (el) {
+        try { el.remove(); } catch (e) {}
+      });
+    });
+  }
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', purge);
+  } else {
+    purge();
+  }
+  window.addEventListener('load', purge);
+  setTimeout(purge, 800);
+  setTimeout(purge, 2500);
+})();
