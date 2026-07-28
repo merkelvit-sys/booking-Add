@@ -3939,12 +3939,12 @@ function initFontSizeMode() {
     const clientHeight = window.innerHeight || document.documentElement.clientHeight || 0;
     const maxScroll = scrollHeight - clientHeight;
 
-    if (maxScroll <= 150) {
+    if (maxScroll <= 20) {
       btn.classList.add('hidden');
       return;
     }
 
-    if (scrollTop < 200) {
+    if (scrollTop < 120) {
       // Пользователь вверху страницы -> показываем стрелку вниз ⬇️
       isScrollDownDirection = true;
       if (icon) {
