@@ -1502,29 +1502,40 @@ body, #app, .tab-content {
 .quick-scroll-btn {
   position: fixed !important;
   bottom: calc(20px + env(safe-area-inset-bottom, 0px)) !important;
-  right: calc(16px + env(safe-area-inset-right, 0px)) !important;
+  right: max(16px, calc(50vw - 240px + 16px)) !important;
   width: 48px !important;
   height: 48px !important;
   border-radius: 50% !important;
-  background: #2196F3 !important;
+  background: var(--primary, #2563eb) !important;
   color: #ffffff !important;
   border: none !important;
-  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.35) !important;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.35) !important;
   cursor: pointer !important;
   z-index: 99999 !important; /* Гарантирует отображение поверх всех элементов */
   display: flex !important;
   align-items: center !important;
   justify-content: center !important;
   font-size: 1.3rem !important;
-  transition: opacity 0.25s ease, transform 0.25s ease !important;
+  transition: opacity 0.25s ease, transform 0.25s ease, background-color 0.2s !important;
   touch-action: manipulation !important;
   -webkit-tap-highlight-color: transparent !important;
   user-select: none !important;
+  transform: translateZ(0) !important;
+}
+
+#quickScrollBtn:hover {
+  background-color: var(--primary-hover, #1d4ed8) !important;
+  transform: scale(1.08) translateZ(0) !important;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.45) !important;
+}
+
+#quickScrollBtn:active {
+  transform: scale(0.92) translateZ(0) !important;
 }
 
 #quickScrollBtn.hidden,
 .quick-scroll-btn.hidden {
   opacity: 0 !important;
   pointer-events: none !important;
-  transform: scale(0.7) !important;
+  transform: scale(0.6) translateZ(0) !important;
 }
