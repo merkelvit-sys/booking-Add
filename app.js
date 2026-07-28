@@ -3890,3 +3890,90 @@ function initFontSizeMode() {
     }
   }, { passive: true });
 })();
+
+// ----------------------------------------------------------------------------
+// Умная плавающая кнопка навигации (Smart Scroll to Top / Bottom)
+// ----------------------------------------------------------------------------
+(function () {
+  let isScrollDownDirection = true;
+
+  function isAnyModalOpen() {
+    const backdrops = document.querySelectorAll('.modal-backdrop, .lang-confirm-overlay');
+    for (let i = 0; i < backdrops.length; i++) {
+      if (window.getComputedStyle(backdrops[i]).display !== 'none') return true;
+    }
+    const activeModals = document.querySelectorAll('.modal.active, .modal.open, .day-editor-modal, #dayEditorModal, #quickBookingModal');
+    for (let i = 0; i < activeModals.length; i++) {
+      if (window.getComputedStyle(activeModals[i]).display !== 'none') return true;
+    }
+    return false;
+  }
+
+  function getScrollButton() {
+    let btn = document.getElementById('quickScrollBtn');
+    if (!btn) {
+      btn = document.createElement('button');
+      btn.id = 'quickScrollBtn';
+      btn.className = 'quick-scroll-btn hidden';
+      btn.setAttribute('aria-label', 'Scroll navigation');
+      btn.innerHTML = `<svg id="quickScrollIcon" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M19 14l-7 7m0 0l-7-7m7 7V3" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
+      document.body.appendChild(btn);
+    }
+    return btn;
+  }
+
+  function updateScrollButton() {
+    const btn = getScrollButton();
+    const icon = document.getElementById('quickScrollIcon');
+    if (!btn) return;
+
+    if (isAnyModalOpen()) {
+      btn.classList.add('hidden');
+      return;
+    }
+
+    const scrollTop = window.scrollY || document.documentElement.scrollTop || 0;
+    const scrollHeight = document.documentElement.scrollHeight || document.body.scrollHeight || 0;
+    const clientHeight = window.innerHeight || document.documentElement.clientHeight || 0;
+    const maxScroll = scrollHeight - clientHeight;
+
+    if (maxScroll <= 150) {
+      btn.classList.add('hidden');
+      return;
+    }
+
+    if (scrollTop < 200) {
+      // Пользователь вверху страницы -> показываем стрелку вниз ⬇️
+      isScrollDownDirection = true;
+      if (icon) {
+        icon.innerHTML = `<path d="M19 14l-7 7m0 0l-7-7m7 7V3" stroke-linecap="round" stroke-linejoin="round"/>`;
+      }
+    } else {
+      // Пользователь проскроллил вниз -> показываем стрелку вверх ⬆️
+      isScrollDownDirection = false;
+      if (icon) {
+        icon.innerHTML = `<path d="M5 10l7-7m0 0l7 7m-7-7v18" stroke-linecap="round" stroke-linejoin="round"/>`;
+      }
+    }
+
+    btn.classList.remove('hidden');
+  }
+
+  window.handleQuickScroll = function () {
+    if (isScrollDownDirection) {
+      const scrollHeight = document.documentElement.scrollHeight || document.body.scrollHeight || 0;
+      window.scrollTo({ top: scrollHeight, behavior: 'smooth' });
+    } else {
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+  };
+
+  document.addEventListener('DOMContentLoaded', function () {
+    const btn = getScrollButton();
+    btn.onclick = window.handleQuickScroll;
+    updateScrollButton();
+  });
+
+  window.addEventListener('scroll', updateScrollButton, { passive: true });
+  window.addEventListener('resize', updateScrollButton, { passive: true });
+})();
