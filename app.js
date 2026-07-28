@@ -1075,6 +1075,9 @@ function selectDate(dateISO) {
 // ----------------------------------------------------------------------------
 // API И КЭШИРОВАНИЕ ПОГОДЫ ДЛЯ МАРБУРГА (Open-Meteo API + 3h localStorage cache)
 // ----------------------------------------------------------------------------
+const MARBURG_WEATHER_CACHE_KEY = 'marburg_weather_cache';
+const MARBURG_WEATHER_CACHE_TTL = 3 * 60 * 60 * 1000; // 3 часа в мс
+
 function getCurrentAppLang() {
   if (window.AppState && AppState.language) {
     const l = String(AppState.language).toLowerCase();
