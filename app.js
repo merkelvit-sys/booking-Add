@@ -3918,6 +3918,8 @@ function initFontSizeMode() {
       btn.setAttribute('aria-label', 'Scroll navigation');
       btn.innerHTML = `<svg id="quickScrollIcon" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M19 14l-7 7m0 0l-7-7m7 7V3" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
       document.body.appendChild(btn);
+    } else if (btn.parentElement !== document.body) {
+      document.body.appendChild(btn);
     }
     return btn;
   }
