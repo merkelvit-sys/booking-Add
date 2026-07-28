@@ -3898,8 +3898,7 @@ function initFontSizeMode() {
   let isScrollDownDirection = true;
 
   function isAnyModalOpen() {
-    if (document.body.style.overflow === 'hidden') return true;
-    const backdrops = document.querySelectorAll('.modal-backdrop:not([style*="display: none"]), .lang-confirm-overlay:not([style*="display: none"])');
+    const backdrops = document.querySelectorAll('.modal-backdrop, .lang-confirm-overlay');
     for (let i = 0; i < backdrops.length; i++) {
       const style = window.getComputedStyle(backdrops[i]);
       if (style.display !== 'none' && style.visibility !== 'hidden' && style.opacity !== '0') return true;
@@ -3912,6 +3911,9 @@ function initFontSizeMode() {
     return false;
   }
 
+  const SVG_DOWN = '<svg class="scroll-icon-svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M19 12l-7 7-7-7"/></svg>';
+  const SVG_UP = '<svg class="scroll-icon-svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V5M5 12l7-7 7 7"/></svg>';
+
   function initQuickScrollButton() {
     let btn = document.getElementById('quickScrollBtn');
     if (!btn) {
@@ -3919,7 +3921,7 @@ function initFontSizeMode() {
       btn.id = 'quickScrollBtn';
       btn.className = 'quick-scroll-btn hidden';
       btn.setAttribute('aria-label', 'Scroll navigation');
-      btn.innerHTML = '<span class="scroll-icon">⬇️</span>';
+      btn.innerHTML = SVG_DOWN;
       document.body.appendChild(btn);
     } else if (btn.parentElement !== document.body) {
       document.body.appendChild(btn);
@@ -3940,19 +3942,21 @@ function initFontSizeMode() {
       const clientHeight = window.innerHeight || document.documentElement.clientHeight || 0;
       const maxScroll = scrollHeight - clientHeight;
 
-      if (maxScroll < 100) {
+      if (maxScroll <= 5) {
         btn.classList.add('hidden');
         return;
       }
 
       btn.classList.remove('hidden');
 
-      if (scrollTop < 200) {
+      if (scrollTop < 100) {
         isScrollingDown = true;
-        btn.innerHTML = '<span class="scroll-icon">⬇️</span>';
+        btn.innerHTML = SVG_DOWN;
+        btn.setAttribute('aria-label', 'Scroll to bottom');
       } else {
         isScrollingDown = false;
-        btn.innerHTML = '<span class="scroll-icon">⬆️</span>';
+        btn.innerHTML = SVG_UP;
+        btn.setAttribute('aria-label', 'Scroll to top');
       }
     }
 
@@ -3982,4 +3986,33 @@ function initFontSizeMode() {
 
   document.addEventListener('DOMContentLoaded', initQuickScrollButton);
   initQuickScrollButton();
+})();
+
+// Принудительное удаление Vercel Toolbar из DOM
+(function removeVercelToolbar() {
+  function purge() {
+    const selectors = [
+      '#vercel-toolbar',
+      'vercel-live-feedback',
+      '[data-vercel-toolbar]',
+      'iframe[id*="vercel-toolbar"]',
+      'iframe[src*="vercel.live"]',
+      'iframe[src*="vercel.com/toolbar"]',
+      'div[class*="vercel-toolbar"]',
+      'div[id*="vercel-toolbar"]'
+    ];
+    selectors.forEach(function (sel) {
+      document.querySelectorAll(sel).forEach(function (el) {
+        try { el.remove(); } catch (e) {}
+      });
+    });
+  }
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', purge);
+  } else {
+    purge();
+  }
+  window.addEventListener('load', purge);
+  setTimeout(purge, 800);
+  setTimeout(purge, 2500);
 })();
