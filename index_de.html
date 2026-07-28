@@ -329,34 +329,48 @@
 
         .tabs {
             display: flex;
-            background-color: rgba(120, 120, 120, 0.08);
-            padding: 4px;
+            background-color: var(--bg);
+            padding: 5px;
             border-radius: var(--radius-md);
             margin-bottom: 16px;
-            gap: 4px;
+            gap: 6px;
+            border: 1px solid var(--border);
+            box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.04);
         }
 
         .tab-btn {
             flex: 1;
-            padding: 8px;
-            border: none;
+            padding: 9px 12px;
+            border: 1px solid transparent;
             background-color: transparent;
             color: var(--text-muted);
-            font-weight: 600;
-            font-size: 0.85rem;
+            font-weight: 700;
+            font-size: 0.88rem;
             border-radius: var(--radius-sm);
             cursor: pointer;
-            transition: all 0.2s ease;
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
             display: flex;
             align-items: center;
             justify-content: center;
             gap: 6px;
+            user-select: none;
+        }
+
+        .tab-btn:hover:not(.active) {
+            background-color: var(--primary-container);
+            color: var(--primary);
         }
 
         .tab-btn.active {
-            background-color: var(--card-bg);
-            color: var(--primary);
-            box-shadow: var(--shadow);
+            background-color: var(--primary);
+            color: #ffffff !important;
+            border-color: var(--primary);
+            box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3);
+            transform: translateY(-1px);
+        }
+
+        .tab-btn.active svg {
+            stroke: #ffffff;
         }
 
         .tab-content {
@@ -365,12 +379,12 @@
 
         .tab-content.active {
             display: block;
-            animation: fadeIn 0.2s ease-out;
+            animation: tabScaleIn 0.22s cubic-bezier(0.16, 1, 0.3, 1);
         }
 
-        @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(4px); }
-            to { opacity: 1; transform: translateY(0); }
+        @keyframes tabScaleIn {
+            0% { opacity: 0; transform: scale(0.985); }
+            100% { opacity: 1; transform: scale(1); }
         }
 
         .section-title {
