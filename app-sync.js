@@ -570,6 +570,18 @@
     if (typeof renderScheduleTab === "function") renderScheduleTab();
     else if (typeof renderScheduleBoard === "function") renderScheduleBoard();
     if (typeof renderYearGrid === "function") renderYearGrid();
+
+    try {
+      var activeTab = document.querySelector('.tab-content.active');
+      if (activeTab) {
+        activeTab.classList.remove('tab-updated-flash');
+        void activeTab.offsetWidth;
+        activeTab.classList.add('tab-updated-flash');
+        setTimeout(function () {
+          activeTab.classList.remove('tab-updated-flash');
+        }, 500);
+      }
+    } catch (e) {}
   }
 
   // Связь «Запись» → «Год»: тележки дня окрашиваются в цвета языков записи.
