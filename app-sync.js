@@ -258,10 +258,9 @@
     return v;
   }
   function setSchedule(sched) {
-    yearSchedule = (Array.isArray(sched) ? sched : []).map(function (day) {
-      if (!day) return day;
-      return Object.assign({}, day, { date: normalizeDateValue(day.date) });
-    });
+    var raw = Array.isArray(sched) ? sched : [];
+    if (!raw.length) raw = generateYearSchedule();
+    yearSchedule = dedupeSchedule(raw);
     scheduleIndex = {};
     for (var i = 0; i < yearSchedule.length; i++) {
       var day = yearSchedule[i];
@@ -288,19 +287,58 @@
     }
     return out;
   }
-  // Удаляет дубликаты по дате+номеру тележки (оставляет последний)
+
+  // Объединяет дубликаты по дате+номеру тележки, сохраняя заполненный статус, описание и заметку
   function dedupeSchedule(arr) {
+    if (!Array.isArray(arr)) return [];
     var seen = {};
-    var out = [];
     for (var i = 0; i < arr.length; i++) {
       var day = arr[i];
       if (!day || !day.date) continue;
-      var key = day.date + "|" + (parseInt(day.cartNumber, 10) || 1);
-      seen[key] = day;
+      var dateIso = normalizeDateValue(day.date);
+      if (!dateIso) continue;
+      var cartNum = parseInt(day.cartNumber, 10) || 1;
+      var key = dateIso + "|" + cartNum;
+
+      if (!seen[key]) {
+        seen[key] = {
+          date: dateIso,
+          cartNumber: cartNum,
+          trolley: (day.trolley || "").trim().toLowerCase(),
+          status: day.status || "available",
+          description: (day.description || "").trim(),
+          note: (day.note || "").trim()
+        };
+      } else {
+        var existing = seen[key];
+        var st = (day.status && day.status !== "available") ? day.status : existing.status;
+        var desc = (day.description && day.description.trim()) ? day.description.trim() : existing.description;
+        var nt = (day.note && day.note.trim()) ? day.note.trim() : existing.note;
+        var tr = (day.trolley && day.trolley.trim()) ? day.trolley.trim().toLowerCase() : existing.trolley;
+
+        seen[key] = {
+          date: dateIso,
+          cartNumber: cartNum,
+          trolley: tr,
+          status: st,
+          description: desc,
+          note: nt
+        };
+      }
     }
     var keys = Object.keys(seen).sort();
-    for (var k = 0; k < keys.length; k++) out.push(seen[keys[k]]);
+    var out = [];
+    for (var k = 0; k < keys.length; k++) {
+      out.push(seen[keys[k]]);
+    }
     return out;
+  }
+
+  function mergeSchedules(serverSched, localSched) {
+    var base = generateYearSchedule();
+    var local = Array.isArray(localSched) ? localSched : [];
+    var server = Array.isArray(serverSched) ? serverSched : [];
+    return dedupeSchedule(base.concat(local).concat(server));
   }
   function upsertDay(day) {
     var found = false;
@@ -443,7 +481,7 @@
       setTimeout(function () {
         fetchCombined().then(function (data) {
           var bookings = (data.bookings || []).map(normalizeBooking);
-          var sched = (data.schedule && data.schedule.length) ? dedupeSchedule(data.schedule) : generateYearSchedule();
+          var sched = mergeSchedules(data.schedule, loadCache());
           updateAppState({ bookings: bookings, schedule: sched });
           lastSyncOnline = true;
           lastSyncTime   = Date.now();
@@ -470,7 +508,7 @@
   function refreshAll() {
     return fetchCombined().then(function (data) {
       var bookings = (data.bookings || []).map(normalizeBooking);
-      var sched = (data.schedule && data.schedule.length) ? dedupeSchedule(data.schedule) : generateYearSchedule();
+      var sched = mergeSchedules(data.schedule, loadCache());
       updateAppState({ bookings: bookings, schedule: sched });
       lastSyncOnline = true;
       lastSyncTime   = Date.now();
@@ -490,7 +528,7 @@
     if (isSyncLocked) return Promise.resolve(true);
     return fetchCombined().then(function (data) {
       var bookings = (data.bookings || []).map(normalizeBooking);
-      var sched = (data.schedule && data.schedule.length) ? dedupeSchedule(data.schedule) : generateYearSchedule();
+      var sched = mergeSchedules(data.schedule, loadCache());
       updateAppState({ bookings: bookings, schedule: sched });
       lastSyncOnline = true;
       lastSyncTime   = Date.now();
@@ -1376,14 +1414,34 @@
     }
     ensureDayEditor();
     var rows = scheduleIndex[date] || [];
-    var c1 = rows.filter(function (r) { return (parseInt(r.cartNumber, 10) || 1) === 1; })[0] || { date: date, status: "available", trolley: "", description: "", note: "" };
-    var c2 = rows.filter(function (r) { return (parseInt(r.cartNumber, 10) || 1) === 2; })[0] || { date: date, status: "available", trolley: "", description: "", note: "" };
+    var cart1Rows = rows.filter(function (r) { return (parseInt(r.cartNumber, 10) || 1) === 1; });
+    var cart2Rows = rows.filter(function (r) { return (parseInt(r.cartNumber, 10) || 1) === 2; });
+
+    var c1 = cart1Rows[cart1Rows.length - 1] || { date: date, status: "available", trolley: "", description: "", note: "" };
+    var c2 = cart2Rows[cart2Rows.length - 1] || { date: date, status: "available", trolley: "", description: "", note: "" };
+
+    var effectiveStatus = "available";
+    for (var ri = 0; ri < rows.length; ri++) {
+      if (rows[ri].status && rows[ri].status !== "available") {
+        effectiveStatus = rows[ri].status;
+        break;
+      }
+    }
+    if (effectiveStatus === "available") {
+      effectiveStatus = c1.status || c2.status || "available";
+    }
+
     editorState.date = date;
-    editorState.status = c1.status || c2.status || "available";
+    editorState.status = effectiveStatus;
     editorState.cart1Lang = c1.trolley || "";
     editorState.cart2Lang = c2.trolley || "";
 
-
+    var effectiveDesc = c1.description || c2.description || "";
+    var effectiveNote = c1.note || c2.note || "";
+    for (var rj = 0; rj < rows.length; rj++) {
+      if (!effectiveDesc && rows[rj].description) effectiveDesc = rows[rj].description;
+      if (!effectiveNote && rows[rj].note) effectiveNote = rows[rj].note;
+    }
 
     document.getElementById("dayEditorDate").textContent = formatDateHuman(date);
 
@@ -1430,8 +1488,8 @@
       opts.appendChild(b);
     });
 
-    document.getElementById("dayEditorDesc").value = c1.description || c2.description || "";
-    document.getElementById("dayEditorNote").value = c1.note || c2.note || "";
+    document.getElementById("dayEditorDesc").value = effectiveDesc;
+    document.getElementById("dayEditorNote").value = effectiveNote;
     updateDayEditorNoteBadge();
 
     // Заполнение подробного списка записей дня
