@@ -1565,17 +1565,20 @@ body, #app, .tab-content {
   width: 48px !important;
   height: 48px !important;
   border-radius: 50% !important;
-  background: var(--primary, #2563eb) !important;
+  background: rgba(37, 99, 235, 0.65) !important;
+  backdrop-filter: blur(8px) !important;
+  -webkit-backdrop-filter: blur(8px) !important;
   color: #ffffff !important;
-  border: 2px solid rgba(255, 255, 255, 0.25) !important;
-  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.45) !important;
+  border: 1.5px solid rgba(255, 255, 255, 0.3) !important;
+  box-shadow: 0 4px 18px rgba(0, 0, 0, 0.25) !important;
   cursor: pointer !important;
-  z-index: 999999 !important; /* Гарантирует отображение поверх всех элементов */
+  z-index: 999999 !important;
   display: flex !important;
   align-items: center !important;
   justify-content: center !important;
   font-size: 1.3rem !important;
-  transition: opacity 0.25s ease, transform 0.25s ease, background-color 0.2s !important;
+  opacity: 0.65 !important;
+  transition: opacity 0.25s ease, transform 0.25s ease, background-color 0.2s, box-shadow 0.2s !important;
   touch-action: manipulation !important;
   -webkit-tap-highlight-color: transparent !important;
   user-select: none !important;
@@ -1593,10 +1596,13 @@ body, #app, .tab-content {
   }
 }
 
-#quickScrollBtn:hover {
-  background-color: var(--primary-hover, #1d4ed8) !important;
+#quickScrollBtn:hover,
+#quickScrollBtn:focus-visible,
+#quickScrollBtn:active {
+  opacity: 1 !important;
+  background: var(--primary, #2563eb) !important;
   transform: scale(1.08) translateZ(0) !important;
-  box-shadow: 0 8px 28px rgba(0, 0, 0, 0.55) !important;
+  box-shadow: 0 8px 28px rgba(0, 0, 0, 0.45) !important;
 }
 
 #quickScrollBtn:active {
