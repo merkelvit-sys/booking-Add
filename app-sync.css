@@ -442,6 +442,7 @@
 .info-tip-btn:hover,
 .info-tip-btn:focus-visible { background-color: var(--primary-container, rgba(37,99,235,0.12)); outline: none; }
 .info-tip-btn svg { width: 16px; height: 16px; }
+
 .info-tip-pop {
     display: none;
     position: absolute;
@@ -463,33 +464,13 @@
     text-align: left;
     white-space: normal;
     word-wrap: break-word;
-    animation: slideDown 0.18s ease-out forwards;
+    animation: popoverFadeIn 0.18s ease-out forwards;
 }
 .info-tip.open .info-tip-pop { display: block; }
 
-@keyframes slideDown {
-    from { opacity: 0; transform: translateX(-50%) translateY(-6px); }
-    to { opacity: 1; transform: translateX(-50%) translateY(0); }
-}
-
-@media (max-width: 768px) {
-    .info-tip-pop {
-        position: fixed !important;
-        top: 50% !important;
-        left: 50% !important;
-        transform: translate(-50%, -50%) !important;
-        width: 85vw !important;
-        max-width: 280px !important;
-        box-shadow: 0 10px 45px rgba(0,0,0,0.25) !important;
-        white-space: normal !important;
-        word-wrap: break-word !important;
-        animation: tooltipFadeIn 0.2s ease-out forwards !important;
-    }
-}
-
-@keyframes tooltipFadeIn {
-    from { opacity: 0; transform: translate(-50%, -45%); }
-    to { opacity: 1; transform: translate(-50%, -50%); }
+@keyframes popoverFadeIn {
+    from { opacity: 0; transform: translateY(-4px); }
+    to { opacity: 1; transform: translateY(0); }
 }
 
 /* Result (success/error) modal */
