@@ -212,6 +212,121 @@
             color: var(--text-muted);
         }
 
+        .congregation-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            margin-top: 6px;
+            padding: 4px 12px;
+            border-radius: 999px;
+            background: var(--primary-container);
+            color: var(--primary);
+            font-size: 0.78rem;
+            font-weight: 700;
+            letter-spacing: 0.02em;
+            border: 1.5px solid var(--primary);
+            user-select: none;
+        }
+
+        .congregation-badge svg {
+            flex-shrink: 0;
+        }
+
+        /* ── Lang-switch confirmation modal ──────────────────────── */
+        .lang-confirm-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.52);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 9000;
+            padding: 16px;
+            backdrop-filter: blur(3px);
+            animation: fadeInOverlay 0.18s ease;
+        }
+
+        @keyframes fadeInOverlay {
+            from { opacity: 0; }
+            to   { opacity: 1; }
+        }
+
+        .lang-confirm-box {
+            background: var(--card-bg);
+            border-radius: var(--radius-lg);
+            padding: 24px 20px 20px;
+            max-width: 340px;
+            width: 100%;
+            box-shadow: var(--shadow-lg);
+            border: 1px solid var(--border);
+            animation: modalPop 0.25s cubic-bezier(0.34,1.56,0.64,1);
+            text-align: center;
+        }
+
+        .lang-confirm-icon {
+            width: 48px;
+            height: 48px;
+            background: var(--primary-container);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 14px;
+        }
+
+        .lang-confirm-icon svg {
+            stroke: var(--primary);
+        }
+
+        .lang-confirm-title {
+            font-size: 1rem;
+            font-weight: 700;
+            margin-bottom: 8px;
+            color: var(--text);
+        }
+
+        .lang-confirm-msg {
+            font-size: 0.88rem;
+            color: var(--text-muted);
+            line-height: 1.5;
+            margin-bottom: 20px;
+        }
+
+        .lang-confirm-btns {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+        }
+
+        .lang-confirm-btns button {
+            flex: 1;
+            padding: 10px 16px;
+            border-radius: var(--radius-md);
+            font-size: 0.88rem;
+            font-weight: 700;
+            border: none;
+            cursor: pointer;
+            transition: all 0.18s;
+        }
+
+        .lang-confirm-btns .btn-cancel {
+            background: rgba(120,120,120,0.1);
+            color: var(--text-muted);
+        }
+
+        .lang-confirm-btns .btn-cancel:hover {
+            background: rgba(120,120,120,0.2);
+        }
+
+        .lang-confirm-btns .btn-proceed {
+            background: var(--primary);
+            color: #fff;
+        }
+
+        .lang-confirm-btns .btn-proceed:hover {
+            background: var(--primary-hover);
+        }
+
         .tabs {
             display: flex;
             background-color: rgba(120, 120, 120, 0.08);
@@ -1470,9 +1585,9 @@
                 <button type="button" class="lang-btn" id="btnToggleFontSize" onclick="toggleFontSize()" title="Крупный шрифт (Вкл/Выкл)" style="margin-right: 6px; padding: 4px 8px; gap: 2px;">
                     <span style="font-size: 0.85rem; font-weight: bold;">A<sup>+</sup></span>
                 </button>
-                <a href="index.html" onclick="localStorage.setItem('preferredLanguage', 'ru')" class="lang-btn active">RU</a>
-                <a href="index_ua.html" onclick="localStorage.setItem('preferredLanguage', 'ua')" class="lang-btn">UA</a>
-                <a href="index_de.html" onclick="localStorage.setItem('preferredLanguage', 'de')" class="lang-btn">DE</a>
+                <a href="index.html" class="lang-btn active" aria-current="page" onclick="return false;">RU</a>
+                <a href="index_ua.html" class="lang-btn" onclick="langSwitchConfirm(event,'ua','index_ua.html','Украинского');">UA</a>
+                <a href="index_de.html" class="lang-btn" onclick="langSwitchConfirm(event,'de','index_de.html','Немецкого');">DE</a>
                 <button type="button" class="lang-btn share-btn" id="btnHeaderInstall" onclick="showPWAInstallBanner()" title="Установить приложение на рабочий стол" style="display:none;">
                     <svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24" style="vertical-align:middle;"><path d="M12 16v-8m0 8l-3-3m3 3l3-3M5 20h14" stroke-linecap="round" stroke-linejoin="round"/></svg>
                     Установить
@@ -1484,6 +1599,12 @@
             </div>
             <h1>Служение с тележками</h1>
             <p class="subtitle">Стенды в городе Марбург, Германия</p>
+            <div style="text-align:center;">
+                <span class="congregation-badge">
+                    <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24"><path d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                    Собрание: Русскоязычное
+                </span>
+            </div>
         </header>
 
         <div class="tabs">
@@ -1790,6 +1911,45 @@
             const isVisible = window.getComputedStyle(box).display === 'block';
             box.style.display = isVisible ? 'none' : 'block';
         }
+    </script>
+    <!-- ── Congregation-switch confirmation modal (RU) ──────────── -->
+    <div id="langConfirmOverlay" class="lang-confirm-overlay" style="display:none;" role="dialog" aria-modal="true" aria-labelledby="langConfirmTitle">
+        <div class="lang-confirm-box">
+            <div class="lang-confirm-icon">
+                <svg width="24" height="24" fill="none" stroke-width="2" viewBox="0 0 24 24"><path d="M8 7h12m0 0l-4-4m4 4l-4 4M4 17h12m0 0l-4-4m4 4l-4 4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            </div>
+            <div class="lang-confirm-title" id="langConfirmTitle">Смена собрания</div>
+            <div class="lang-confirm-msg" id="langConfirmMsg"></div>
+            <div class="lang-confirm-btns">
+                <button class="btn-cancel" onclick="closeLangConfirm()">Отмена</button>
+                <button class="btn-proceed" id="langConfirmProceed">Перейти</button>
+            </div>
+        </div>
+    </div>
+    <script>
+    (function() {
+        var _langTarget = null;
+        window.langSwitchConfirm = function(e, langCode, url, langName) {
+            e.preventDefault();
+            var msg = 'Вы действительно хотите перейти на график ' + langName + ' собрания?';
+            document.getElementById('langConfirmMsg').textContent = msg;
+            document.getElementById('langConfirmProceed').onclick = function() {
+                localStorage.setItem('preferredLanguage', langCode);
+                window.location.href = url;
+            };
+            var overlay = document.getElementById('langConfirmOverlay');
+            overlay.style.display = 'flex';
+            overlay.addEventListener('click', function onOvClick(ev) {
+                if (ev.target === overlay) { closeLangConfirm(); overlay.removeEventListener('click', onOvClick); }
+            });
+        };
+        window.closeLangConfirm = function() {
+            document.getElementById('langConfirmOverlay').style.display = 'none';
+        };
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape') closeLangConfirm();
+        });
+    })();
     </script>
     <script src="trolley.js"></script>
     <script src="app.js"></script>
