@@ -1067,7 +1067,173 @@ function selectDate(dateISO) {
 
   renderScheduleBoard();
   onLocationOrDateChange();
+  if (typeof updateScheduleWeatherWidget === 'function') {
+    updateScheduleWeatherWidget(dateISO);
+  }
 }
+
+// ----------------------------------------------------------------------------
+// API И КЭШИРОВАНИЕ ПОГОДЫ ДЛЯ МАРБУРГА (Open-Meteo API + 3h localStorage cache)
+// ----------------------------------------------------------------------------
+const MARBURG_WEATHER_CACHE_KEY = 'marburg_weather_cache';
+const MARBURG_WEATHER_CACHE_TTL = 3 * 60 * 60 * 1000; // 3 часа в мс
+
+const WEATHER_CODE_MAP = {
+  0:  { ru: '☀️ Ясно', de: '☀️ Sonnig', ua: '☀️ Ясно' },
+  1:  { ru: '🌤️ Облачно', de: '🌤️ Bewölkt', ua: '🌤️ Хмарно' },
+  2:  { ru: '🌤️ Облачно', de: '🌤️ Bewölkt', ua: '🌤️ Хмарно' },
+  3:  { ru: '🌤️ Облачно', de: '🌤️ Bewölkt', ua: '🌤️ Хмарно' },
+  45: { ru: '🌫️ Туман', de: '🌫️ Nebel', ua: '🌫️ Туман' },
+  48: { ru: '🌫️ Туман', de: '🌫️ Nebel', ua: '🌫️ Туман' },
+  51: { ru: '🌧️ Дождь', de: '🌧️ Regen', ua: '🌧️ Дощ' },
+  53: { ru: '🌧️ Дождь', de: '🌧️ Regen', ua: '🌧️ Дощ' },
+  55: { ru: '🌧️ Дождь', de: '🌧️ Regen', ua: '🌧️ Дощ' },
+  56: { ru: '🌧️ Дождь', de: '🌧️ Regen', ua: '🌧️ Дощ' },
+  57: { ru: '🌧️ Дождь', de: '🌧️ Regen', ua: '🌧️ Дощ' },
+  61: { ru: '🌧️ Дождь', de: '🌧️ Regen', ua: '🌧️ Дощ' },
+  63: { ru: '🌧️ Дождь', de: '🌧️ Regen', ua: '🌧️ Дощ' },
+  65: { ru: '🌧️ Дождь', de: '🌧️ Regen', ua: '🌧️ Дощ' },
+  66: { ru: '🌧️ Дождь', de: '🌧️ Regen', ua: '🌧️ Дощ' },
+  67: { ru: '🌧️ Дождь', de: '🌧️ Regen', ua: '🌧️ Дощ' },
+  71: { ru: '❄️ Снег', de: '❄️ Schnee', ua: '❄️ Сніг' },
+  73: { ru: '❄️ Снег', de: '❄️ Schnee', ua: '❄️ Сніг' },
+  75: { ru: '❄️ Снег', de: '❄️ Schnee', ua: '❄️ Сніг' },
+  77: { ru: '❄️ Снег', de: '❄️ Schnee', ua: '❄️ Сніг' },
+  80: { ru: '🌧️ Дождь', de: '🌧️ Regen', ua: '🌧️ Дощ' },
+  81: { ru: '🌧️ Дождь', de: '🌧️ Regen', ua: '🌧️ Дощ' },
+  82: { ru: '🌧️ Дождь', de: '🌧️ Regen', ua: '🌧️ Дощ' },
+  85: { ru: '❄️ Снег', de: '❄️ Schnee', ua: '❄️ Сніг' },
+  86: { ru: '❄️ Снег', de: '❄️ Schnee', ua: '❄️ Сніг' },
+  95: { ru: '🌩️ Гроза', de: '🌩️ Gewitter', ua: '🌩️ Гроза' },
+  96: { ru: '🌩️ Гроза', de: '🌩️ Gewitter', ua: '🌩️ Гроза' },
+  99: { ru: '🌩️ Гроза', de: '🌩️ Gewitter', ua: '🌩️ Гроза' }
+};
+
+function getWeatherDescription(code, lang) {
+  const l = (lang || (window.AppState && AppState.language) || 'ru').toLowerCase();
+  const entry = WEATHER_CODE_MAP[code] || { ru: '🌤️ Погода', de: '🌤️ Wetter', ua: '🌤️ Погода' };
+  return entry[l] || entry.ru;
+}
+
+async function fetchMarburgWeatherData() {
+  try {
+    const rawCache = localStorage.getItem(MARBURG_WEATHER_CACHE_KEY);
+    if (rawCache) {
+      const cache = JSON.parse(rawCache);
+      if (cache && cache.timestamp && (Date.now() - cache.timestamp < MARBURG_WEATHER_CACHE_TTL) && cache.data) {
+        return cache.data;
+      }
+    }
+  } catch (e) {
+    console.warn('[Weather Cache Read Error]', e);
+  }
+
+  const url = 'https://api.open-meteo.com/v1/forecast?latitude=50.8108&longitude=8.7711&daily=weathercode,temperature_2m_max,temperature_2m_min&timezone=Europe%2FBerlin';
+  const response = await fetch(url);
+  if (!response.ok) {
+    throw new Error('Weather API HTTP error ' + response.status);
+  }
+  const data = await response.json();
+  try {
+    localStorage.setItem(MARBURG_WEATHER_CACHE_KEY, JSON.stringify({
+      timestamp: Date.now(),
+      data: data
+    }));
+  } catch (e) {
+    console.warn('[Weather Cache Write Error]', e);
+  }
+  return data;
+}
+
+async function getMarburgWeatherForDate(isoDate) {
+  try {
+    const data = await fetchMarburgWeatherData();
+    if (!data || !data.daily || !Array.isArray(data.daily.time)) return null;
+    const idx = data.daily.time.indexOf(isoDate);
+    if (idx === -1) return null;
+    return {
+      maxTemp: Math.round(data.daily.temperature_2m_max[idx]),
+      minTemp: Math.round(data.daily.temperature_2m_min[idx]),
+      weathercode: data.daily.weathercode[idx]
+    };
+  } catch (err) {
+    console.warn('[Weather Fetch Error]', err);
+    return null;
+  }
+}
+
+async function updateScheduleWeatherWidget(isoDate) {
+  let widget = document.getElementById('scheduleWeatherWidget');
+  if (!widget) {
+    const scheduleTab = document.getElementById('scheduleTabContent');
+    if (!scheduleTab) return;
+    const refreshRow = scheduleTab.querySelector('.refresh-row');
+    widget = document.createElement('div');
+    widget.id = 'scheduleWeatherWidget';
+    widget.className = 'schedule-weather-widget';
+    if (refreshRow) {
+      refreshRow.after(widget);
+    } else {
+      scheduleTab.prepend(widget);
+    }
+  }
+
+  const targetISO = isoDate || selectedDateISO || new Date().toISOString().slice(0, 10);
+  const lang = (window.AppState && AppState.language) ? AppState.language.toLowerCase() : 'ru';
+
+  const todayObj = new Date();
+  todayObj.setHours(0, 0, 0, 0);
+  const targetObj = new Date(targetISO + 'T00:00:00');
+  const diffDays = Math.round((targetObj - todayObj) / 86400000);
+
+  const outOfRangeMsg = {
+    ru: '🌡️ Прогноз погоды доступен на ближайшие 7 дней',
+    de: '🌡️ Wettervorhersage für die nächsten 7 Tage verfügbar',
+    ua: '🌡️ Прогноз погоди доступний на найближчі 7 днів'
+  };
+
+  const cityLabels = {
+    ru: '🌡️ Марбург',
+    de: '🌡️ Marburg',
+    ua: '🌡️ Марбург'
+  };
+
+  if (diffDays < 0 || diffDays > 7) {
+    const msg = outOfRangeMsg[lang] || outOfRangeMsg.ru;
+    widget.innerHTML = `<div class="weather-card weather-card-out-of-range"><span>${msg}</span></div>`;
+    return;
+  }
+
+  try {
+    const weatherInfo = await getMarburgWeatherForDate(targetISO);
+    if (!weatherInfo) {
+      const msg = outOfRangeMsg[lang] || outOfRangeMsg.ru;
+      widget.innerHTML = `<div class="weather-card weather-card-out-of-range"><span>${msg}</span></div>`;
+      return;
+    }
+
+    const maxTemp = weatherInfo.maxTemp;
+    const minTemp = weatherInfo.minTemp;
+    const maxStr = (maxTemp >= 0 ? '+' : '') + maxTemp + '°C';
+    const minStr = (minTemp >= 0 ? '+' : '') + minTemp + '°C';
+    const desc = getWeatherDescription(weatherInfo.weathercode, lang);
+    const city = cityLabels[lang] || cityLabels.ru;
+
+    widget.innerHTML = `
+      <div class="weather-card">
+        <span class="weather-city-temp">${city}: ${maxStr} / ${minStr}</span>
+        <span class="weather-desc">${desc}</span>
+      </div>
+    `;
+  } catch (err) {
+    console.warn('[Weather Widget Render Error]', err);
+    const msg = outOfRangeMsg[lang] || outOfRangeMsg.ru;
+    widget.innerHTML = `<div class="weather-card weather-card-out-of-range"><span>${msg}</span></div>`;
+  }
+}
+
+window.getMarburgWeatherForDate = getMarburgWeatherForDate;
+window.updateScheduleWeatherWidget = updateScheduleWeatherWidget;
 
 // Переход к произвольной дате (например, по клику из годового календаря):
 // прокручивает ленту недель к нужной неделе, подсвечивает день и открывает «График».
