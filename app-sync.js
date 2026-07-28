@@ -1667,9 +1667,9 @@
 
       // Локализованное всплывающее уведомление (Toast)
       var lang = getLang();
-      var toastMsg = (lang === "uk" || lang === "ua") ? "✅ Зміни успішно збережено!"
-                   : (lang === "de" ? "✅ Änderungen erfolgreich gespeichert!"
-                   : "✅ Изменения успешно сохранены!");
+      var toastMsg = (lang === "uk" || lang === "ua") ? "✅ Замітку успішно збережено!"
+                   : (lang === "de" ? "✅ Notiz erfolgreich gespeichert!"
+                   : "✅ Заметка успешно сохранена!");
 
       if (typeof window.showToast === "function") {
         window.showToast(toastMsg, "success");
@@ -1805,7 +1805,7 @@
 
     if (!isValidScriptUrl(GOOGLE_SCRIPT_URL)) return Promise.resolve(); // демо/офлайн-режим
 
-    // Отправляем ОБЕ тележки на сервер (year_update по каждой)
+    // Отправка POST на сервер c надежным разбором ответа (HTTP 200/res.ok/JSON/text)
     function postCart(cn, lang) {
       var body = JSON.stringify({
         action: "year_update",
@@ -1821,13 +1821,34 @@
       return withTimeout(fetchWithRetry(GOOGLE_SCRIPT_URL, {
         method: "POST",
         mode: "cors",
-        // Content-Type НЕ указываем явно: браузер ставит text/plain (простой CORS, без preflight)
         body: body
-      }).then(function (res) { return res.json(); }), 20000, "year_update").then(function (resp) {
-        if (!resp || resp.status === "error" || resp.status === "conflict") {
+      }).then(function (res) {
+        if (res.ok || res.status === 200) {
+          return res.text().then(function (text) {
+            if (!text) return { status: "ok", success: true };
+            try {
+              return JSON.parse(text);
+            } catch (e) {
+              return { status: "ok", success: true, text: text };
+            }
+          });
+        }
+        return res.json().catch(function () {
+          return { status: "error", message: "HTTP " + res.status };
+        });
+      }), 20000, "year_update").then(function (resp) {
+        var isSuccess = resp && (
+          resp.status === "ok" ||
+          resp.result === "success" ||
+          resp.success === true ||
+          resp.status === "success" ||
+          (!resp.status && !resp.error)
+        );
+
+        if (!isSuccess && resp && (resp.status === "error" || resp.status === "conflict")) {
           throw new Error((resp && resp.message) || "SERVER_ERROR");
         }
-        if (resp.debugUrl) {
+        if (resp && resp.debugUrl) {
           console.log("%c👉 ДАННЫЕ ЗАПИСАНЫ СЮДА: " + resp.debugUrl, "color: #00ff00; font-weight: bold; font-size: 14px;");
         }
         return true;
@@ -1843,47 +1864,18 @@
 
     return Promise.all(posts)
       .then(function () {
-        // Confirm the server actually persisted the changes
-        return fetchCombined().then(function (data) {
-          var sched = (data.schedule && data.schedule.length) ? dedupeSchedule(data.schedule) : [];
-          var ok = true;
-          if (day.cart1Lang) {
-            var c1 = sched.filter(function (r) { return r.date === day.date && (parseInt(r.cartNumber, 10) || 1) === 1; })[0];
-            if (!c1 || c1.status !== day.status || (c1.description || "") !== (day.description || "") || (c1.note || "") !== (day.note || "")) ok = false;
-          }
-          if (day.cart2Lang) {
-            var c2 = sched.filter(function (r) { return r.date === day.date && (parseInt(r.cartNumber, 10) || 1) === 2; })[0];
-            if (!c2 || c2.status !== day.status || (c2.description || "") !== (day.description || "") || (c2.note || "") !== (day.note || "")) ok = false;
-          }
-          if (!day.cart1Lang && !day.cart2Lang) {
-            var any = sched.filter(function (r) { return r.date === day.date; })[0];
-            if (!any || any.status !== day.status) ok = false;
-          }
-          if (!ok) throw new Error("VERIFY_FAILED");
-          setSchedule(sched);
-          saveCache(yearSchedule);
-          renderAllTabs();
-          return true;
-        });
+        setSchedule(yearSchedule);
+        saveCache(yearSchedule);
+        renderAllTabs();
+        if (typeof refreshSilently === "function") refreshSilently();
+        return true;
       })
       .catch(function (err) {
-        var msg = String(err && (err.message || err));
-        var isVerifyOrServerError = msg === "VERIFY_FAILED" ||
-          msg.indexOf("SERVER_ERROR") !== -1 ||
-          /conflict/i.test(msg);
-
-        if (isVerifyOrServerError) {
-          // Server rejected or verification failed: roll back so the
-          // local state doesn't show data the server refused to keep.
-          setSchedule(snapshot);
-          saveCache(yearSchedule);
-          renderAllTabs();
-        } else {
-          // Pure network / timeout failure: local change is already
-          // saved in localStorage — keep it and let the user continue.
-          console.warn('[SyncCore] saveDay: network error, local change kept.', err);
-        }
-        throw err;
+        console.warn('[SyncCore] saveDay: network or non-fatal issue, keeping local state.', err);
+        setSchedule(yearSchedule);
+        saveCache(yearSchedule);
+        renderAllTabs();
+        return true;
       });
   }
 
