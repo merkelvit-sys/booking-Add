@@ -1,5 +1,10 @@
 importScripts('https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.sw.js');
 
+// Register message listener on the top-level scope to satisfy Chrome's initial evaluation check
+self.addEventListener('message', function(event) {
+  // Handled by OneSignalSDK.sw.js
+});
+
 const CACHE_NAME = 'service-schedule-v40'; // <-- v40: обновлено для новой кнопки-колокольчика и ее переключения вкл/выкл
 const ASSETS = [
   './',
