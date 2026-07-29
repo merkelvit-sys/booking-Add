@@ -1,3 +1,5 @@
+importScripts('https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.sw.js');
+
 const CACHE_NAME = 'service-schedule-v40'; // <-- v40: обновлено для новой кнопки-колокольчика и ее переключения вкл/выкл
 const ASSETS = [
   './',
