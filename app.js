@@ -980,9 +980,14 @@ window.addEventListener('DOMContentLoaded', () => {
         for (let r of registrations) {
           try {
             const scopePath = new URL(r.scope).pathname;
-            if (scopePath === '/' && r.active && r.active.scriptURL && r.active.scriptURL.indexOf('OneSignalSDKWorker.js') !== -1) {
-              console.log('[PWA] Unregistering old root-scope OneSignal service worker:', r.active.scriptURL);
-              r.unregister().catch(() => {});
+            if (scopePath === '/') {
+              const scriptURL = (r.active && r.active.scriptURL) || 
+                                (r.waiting && r.waiting.scriptURL) || 
+                                (r.installing && r.installing.scriptURL);
+              if (scriptURL && scriptURL.indexOf('OneSignalSDKWorker.js') !== -1) {
+                console.log('[PWA] Unregistering old root-scope OneSignal service worker:', scriptURL);
+                r.unregister().catch(() => {});
+              }
             }
           } catch (err) {}
         }
