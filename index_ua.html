@@ -4,20 +4,6 @@
     <meta charset="UTF-8">
     <script src="https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.page.js" defer></script>
     <script>
-      window.OneSignalDeferred = window.OneSignalDeferred || [];
-      OneSignalDeferred.push(async function(OneSignal) {
-        await OneSignal.init({
-          appId: "817ea691-15bf-4e90-a20e-a710ed052184",
-          serviceWorkerPath: "sw.js",
-          serviceWorkerParam: { scope: "/" }
-        });
-        window.oneSignalReady = true;
-        if (typeof window.syncNotificationButtonState === 'function') {
-          window.syncNotificationButtonState();
-        }
-      });
-    </script>
-    <script>
         (function() {
             var currentLang = "ua";
             var pref = localStorage.getItem("preferredLanguage");
