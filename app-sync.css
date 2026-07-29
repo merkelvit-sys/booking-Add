@@ -1874,3 +1874,15 @@ body, .month-block, .day-cell, .modal-content, .auth-modal-box, .board-card {
 .global-center-tooltip-close:hover {
     color: #ffffff;
 }
+
+
+/* Active notification button styling */
+#btnPushNotifications.active {
+    background-color: var(--success-bg) !important;
+    color: var(--success) !important;
+    border-color: var(--success) !important;
+}
+#btnPushNotifications.active:hover {
+    background-color: var(--success) !important;
+    color: #ffffff !important;
+}

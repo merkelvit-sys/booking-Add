@@ -830,6 +830,10 @@ function buildApiUrl() {
     else if (typeof renderScheduleBoard === "function") renderScheduleBoard();
     if (typeof renderYearGrid === "function") renderYearGrid();
 
+    if (typeof window.syncNotificationButtonState === "function") {
+      window.syncNotificationButtonState();
+    }
+
     try {
       var activeTab = document.querySelector('.tab-content.active');
       if (activeTab) {
@@ -2551,42 +2555,49 @@ function buildApiUrl() {
   }
 
   // OneSignal Subscription Button Management
+  function syncNotificationButtonState() {
+    var btn = document.getElementById('btnPushNotifications');
+    if (!btn) return;
+
+    var lang = (document.documentElement.lang || "ru").toLowerCase();
+    if (lang.indexOf("uk") === 0 || lang.indexOf("ua") === 0) lang = "uk";
+    else if (lang.indexOf("de") === 0) lang = "de";
+    else lang = "ru";
+
+    var texts = {
+      ru: {
+        default: "🔔 Уведомления о напарниках",
+        active: "✅ Уведомления активны"
+      },
+      de: {
+        default: "🔔 Partner-Benachrichtigungen",
+        active: "✅ Benachrichtigungen aktiv"
+      },
+      uk: {
+        default: "🔔 Сповіщення про напарників",
+        active: "✅ Сповіщення активні"
+      }
+    };
+
+    var t = texts[lang] || texts.ru;
+
+    var isGranted = (typeof Notification !== 'undefined' && Notification.permission === 'granted') ||
+                    (typeof window.OneSignal !== 'undefined' && window.OneSignal.Notifications && window.OneSignal.Notifications.permission);
+
+    if (isGranted) {
+      btn.innerHTML = t.active;
+      btn.classList.add('active');
+    } else {
+      btn.innerHTML = t.default;
+      btn.classList.remove('active');
+    }
+  }
+  window.syncNotificationButtonState = syncNotificationButtonState;
+
   window.OneSignalDeferred = window.OneSignalDeferred || [];
   window.OneSignalDeferred.push(async function(OneSignal) {
-    function updatePushNotificationsButtonStatus() {
-      var btn = document.getElementById('btnPushNotifications');
-      if (!btn) return;
-
-      var lang = (document.documentElement.lang || "ru").toLowerCase();
-      if (lang.indexOf("uk") === 0 || lang.indexOf("ua") === 0) lang = "uk";
-      else if (lang.indexOf("de") === 0) lang = "de";
-      else lang = "ru";
-
-      var texts = {
-        ru: {
-          default: "🔔 Уведомления о напарниках",
-          active: "Уведомления активны ✅"
-        },
-        de: {
-          default: "🔔 Partner-Benachrichtigungen",
-          active: "Benachrichtigungen aktiv ✅"
-        },
-        uk: {
-          default: "🔔 Сповіщення про напарників",
-          active: "Сповіщення активні ✅"
-        }
-      };
-
-      var t = texts[lang] || texts.ru;
-
-      if (OneSignal.Notifications && OneSignal.Notifications.permission) {
-        btn.innerHTML = t.active;
-        btn.classList.add('active');
-      } else {
-        btn.innerHTML = t.default;
-        btn.classList.remove('active');
-      }
-    }
+    // Sync immediately upon OneSignal initialization
+    syncNotificationButtonState();
 
     function initButton() {
       var btn = document.getElementById('btnPushNotifications');
@@ -2594,11 +2605,11 @@ function buildApiUrl() {
         btn.onclick = function() {
           if (OneSignal.Notifications && typeof OneSignal.Notifications.requestPermission === "function") {
             OneSignal.Notifications.requestPermission().then(function() {
-              updatePushNotificationsButtonStatus();
+              syncNotificationButtonState();
             });
           }
         };
-        updatePushNotificationsButtonStatus();
+        syncNotificationButtonState();
       }
     }
 
@@ -2610,7 +2621,7 @@ function buildApiUrl() {
 
     if (OneSignal.Notifications && typeof OneSignal.Notifications.addEventListener === "function") {
       OneSignal.Notifications.addEventListener('permissionChange', function(permission) {
-        updatePushNotificationsButtonStatus();
+        syncNotificationButtonState();
       });
     }
   });
