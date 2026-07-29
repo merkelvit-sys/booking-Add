@@ -399,6 +399,144 @@
             justify-content: space-between;
         }
 
+        .btn-info-toggle {
+            background: none;
+            border: none;
+            color: var(--text-muted);
+            cursor: pointer;
+            padding: 2px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 50%;
+            width: 20px;
+            height: 20px;
+            transition: all 0.2s ease;
+            vertical-align: middle;
+            flex-shrink: 0;
+        }
+
+        .btn-info-toggle:hover {
+            color: var(--primary);
+            background-color: var(--primary-container);
+        }
+
+        .btn-info-toggle svg {
+            width: 14px;
+            height: 14px;
+            pointer-events: none;
+        }
+
+        .info-helper-box {
+            background-color: var(--primary-container);
+            border-left: 3px solid var(--primary);
+            border-radius: var(--radius-sm);
+            padding: 8px 12px;
+            margin-top: 6px;
+            margin-bottom: 10px;
+            font-size: 0.78rem;
+            color: var(--text);
+            line-height: 1.5;
+        }
+
+        #dateInfo {
+            display: none;
+        }
+
+        #dateInfo.info-helper-box {
+            animation: infoFadeIn 0.2s ease-out;
+        }
+
+        /* Quick booking modal: hide info-helper-boxes by default, show as floating tooltips */
+        #quickBookingForm .info-helper-box {
+            display: none;
+            border: none;
+            background: none;
+        }
+        #quickBookingForm .info-helper-box.qb-tooltip-open {
+            display: block;
+            position: absolute;
+            bottom: calc(100% + 6px);
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 10001;
+            margin-bottom: 0;
+            margin-top: 0;
+            max-width: 220px;
+            width: max-content;
+            background-color: var(--card-bg);
+            border: 1px solid var(--border);
+            border-left: none;
+            border-radius: var(--radius-sm);
+            box-shadow: 0 -4px 20px rgba(0,0,0,0.2);
+            padding: 8px 12px;
+            font-size: 0.78rem;
+            line-height: 1.45;
+            animation: tooltipFadeUp 0.15s ease-out;
+            white-space: normal;
+            word-wrap: break-word;
+            pointer-events: none;
+        }
+        #quickBookingForm .info-helper-box.qb-tooltip-hover {
+            display: block;
+            position: absolute;
+            bottom: calc(100% + 6px);
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 10000;
+            margin-bottom: 0;
+            margin-top: 0;
+            max-width: 220px;
+            width: max-content;
+            background-color: var(--card-bg);
+            border: 1px solid var(--border);
+            border-left: none;
+            border-radius: var(--radius-sm);
+            box-shadow: 0 -4px 20px rgba(0,0,0,0.2);
+            padding: 8px 12px;
+            font-size: 0.78rem;
+            line-height: 1.45;
+            animation: tooltipFadeUp 0.15s ease-out;
+            white-space: normal;
+            word-wrap: break-word;
+            pointer-events: none;
+        }
+        #quickBookingForm .form-section-compact > div {
+            position: relative;
+        }
+        @keyframes tooltipFadeUp {
+            from { opacity: 0; transform: translate(-50%, 4px); }
+            to { opacity: 1; transform: translate(-50%, 0); }
+        }
+
+        @keyframes infoFadeIn {
+            from { opacity: 0; transform: translateY(-4px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .btn-today {
+            background: none;
+            border: none;
+            color: var(--primary);
+            font-size: 0.75rem;
+            font-weight: 700;
+            cursor: pointer;
+            padding: 4px 8px;
+            border-radius: var(--radius-sm);
+            transition: background-color 0.2s ease;
+        }
+
+        .btn-today:hover {
+            background-color: var(--primary-container);
+        }
+
+        .refresh-row {
+            display: flex;
+            justify-content: flex-end;
+            gap: 16px;
+            margin-bottom: 8px;
+        }
+
         .week-switcher {
             display: flex;
             background-color: rgba(120, 120, 120, 0.08);
@@ -896,6 +1034,20 @@
             cursor: not-allowed;
         }
 
+        .input-field {
+            background-image: none !important;
+            appearance: none;
+        }
+        #qbName1, #qbName2 {
+            background-image: none !important;
+            appearance: none;
+        }
+        #quickBookingForm .form-section-compact > div::before,
+        #quickBookingForm .form-section-compact > div::after {
+            display: none !important;
+            content: none !important;
+        }
+
         .btn-submit {
             display: flex;
             align-items: center;
@@ -1128,12 +1280,6 @@
             background-color: rgba(107, 114, 128, 0.1);
             color: var(--text-muted);
             border: 1px solid rgba(107, 114, 128, 0.2);
-        }
-
-        .refresh-row {
-            display: flex;
-            justify-content: flex-end;
-            margin-bottom: 8px;
         }
 
         .btn-refresh {
@@ -1742,7 +1888,7 @@
                         <svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z" fill="currentColor"/></svg>
                     </button>
                 </span>
-                <button type="button" onclick="jumpToToday()" style="background:none; border:none; color:var(--primary); font-size:0.75rem; font-weight:700; cursor:pointer; padding: 4px 8px;">Heute</button>
+                <button type="button" onclick="jumpToToday()" class="btn-today">Heute</button>
             </h2>
             <div id="dateInfo" class="info-helper-box">
                 Wählen Sie im Umschalter eine Woche (Diese, Nächste oder Übernächste) und klicken Sie dann auf das gewünschte Datum in der Tagesleiste.
