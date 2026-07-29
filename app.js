@@ -974,6 +974,26 @@ window.addEventListener('DOMContentLoaded', () => {
       }
     });
 
+    // Clean up old OneSignalSDKWorker registrations on the root scope '/' to prevent conflicts
+    if (typeof navigator.serviceWorker.getRegistrations === 'function') {
+      navigator.serviceWorker.getRegistrations().then(registrations => {
+        for (let r of registrations) {
+          try {
+            const scopePath = new URL(r.scope).pathname;
+            if (scopePath === '/') {
+              const scriptURL = (r.active && r.active.scriptURL) || 
+                                (r.waiting && r.waiting.scriptURL) || 
+                                (r.installing && r.installing.scriptURL);
+              if (scriptURL && scriptURL.indexOf('OneSignalSDKWorker.js') !== -1) {
+                console.log('[PWA] Unregistering old root-scope OneSignal service worker:', scriptURL);
+                r.unregister().catch(() => {});
+              }
+            }
+          } catch (err) {}
+        }
+      }).catch(() => {});
+    }
+
     navigator.serviceWorker.register('sw.js', { scope: '/' })
       .then(reg => {
         function showUpdateToast() {
@@ -1062,52 +1082,48 @@ window.addEventListener('DOMContentLoaded', () => {
           }
         }
 
-        function checkUpdate(registration) {
-          if (registration.waiting && navigator.serviceWorker.controller) {
-            showUpdateToast();
+        function setupUpdateBanner(registration) {
+          if (!navigator.serviceWorker.controller) {
             return;
           }
-          if (registration.installing) {
-            registration.installing.addEventListener('statechange', (e) => {
-              if (e.target.state === 'installed' && navigator.serviceWorker.controller) {
+
+          if (registration.waiting) {
+            showUpdateToast();
+          }
+
+          registration.addEventListener('updatefound', () => {
+            const installingWorker = registration.installing;
+            if (!installingWorker) return;
+
+            installingWorker.addEventListener('statechange', () => {
+              if (installingWorker.state === 'installed' && navigator.serviceWorker.controller) {
                 showUpdateToast();
               }
             });
-          }
+          });
         }
 
-        // Check current status on startup
-        checkUpdate(reg);
+        setupUpdateBanner(reg);
 
-        // Listen for new worker updates
-        reg.addEventListener('updatefound', () => {
-          const newWorker = reg.installing;
-          if (newWorker) {
-            newWorker.addEventListener('statechange', () => {
-              if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
-                showUpdateToast();
-              }
-            });
-          }
-        });
+        function manualCheck() {
+          reg.update().then(() => {
+            if (reg.waiting && navigator.serviceWorker.controller) {
+              showUpdateToast();
+            }
+          }).catch(() => {});
+        }
 
         // Trigger an update check immediately on init
-        reg.update().then(() => checkUpdate(reg)).catch(() => {});
+        manualCheck();
 
         // Keep polling for updates every 15 minutes
-        setInterval(() => {
-          reg.update().then(() => checkUpdate(reg)).catch(() => {});
-        }, 15 * 60 * 1000);
+        setInterval(manualCheck, 15 * 60 * 1000);
 
         // Trigger update checks when returning to page or focusing window
         document.addEventListener('visibilitychange', () => {
-          if (document.visibilityState === 'visible') {
-            reg.update().then(() => checkUpdate(reg)).catch(() => {});
-          }
+          if (document.visibilityState === 'visible') manualCheck();
         });
-        window.addEventListener('focus', () => {
-          reg.update().then(() => checkUpdate(reg)).catch(() => {});
-        });
+        window.addEventListener('focus', manualCheck);
 
         // Initialize OneSignal ONLY after Service Worker is successfully registered
         window.OneSignalDeferred = window.OneSignalDeferred || [];
@@ -1115,7 +1131,8 @@ window.addEventListener('DOMContentLoaded', () => {
           await OneSignal.init({
             appId: "817ea691-15bf-4e90-a20e-a710ed052184",
             serviceWorkerPath: "sw.js",
-            serviceWorkerParam: { scope: "/" }
+            serviceWorkerParam: { scope: "/" },
+            serviceWorkerOverrideForCustomPage: true
           });
           window.oneSignalReady = true;
           if (typeof window.syncNotificationButtonState === 'function') {
