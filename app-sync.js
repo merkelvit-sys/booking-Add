@@ -15,6 +15,7 @@
       weekdays: ["Пн","Вт","Ср","Чт","Пт","Сб","Вс"],
       statuses: { available:"Служение", closed:"Выходной", event:"Событие", holiday:"Праздник", special:"Особое" },
       dayEditorTitle:"День служения", statusLabel:"Статус", descLabel:"Описание события", noteLabel:"Заметка", trolleyLabel:"Тележка", trolleyPlaceholder:"— выберите —", trolleys:{ru:"Русская",ua:"Украинская",de:"Немецкая"}, noTrolley:"Выберите тележку",
+      yearMessageLabel:"Объявление на вкладке График (YearSchedule)", yearMessagePlaceholder:"Введите текст объявления...", saveYearMessage:"Отправить объявление",
       cart1Name:"Тележка №1 (Стенд 1)", cart2Name:"Тележка №2 (Стенд 2)", cart1Lang:"Язык тележки №1", cart2Lang:"Язык тележки №2", bookingsTitle:"📋 Записи на этот день:", goToSchedule:"📅 В график", noBookings:"Записей на этот день нет (свободно)",
       preacher1:"Возвещатель 1 (ФИО)", preacher2:"Возвещатель 2 (ФИО)",
       save:"Сохранить", cancel:"Отмена", confirmDeleteYes:"Да, удалить", savedTitle:"Сохранено", errorTitle:"Ошибка", ok:"OK", daySaved:"Данные дня успешно сохранены!", saving:"Сохранение…", saved:"Данные сохранены", edit:"Редактировать", saveChanges:"Сохранить изменения", saveError:"Ошибка сохранения", saveVerifyFail:"Сервер не сохранил изменения. Пересоздайте Web App (Deploy → New version) с новым кодом google_script.txt.",
@@ -42,6 +43,7 @@
       weekdays: ["Пн","Вт","Ср","Чт","Пт","Сб","Нд"],
       statuses: { available:"Служіння", closed:"Вихідний", event:"Подія", holiday:"Свято", special:"Особливе" },
       dayEditorTitle:"День служіння", statusLabel:"Статус", descLabel:"Опис події", noteLabel:"Примітка", trolleyLabel:"Візок", trolleyPlaceholder:"— оберіть —", trolleys:{ru:"Російська",ua:"Українська",de:"Німецька"}, noTrolley:"Оберіть візок",
+      yearMessageLabel:"Оголошення на вкладці Графік (YearSchedule)", yearMessagePlaceholder:"Введіть текст оголошення...", saveYearMessage:"Надіслати оголошення",
       cart1Name:"Візок №1 (Стенд 1)", cart2Name:"Візок №2 (Стенд 2)", cart1Lang:"Мова візка №1", cart2Lang:"Мова візка №2", bookingsTitle:"📋 Записи на цей день:", goToSchedule:"📅 До розкладу", noBookings:"Записів на цей день немає (вільно)",
       preacher1:"Возвіщувач 1 (ПІБ)", preacher2:"Возвіщувач 2 (ПІБ)",
       save:"Зберегти", cancel:"Скасувати", confirmDeleteYes:"Так, видалити", savedTitle:"Збережено", errorTitle:"Помилка", ok:"OK", daySaved:"Дані дня успішно збережено!", saving:"Збереження…", saved:"Дані збережено", edit:"Редагувати", saveChanges:"Зберегти зміни", saveError:"Помилка збереження", saveVerifyFail:"Сервер не зберіг зміни. Перевидіть Web App (Deploy → New version) з новим кодом google_script.txt.",
@@ -69,6 +71,7 @@
       weekdays: ["Mo","Di","Mi","Do","Fr","Sa","So"],
       statuses: { available:"Dienst", closed:"Frei", event:"Veranstaltung", holiday:"Feiertag", special:"Besonderes" },
       dayEditorTitle:"Diensttag", statusLabel:"Status", descLabel:"Ereignisbeschreibung", noteLabel:"Notiz", trolleyLabel:"Trolley", trolleyPlaceholder:"— auswählen —", trolleys:{ru:"Russisch",ua:"Ukrainisch",de:"Deutsch"}, noTrolley:"Trolley auswählen",
+      yearMessageLabel:"Ankündigung auf der Registerkarte Zeitplan (YearSchedule)", yearMessagePlaceholder:"Geben Sie den Text der Ankündigung ein...", saveYearMessage:"Ankündigung senden",
       cart1Name:"Trolley №1 (Stand 1)", cart2Name:"Trolley №2 (Stand 2)", cart1Lang:"Sprache Trolley №1", cart2Lang:"Sprache Trolley №2", bookingsTitle:"📋 Einträge für diesen Tag:", goToSchedule:"📅 Zum Zeitplan", noBookings:"Keine Einträge für diesen Tag (frei)",
       save:"Speichern", cancel:"Abbrechen", confirmDeleteYes:"Ja, löschen", savedTitle:"Gespeichert", errorTitle:"Fehler", ok:"OK", daySaved:"Daten des Tages erfolgreich gespeichert!", saving:"Speichern…", saved:"Daten gespeichert", edit:"Bearbeiten", saveChanges:"Änderungen speichern", saveError:"Speicherfehler", saveVerifyFail:"Server hat die Änderungen nicht gespeichert. Erstellen Sie die Web App neu (Deploy → New version) mit dem neuen Code google_script.txt.",
       offline:"Keine Verbindung zum Server. Letzter gespeicherter Plan wird angezeigt.",
@@ -383,29 +386,43 @@
 
   // ----- Сетевой слой -----
 
-  // Обёртка fetch с Exponential Backoff:
-  // при ошибках 429 / 500 / 503 (перегрузка сервера) или потере сети
-  // автоматически повторяет запрос: 1 с → 3 с → 5 с (до maxAttempts попыток).
-  function fetchWithRetry(url, opts, maxAttempts, retryDelays) {
+// Строит URL запроса к Google Apps Script строго на основе GOOGLE_SCRIPT_URL.
+// Каждый вызов конструирует URL заново, добавляя ключ и параметр защиты от кэширования.
+// Перенаправленные URL (script.googleusercontent.com) НЕ сохраняются и НЕ повторно используются.
+function buildApiUrl() {
+  var base = GOOGLE_SCRIPT_URL;
+  var sep = base.indexOf("?") === -1 ? "?" : "&";
+  return base + sep + "key=" + encodeURIComponent(API_KEY) + "&_t=" + Date.now();
+}
+
+// Обёртка fetch с Exponential Backoff:
+// при ошибках 429 / 500 / 503 (перегрузка сервера) или потере сети
+// автоматически повторяет запрос: 1 с → 3 с → 5 с (до maxAttempts попыток).
+// Каждая попытка строит URL заново через buildApiUrl(), чтобы никогда
+// не повторно использовать перенаправленный URL (script.googleusercontent.com).
+  function fetchWithRetry(urlBuilder, opts, maxAttempts) {
     maxAttempts = maxAttempts || 3;
-    retryDelays = retryDelays || [1000, 3000, 5000];
     function attempt(n) {
-      return fetch(url, opts || {}).then(function (res) {
-        // Повторяем при перегрузке сервера (Google Apps Script → 429/500)
+      var url = (typeof urlBuilder === "function") ? urlBuilder() : urlBuilder;
+      var fetchOpts = Object.assign({}, opts, { cache: "no-store" });
+      return fetch(url, fetchOpts).then(function (res) {
         if ((res.status === 429 || res.status === 500 || res.status === 503) && n < maxAttempts) {
+          var delay = Math.pow(2, n - 1) * 1000 + Math.floor(Math.random() * 1000);
+          console.log("[SyncCore] Server error " + res.status + ", retrying attempt " + (n + 1) + " in " + delay + "ms");
           return new Promise(function (resolve) {
-            setTimeout(function () { resolve(attempt(n + 1)); }, retryDelays[n - 1] || 5000);
+            setTimeout(function () { resolve(attempt(n + 1)); }, delay);
           });
         }
         return res;
       }).catch(function (err) {
-        // Пробрасываем оригинальную ошибку (CORS-ошибки исчезнут после удаления Content-Type)
         if (n < maxAttempts) {
+          var delay = Math.pow(2, n - 1) * 1000 + Math.floor(Math.random() * 1000);
+          console.warn("[SyncCore] Fetch network error, retrying attempt " + (n + 1) + " in " + delay + "ms", err);
           return new Promise(function (resolve) {
-            setTimeout(function () { resolve(attempt(n + 1)); }, retryDelays[n - 1] || 5000);
+            setTimeout(function () { resolve(attempt(n + 1)); }, delay);
           });
         }
-        throw err; // пробрасываем оригинальную ошибку без маскировки
+        throw err;
       });
     }
     return attempt(1);
@@ -428,18 +445,159 @@
     });
   }
 
+  // ----- Очередь офлайн-синхронизации (Offline Sync Queue) -----
+  var OFFLINE_QUEUE_KEY = "booking_offline_actions_v1";
+
+  function getOfflineQueue() {
+    try {
+      return JSON.parse(localStorage.getItem(OFFLINE_QUEUE_KEY)) || [];
+    } catch (e) {
+      return [];
+    }
+  }
+
+  function saveOfflineQueue(queue) {
+    try {
+      localStorage.setItem(OFFLINE_QUEUE_KEY, JSON.stringify(queue));
+    } catch (e) {}
+  }
+
+  function pushOfflineAction(type, data) {
+    var queue = getOfflineQueue();
+    queue.push({ id: Date.now() + "_" + Math.random(), type: type, data: data });
+    saveOfflineQueue(queue);
+    console.log("[SyncCore] Offline action queued:", type, data);
+  }
+
+  var isQueueProcessing = false;
+
+  function processOfflineQueue() {
+    if (isQueueProcessing) return Promise.resolve(true);
+    var queue = getOfflineQueue();
+    if (queue.length === 0) return Promise.resolve(true);
+
+    isQueueProcessing = true;
+    console.log("[SyncCore] Starting processing offline queue of size:", queue.length);
+
+    function executeAction(action) {
+      if (!isValidScriptUrl(GOOGLE_SCRIPT_URL)) return Promise.resolve(true);
+
+      var p;
+      if (action.type === "create") {
+        var body = JSON.stringify({
+          action: "create",
+          key: API_KEY,
+          language: getLang(),
+          bookings: [action.data.record]
+        });
+        p = fetch(buildApiUrl(), {
+          method: "POST",
+          mode: "cors",
+          body: body
+        }).then(function (res) { return res.json(); });
+      } else if (action.type === "delete") {
+        var params = new URLSearchParams({
+          action: "delete",
+          location: action.data.booking.location,
+          date: action.data.booking.date,
+          time: action.data.booking.time,
+          cartNumber: String(action.data.booking.cartNumber),
+          language: getLang(),
+          key: API_KEY
+        });
+        p = fetch(GOOGLE_SCRIPT_URL + '?' + params.toString(), {
+          method: 'POST',
+          mode: 'cors'
+        }).then(function (res) { return res.json(); });
+      } else if (action.type === "year_update") {
+        var day = action.data.day;
+        var posts = [];
+        var postCartFn = function(cn, lang) {
+          var body = JSON.stringify({
+            action: "year_update",
+            key: API_KEY,
+            language: getLang(),
+            date: day.date,
+            cartNumber: cn,
+            trolley: lang,
+            status: day.status,
+            description: day.description || "",
+            note: day.note || ""
+          });
+          return fetch(buildApiUrl(), {
+            method: "POST",
+            mode: "cors",
+            body: body
+          }).then(function (res) { return res.json(); });
+        };
+        if (day.cart1Lang) posts.push(postCartFn(1, day.cart1Lang));
+        if (day.cart2Lang) posts.push(postCartFn(2, day.cart2Lang));
+        if (!posts.length) posts.push(postCartFn(1, ""));
+        p = Promise.all(posts).then(function (results) {
+          for (var i = 0; i < results.length; i++) {
+            if (results[i] && results[i].status === "error") return results[i];
+          }
+          return { status: "success" };
+        });
+      } else {
+        return Promise.resolve(true);
+      }
+
+      return p.then(function (result) {
+        if (result && (result.status === "error" || result.status === "conflict")) {
+          console.error("[SyncCore] Offline action rejected by server:", action, result);
+          return true; 
+        }
+        if (action.type === "create") {
+          try {
+            sendOneSignalNotificationClient(action.data.record);
+          } catch (e) {
+            console.error("[OneSignal] Error calling client-side push:", e);
+          }
+        }
+        return true;
+      }).catch(function (err) {
+        console.warn("[SyncCore] Offline action network fail, will retry later:", action, err);
+        throw err;
+      });
+    }
+
+    function processNext(index) {
+      if (index >= queue.length) {
+        saveOfflineQueue([]);
+        isQueueProcessing = false;
+        console.log("[SyncCore] Offline queue fully synchronized!");
+        return true;
+      }
+
+      return executeAction(queue[index]).then(function () {
+        var currentQueue = getOfflineQueue();
+        currentQueue = currentQueue.filter(function (x) { return x.id !== queue[index].id; });
+        saveOfflineQueue(currentQueue);
+        return processNext(index + 1);
+      }).catch(function (err) {
+        isQueueProcessing = false;
+        throw err;
+      });
+    }
+
+    return processNext(0);
+  }
+
   function fetchCombined() {
     if (!isValidScriptUrl(GOOGLE_SCRIPT_URL)) return Promise.reject(new Error("NO_URL"));
-    var url = GOOGLE_SCRIPT_URL + "?key=" + encodeURIComponent(API_KEY);
-    return fetchWithRetry(url, { cache: "no-store" }).then(function (res) {
+    return processOfflineQueue().catch(function() {}).then(function() {
+    return fetchWithRetry(buildApiUrl, { cache: "no-store" }).then(function (res) {
       if (!res.ok) throw new Error("HTTP_" + res.status);
       return res.json();
     }).then(function (data) {
       if (data && data.status === "error") throw new Error(data.message || "SERVER_ERROR");
       return {
         bookings: Array.isArray(data.bookings) ? data.bookings : (Array.isArray(data) ? data : []),
-        schedule: Array.isArray(data.schedule) ? data.schedule : []
+        schedule: Array.isArray(data.schedule) ? data.schedule : [],
+        yearScheduleMessages: data.yearScheduleMessages || {}
       };
+    });
     });
   }
 
@@ -470,7 +628,11 @@
     var hasCachedData = (cb.length > 0 || (cs && cs.length > 0));
     if (hasCachedData) {
       var schedCached = (cs && cs.length) ? cs : generateYearSchedule();
-      updateAppState({ bookings: cb, schedule: schedCached });
+      var cachedMessages = {};
+      try {
+        cachedMessages = JSON.parse(localStorage.getItem("yearScheduleMessages")) || {};
+      } catch (e) {}
+      updateAppState({ bookings: cb, schedule: schedCached, yearScheduleMessages: cachedMessages });
       hideSplash();     // убираем splash немедленно — пользователь уже видит данные
       updateSyncBadge();
     }
@@ -482,7 +644,7 @@
         fetchCombined().then(function (data) {
           var bookings = (data.bookings || []).map(normalizeBooking);
           var sched = mergeSchedules(data.schedule, loadCache());
-          updateAppState({ bookings: bookings, schedule: sched });
+          updateAppState({ bookings: bookings, schedule: sched, yearScheduleMessages: data.yearScheduleMessages });
           lastSyncOnline = true;
           lastSyncTime   = Date.now();
           if (typeof renderYearGrid === 'function') renderYearGrid();
@@ -509,7 +671,7 @@
     return fetchCombined().then(function (data) {
       var bookings = (data.bookings || []).map(normalizeBooking);
       var sched = mergeSchedules(data.schedule, loadCache());
-      updateAppState({ bookings: bookings, schedule: sched });
+      updateAppState({ bookings: bookings, schedule: sched, yearScheduleMessages: data.yearScheduleMessages });
       lastSyncOnline = true;
       lastSyncTime   = Date.now();
       showToast(t("updated"), "success");
@@ -529,7 +691,7 @@
     return fetchCombined().then(function (data) {
       var bookings = (data.bookings || []).map(normalizeBooking);
       var sched = mergeSchedules(data.schedule, loadCache());
-      updateAppState({ bookings: bookings, schedule: sched });
+      updateAppState({ bookings: bookings, schedule: sched, yearScheduleMessages: data.yearScheduleMessages });
       lastSyncOnline = true;
       lastSyncTime   = Date.now();
       updateSyncBadge();
@@ -541,8 +703,67 @@
     return lastSyncTime > 0 ? (Date.now() - lastSyncTime) : Infinity;
   }
 
+  // ----- Адаптивный опрос (Adaptive Polling) -----
+  var isTabVisible = true;
+  var lastUserActivityTime = Date.now();
+  var IDLE_TIMEOUT_MS = 5 * 60 * 1000; // 5 минут
+  var IDLE_SYNC_INTERVAL_MS = 10 * 60 * 1000; // 10 минут
+  var currentIntervalMs = SYNC_INTERVAL_MS;
+
+  function updateActivity() {
+    var now = Date.now();
+    var wasIdle = (now - lastUserActivityTime > IDLE_TIMEOUT_MS);
+    lastUserActivityTime = now;
+    if (wasIdle) {
+      console.log("[SyncCore] User returned from idle, resuming active sync.");
+      adjustPollingInterval();
+    }
+  }
+
+  function adjustPollingInterval() {
+    var now = Date.now();
+    var isIdle = (now - lastUserActivityTime > IDLE_TIMEOUT_MS);
+    var targetInterval = isIdle ? IDLE_SYNC_INTERVAL_MS : SYNC_INTERVAL_MS;
+
+    if (!isTabVisible) {
+      if (autoTimer !== null) {
+        console.log("[SyncCore] Tab hidden, pausing auto sync.");
+        stopAutoSync();
+      }
+      return;
+    }
+
+    if (autoTimer === null || currentIntervalMs !== targetInterval) {
+      console.log("[SyncCore] Adjusting auto sync interval to:", targetInterval / 1000, "seconds.");
+      stopAutoSync();
+      currentIntervalMs = targetInterval;
+      autoTimer = setInterval(refreshSilently, currentIntervalMs);
+    }
+  }
+
+  // Activity listeners
+  document.addEventListener("mousemove", updateActivity);
+  document.addEventListener("keydown", updateActivity);
+  document.addEventListener("click", updateActivity);
+  document.addEventListener("touchstart", updateActivity, { passive: true });
+
+  // Tab visibility changes
+  document.addEventListener("visibilitychange", function () {
+    isTabVisible = (document.visibilityState === "visible");
+    if (isTabVisible) {
+      updateActivity();
+      if (timeSinceLastSync() > SYNC_INTERVAL_MS) {
+        refreshSilently();
+      }
+    }
+    adjustPollingInterval();
+  });
+
+  // Periodically check if idle status changed
+  setInterval(adjustPollingInterval, 30000);
+
   function startAutoSync() {
-    if (autoTimer === null) autoTimer = setInterval(refreshSilently, SYNC_INTERVAL_MS);
+    adjustPollingInterval();
   }
   function stopAutoSync() {
     if (autoTimer !== null) { clearInterval(autoTimer); autoTimer = null; }
@@ -690,6 +911,9 @@
   // Безопасное удаление с откатом локального кэша при сетевой ошибке.
   // offline=true -> не трогаем сервер, просто убираем локально (приложение остаётся рабочим).
   function removeBookingSafe(b, serverDeletePromiseFactory) {
+    if (typeof window.isAuthenticated === "function" && !window.isAuthenticated()) {
+      return Promise.resolve(false);
+    }
     isSyncLocked = true;
     var cn = parseInt(b.cartNumber, 10);
     if (!(cn === 1 || cn === 2)) cn = 1;
@@ -712,18 +936,22 @@
 
     return p.then(function (result) {
       isSyncLocked = false;
-      // Сервер подтвердил удаление (или вернул ошибку поиска — трактуем как уже удалено)
       if (result && result.status === "error") throw new Error(result.message || "SERVER_ERROR");
       return true;
     }).catch(function (err) {
       isSyncLocked = false;
-      // Откат: возвращаем кэш в исходное состояние, перерисовываем.
-      AppState.bookings = snapshot;
-      try { databaseBookings = snapshot; } catch (e) {}
-      saveCachedBookings(snapshot);
-      unlinkBookingFromYear(b.date);
-      renderAllTabs();
-      throw err;
+      var msg = String(err && (err.message || err));
+      var isServerLogicError = msg === "SERVER_ERROR" || (msg.indexOf("SERVER_ERROR") !== -1);
+      if (isServerLogicError) {
+        AppState.bookings = snapshot;
+        try { databaseBookings = snapshot; } catch (e) {}
+        saveCachedBookings(snapshot);
+        unlinkBookingFromYear(b.date);
+        renderAllTabs();
+        throw err;
+      }
+      pushOfflineAction("delete", { booking: b });
+      return { status: "offline", message: "Удалено локально в режиме офлайн." };
     });
   }
 
@@ -759,6 +987,9 @@
   // even without internet. Only hard server logic errors (conflict / server-side
   // validation failure) trigger a rollback and re-render.
   function addBookingRecordSafe(rec, serverCreatePromiseFactory) {
+    if (typeof window.isAuthenticated === "function" && !window.isAuthenticated()) {
+      return Promise.resolve(false);
+    }
     isSyncLocked = true;
     var snapshot = (AppState.bookings || []).map(function (x) { return Object.assign({}, x); });
 
@@ -767,38 +998,43 @@
 
     if (typeof serverCreatePromiseFactory !== "function") {
       isSyncLocked = false;
+      try {
+        sendOneSignalNotificationClient(rec);
+      } catch (e) {
+        console.error("[OneSignal] Error calling client-side push:", e);
+      }
       return Promise.resolve(true);
     }
 
     var p = serverCreatePromiseFactory();
     if (!p || typeof p.then !== "function") {
       isSyncLocked = false;
+      try {
+        sendOneSignalNotificationClient(rec);
+      } catch (e) {
+        console.error("[OneSignal] Error calling client-side push:", e);
+      }
       return Promise.resolve(true);
     }
 
     return p.then(function (result) {
       isSyncLocked = false;
-      // Hard server logic errors — rollback and propagate so the caller can show
-      // a specific message (conflict, validation failure, etc.)
       if (result && (result.status === "error" || result.status === "conflict")) {
         throw new Error(result.message || "SERVER_ERROR");
       }
-      // ── Fix: re-render after server confirms so UI reflects canonical data ──
-      // The optimistic render (line above) ran while the modal was still visible.
-      // This second render fires after the server roundtrip and lets the caller's
-      // setTimeout(closeModal) reveal an already-updated Schedule/Year view.
+      try {
+        sendOneSignalNotificationClient(rec);
+      } catch (e) {
+        console.error("[OneSignal] Error calling client-side push:", e);
+      }
       renderAllTabs();
       return result;
     }).catch(function (err) {
       isSyncLocked = false;
       var msg = String(err && (err.message || err));
-      var isServerLogicError = msg === "SERVER_ERROR" ||
-        /conflict/i.test(msg) ||
-        (msg.indexOf("SERVER_ERROR") !== -1);
+      var isServerLogicError = msg === "SERVER_ERROR" || /conflict/i.test(msg) || (msg.indexOf("SERVER_ERROR") !== -1);
 
       if (isServerLogicError) {
-        // Server explicitly rejected the booking (conflict / bad data): roll back
-        // so the UI doesn’t show an invalid record.
         AppState.bookings = snapshot;
         try { databaseBookings = snapshot; } catch (e) {}
         saveCachedBookings(snapshot);
@@ -812,17 +1048,17 @@
         throw err;
       }
 
-      // Network / timeout error: keep the local booking as-is (offline-first).
-      // The background sync will push it to the server when connectivity returns.
-      console.warn('[SyncCore] addBookingRecordSafe: network error, booking kept locally.', err);
-      // Re-throw so that submitQuickBooking’s catch can show the soft toast.
-      throw err;
+      pushOfflineAction("create", { record: rec });
+      return { status: "offline", message: "Сохранено локально в режиме офлайн." };
     });
   }
 
   // Тонкая обёртка для обратной совместимости (демо-режим app.js):
   // из плоского payload делает две пер-картовые записи и добавляет локально.
   function addBooking(payload) {
+    if (typeof window.isAuthenticated === "function" && !window.isAuthenticated()) {
+      return;
+    }
     var recs = [];
     if ((payload.name1 || payload.name2) && payload.cart1Lang) {
       recs.push({ date: payload.date, time: payload.time, location: payload.location,
@@ -903,9 +1139,136 @@
     if (!root) return;
 
     var dict = I18N[getLang()];
-    
-    // Determine active year
     var year = selectedYear || currentScheduleYear();
+
+    var existingGrid = root.querySelector(".year-grid");
+    var existingYear = root.dataset.renderedYear;
+    var existingLang = root.dataset.renderedLang;
+    var currentLang = getLang();
+
+    if (existingGrid && existingYear === String(year) && existingLang === currentLang) {
+      // Incremental DOM Update: update status classes, trolley badges, and aria-labels of existing cells
+      var cells = existingGrid.querySelectorAll(".day-cell");
+      var tIso = todayIso();
+      for (var i = 0; i < cells.length; i++) {
+        var cell = cells[i];
+        if (cell.classList.contains("empty")) continue;
+
+        var iso = cell.dataset.date;
+        var rows = scheduleIndex[iso] || [];
+        
+        var status = "available";
+        var dayLangSet = {};
+        rows.forEach(function (r) {
+          if (r.status && r.status !== "available") status = r.status;
+          addLangToSet(dayLangSet, r.trolley);
+        });
+        
+        (AppState.bookings || []).forEach(function (b) {
+          if (b.date !== iso) return;
+          if (b.cart1Lang && (b.name1 || b.name2)) addLangToSet(dayLangSet, b.cart1Lang);
+          if (b.cart2Lang && (b.name3 || b.name4)) addLangToSet(dayLangSet, b.cart2Lang);
+        });
+
+        var dayLangs = Object.keys(dayLangSet);
+        var dayBookings = (AppState.bookings || []).filter(function (b) { return b.date === iso; });
+        var hasBookings = dayBookings.length > 0;
+        var isServingStatus = (status === "serving" || status === "Служение" || status === "event");
+        var isServingDay = hasBookings || isServingStatus || (dayLangs && dayLangs.length > 0);
+
+        // Reset classes
+        cell.className = "day-cell status-" + status + (isServingDay ? " has-serving" : " no-serving");
+        cell.dataset.status = status;
+
+        var yearNum = parseInt(iso.split("-")[0], 10);
+        var yearHolidays = getHolidaysForYear(yearNum);
+        var holidayInfo = yearHolidays[iso];
+        if (holidayInfo) {
+          cell.classList.add("is-hessen-holiday");
+        }
+
+        var anyNote = rows.some(function (r) { return r.description || r.note; });
+        if (anyNote) cell.classList.add("has-event");
+        if (iso === tIso) cell.classList.add("today");
+        if (iso < tIso) cell.classList.add("past");
+
+        dayLangs.forEach(function (lg) {
+          cell.classList.add("has-trolley", "has-booking-" + lg);
+        });
+        if (dayLangs.length) cell.dataset.groups = dayLangs.join(",");
+        else cell.removeAttribute("data-groups");
+
+        // Dimming/Highlighting Filters
+        if (selectedStatusFilter !== null) {
+          if (status !== selectedStatusFilter) {
+            cell.classList.add("day-status-dimmed");
+          }
+        }
+        if (yearTrolleyFilter !== "all") {
+          if (dayLangs.indexOf(yearTrolleyFilter) !== -1) {
+            cell.classList.add("day-trolley-highlight", "day-trolley-highlight-" + yearTrolleyFilter);
+          } else {
+            cell.classList.add("day-trolley-dimmed");
+          }
+        }
+
+        // Update innerHTML
+        var currentDay = iso.split("-")[2].replace(/^0/, "");
+        var inner = '<span class="day-number day-num">' + currentDay + '</span>';
+        if (dayLangs.length) {
+          inner += '<span class="day-lang-dots day-badge">';
+          dayLangs.forEach(function (lg) {
+            inner += '<span class="day-lang-dot dot-' + lg + ' cart-icon" data-group="' + lg + '" title="' + (dict.trolleys[lg] || "") + '">';
+            if (window.TrolleyUI) {
+              inner += '<span class="day-trolley-icon status-icon" data-group="' + lg + '" aria-hidden="true">' + TrolleyUI.getMiniSVG() + '</span>';
+            }
+            inner += '</span>';
+          });
+          inner += '</span>';
+        }
+        if (anyNote) inner += '<span class="attention-badge event-alert-badge">!</span>';
+        cell.innerHTML = inner;
+
+        // A11y description
+        var dObj = new Date(yearNum, parseInt(iso.split("-")[1], 10) - 1, parseInt(iso.split("-")[2], 10));
+        var weekdaysFull = {
+          ru: ["Воскресенье", "Понедельник", "Вторник", "Среда", "Четверг", "Пятница", "Суббота"],
+          uk: ["Неділя", "Понеділок", "Вівторок", "Середа", "Четверг", "П'ятниця", "Субота"],
+          de: ["Sonntag", "Montag", "Dienstag", "Mittwoch", "Donnerstag", "Freitag", "Samstag"]
+        };
+        var dayOfWeekLabel = (weekdaysFull[currentLang] || weekdaysFull.ru)[dObj.getDay()];
+        var formattedDate = parseInt(iso.split("-")[2], 10) + " " + dict.months[dObj.getMonth()] + ", " + dayOfWeekLabel;
+        var statusText = dict.statuses[status];
+        cell.setAttribute("aria-label", formattedDate + ". " + statusText + (anyNote ? ", Заметка: " + (rows.find(function (r) { return r.description || r.note; }).description || rows.find(function (r) { return r.description || r.note; }).note) : ""));
+      }
+
+      // Update active state of legend and year buttons
+      var legendBtns = root.querySelectorAll(".status-filter-btn");
+      legendBtns.forEach(function (btn, idx) {
+        var st = ALLOWED[idx];
+        if (selectedStatusFilter === st) {
+          btn.classList.add("active");
+        } else {
+          btn.classList.remove("active");
+        }
+      });
+
+      var yearBtns = root.querySelectorAll(".year-btn");
+      yearBtns.forEach(function (btn) {
+        var y = parseInt(btn.textContent, 10);
+        if (year === y) {
+          btn.classList.add("active");
+        } else {
+          btn.classList.remove("active");
+        }
+      });
+
+      updateSyncBadge();
+      return;
+    }
+
+    root.dataset.renderedYear = year;
+    root.dataset.renderedLang = currentLang;
     root.innerHTML = "";
 
     // Tooltip initialization
@@ -1125,61 +1488,6 @@
           }
           cell.setAttribute("aria-label", fullAriaLabel);
 
-          // Pointer/Touch listeners for Rich Tooltip
-          cell.addEventListener("pointerenter", function (ev) {
-            showTooltipForCell(ev.currentTarget, iso, status, rows, dayLangSet);
-          });
-          cell.addEventListener("pointerleave", function () {
-            hideTooltip();
-          });
-
-          // Keyboard Arrow Navigation & Click editor
-          cell.addEventListener("keydown", function (ev) {
-            var currentD = new Date(year, m, currentDay);
-            var nextD = null;
-            
-            switch (ev.key) {
-              case "ArrowLeft":
-                nextD = new Date(currentD.getFullYear(), currentD.getMonth(), currentD.getDate() - 1);
-                break;
-              case "ArrowRight":
-                nextD = new Date(currentD.getFullYear(), currentD.getMonth(), currentD.getDate() + 1);
-                break;
-              case "ArrowUp":
-                nextD = new Date(currentD.getFullYear(), currentD.getMonth(), currentD.getDate() - 7);
-                break;
-              case "ArrowDown":
-                nextD = new Date(currentD.getFullYear(), currentD.getMonth(), currentD.getDate() + 7);
-                break;
-              case "Enter":
-              case " ":
-                ev.preventDefault();
-                goToDateFromYear(iso);
-                break;
-              default:
-                return;
-            }
-            
-            if (nextD) {
-              ev.preventDefault();
-              var nextIso = nextD.getFullYear() + "-" + pad(nextD.getMonth() + 1) + "-" + pad(nextD.getDate());
-              var targetCell = root.querySelector('.day-cell[data-date="' + nextIso + '"]');
-              if (targetCell) {
-                targetCell.focus();
-                // Show tooltip for focused cell
-                var focusedStatus = targetCell.dataset.status;
-                var focusedRows = scheduleIndex[nextIso] || [];
-                var focusedLangs = getDayLangSetForDate(nextIso);
-                showTooltipForCell(targetCell, nextIso, focusedStatus, focusedRows, focusedLangs);
-              }
-            }
-          });
-
-          // Touch-friendly direct click handler
-          cell.addEventListener("click", function (ev) {
-            openDayEditor(iso);
-          });
-
           days.appendChild(cell);
         })(d);
       }
@@ -1188,6 +1496,77 @@
     }
     grid.appendChild(frag);
     root.appendChild(grid);
+
+    // Event delegation on grid container
+    grid.addEventListener("pointerover", function (ev) {
+      var cell = ev.target.closest(".day-cell");
+      if (!cell || cell.classList.contains("empty")) return;
+      var dateISO = cell.dataset.date;
+      var status = cell.dataset.status;
+      var rows = scheduleIndex[dateISO] || [];
+      var dayLangSet = getDayLangSetForDate(dateISO);
+      showTooltipForCell(cell, dateISO, status, rows, dayLangSet);
+    });
+
+    grid.addEventListener("pointerout", function (ev) {
+      var cell = ev.target.closest(".day-cell");
+      if (!cell) return;
+      var related = ev.relatedTarget;
+      if (related && cell.contains(related)) return;
+      hideTooltip();
+    });
+
+    grid.addEventListener("click", function (ev) {
+      var cell = ev.target.closest(".day-cell");
+      if (!cell || cell.classList.contains("empty")) return;
+      var dateISO = cell.dataset.date;
+      openDayEditor(dateISO);
+    });
+
+    grid.addEventListener("keydown", function (ev) {
+      var cell = ev.target.closest(".day-cell");
+      if (!cell || cell.classList.contains("empty")) return;
+      
+      var dateISO = cell.dataset.date;
+      var dateParts = dateISO.split("-");
+      var currentD = new Date(parseInt(dateParts[0], 10), parseInt(dateParts[1], 10) - 1, parseInt(dateParts[2], 10));
+      var nextD = null;
+      
+      switch (ev.key) {
+        case "ArrowLeft":
+          nextD = new Date(currentD.getFullYear(), currentD.getMonth(), currentD.getDate() - 1);
+          break;
+        case "ArrowRight":
+          nextD = new Date(currentD.getFullYear(), currentD.getMonth(), currentD.getDate() + 1);
+          break;
+        case "ArrowUp":
+          nextD = new Date(currentD.getFullYear(), currentD.getMonth(), currentD.getDate() - 7);
+          break;
+        case "ArrowDown":
+          nextD = new Date(currentD.getFullYear(), currentD.getMonth(), currentD.getDate() + 7);
+          break;
+        case "Enter":
+        case " ":
+          ev.preventDefault();
+          goToDateFromYear(dateISO);
+          break;
+        default:
+          return;
+      }
+      
+      if (nextD) {
+        ev.preventDefault();
+        var nextIso = nextD.getFullYear() + "-" + pad(nextD.getMonth() + 1) + "-" + pad(nextD.getDate());
+        var targetCell = grid.querySelector('.day-cell[data-date="' + nextIso + '"]');
+        if (targetCell) {
+          targetCell.focus();
+          var focusedStatus = targetCell.dataset.status;
+          var focusedRows = scheduleIndex[nextIso] || [];
+          var focusedLangs = getDayLangSetForDate(nextIso);
+          showTooltipForCell(targetCell, nextIso, focusedStatus, focusedRows, focusedLangs);
+        }
+      }
+    });
 
     // Вспомогательная функция для всплывающей подсказки
     function showTooltipForCell(cellEl, dateISO, status, rows, dayLangSet) {
@@ -1329,6 +1708,11 @@
             }).join('') +
           '</div>' +
         '</div>' +
+        '<div class="editor-field" id="dayEditorYearMessageField" style="display: none;">' +
+          '<label id="dayEditorYearMessageLabel">' + (dict.yearMessageLabel || 'Объявление на вкладке График (YearSchedule)') + '</label>' +
+          '<textarea id="dayEditorYearMessage" maxlength="500" placeholder="' + (dict.yearMessagePlaceholder || 'Введите текст объявления...') + '"></textarea>' +
+          '<button type="button" id="btnSaveYearMessage" class="btn-editor-save" style="margin-top: 8px; width: 100%;">' + (dict.saveYearMessage || 'Отправить объявление') + '</button>' +
+        '</div>' +
         '<div class="editor-actions">' +
           '<button type="button" class="btn-editor-cancel" id="dayEditorCancel">' + dict.cancel + '</button>' +
           '<button type="button" class="btn-editor-edit" id="dayEditorEdit">✏️ ' + dict.edit + '</button>' +
@@ -1341,6 +1725,11 @@
     document.getElementById("dayEditorCancel").addEventListener("click", function () { SyncCore._closeDayEditor(); });
     document.getElementById("dayEditorEdit").addEventListener("click", enterEditMode);
     document.getElementById("dayEditorSave").addEventListener("click", saveDayFromEditor);
+    
+    var btnSaveYearMsg = document.getElementById("btnSaveYearMessage");
+    if (btnSaveYearMsg) {
+      btnSaveYearMsg.addEventListener("click", saveYearMessage);
+    }
 
     // Подсказки (i в кружке) для полей редактора дня — помощь пожилым пользователям.
     var dayTips = I18N[getLang()].infoTips || {};
@@ -1534,6 +1923,17 @@
       var presetBtns = dayEditorModalEl.querySelectorAll("#dayEditorPresets .quick-preset-btn");
       for (var pi = 0; pi < presetBtns.length; pi++) {
         presetBtns[pi].onclick = function () { applyQuickPreset(this.dataset.preset); };
+      }
+    }
+    var yearMsgField = document.getElementById("dayEditorYearMessageField");
+    if (yearMsgField) {
+      if (window.currentUserRole === 'admin') {
+        yearMsgField.style.display = "block";
+        var currentLang = getLang();
+        var messages = (AppState && AppState.yearScheduleMessages) || {};
+        document.getElementById("dayEditorYearMessage").value = messages[currentLang] || "";
+      } else {
+        yearMsgField.style.display = "none";
       }
     }
     document.getElementById("dayEditorModal").style.display = "flex";
@@ -1876,7 +2276,7 @@
         description: day.description || "",
         note: day.note || ""
       });
-      return withTimeout(fetchWithRetry(GOOGLE_SCRIPT_URL, {
+      return withTimeout(fetchWithRetry(buildApiUrl, {
         method: "POST",
         mode: "cors",
         body: body
@@ -1929,12 +2329,139 @@
         return true;
       })
       .catch(function (err) {
-        console.warn('[SyncCore] saveDay: network or non-fatal issue, keeping local state.', err);
-        setSchedule(yearSchedule);
-        saveCache(yearSchedule);
-        renderAllTabs();
-        return true;
+        var msg = String(err && (err.message || err));
+        var isServerLogicError = msg === "SERVER_ERROR" || /conflict/i.test(msg) || (msg.indexOf("SERVER_ERROR") !== -1);
+        if (isServerLogicError) {
+          yearSchedule = snapshot;
+          setSchedule(yearSchedule);
+          saveCache(yearSchedule);
+          renderAllTabs();
+          throw err;
+        }
+        pushOfflineAction("year_update", { day: day });
+        console.warn('[SyncCore] saveDay: network issue, saved to offline queue.', err);
+        return { status: "offline", message: "Сохранено локально в режиме офлайн." };
       });
+  }
+
+  function saveYearMessage() {
+    var textEl = document.getElementById("dayEditorYearMessage");
+    if (!textEl) return;
+    var msg = textEl.value.trim();
+    
+    if (typeof window.hapticFeedback === "function") {
+      window.hapticFeedback(50);
+    } else if (window.navigator && window.navigator.vibrate) {
+      window.navigator.vibrate(50);
+    }
+    
+    var saveBtn = document.getElementById("btnSaveYearMessage");
+    var origText = saveBtn ? saveBtn.textContent : "";
+    if (saveBtn) {
+      saveBtn.disabled = true;
+      saveBtn.textContent = getLang() === 'de' ? 'Wird gesendet...' : (getLang() === 'uk' || getLang() === 'ua' ? 'Надсилання...' : 'Отправка...');
+    }
+    
+    var email = (window.AppState && AppState.authUser && AppState.authUser.email) || "";
+    
+    var body = JSON.stringify({
+      action: "year_message_update",
+      key: API_KEY,
+      language: getLang(),
+      email: email,
+      message: msg
+    });
+    
+    fetchWithRetry(buildApiUrl, {
+      method: "POST",
+      mode: "cors",
+      body: body
+    }).then(function (res) {
+      if (!res.ok) throw new Error("HTTP_" + res.status);
+      return res.json();
+    }).then(function (data) {
+      if (data && data.status === "success") {
+        if (typeof window.hapticFeedback === "function") {
+          window.hapticFeedback([50, 50, 50]);
+        }
+        
+        if (saveBtn) {
+          saveBtn.textContent = "✅ " + (getLang() === 'de' ? 'Gesendet!' : (getLang() === 'uk' || getLang() === 'ua' ? 'Надіслано!' : 'Отправлено!'));
+          saveBtn.classList.add("btn-saved-success");
+        }
+        
+        if (!AppState.yearScheduleMessages) {
+          AppState.yearScheduleMessages = {};
+        }
+        AppState.yearScheduleMessages[getLang()] = msg;
+        localStorage.setItem("yearScheduleMessages", JSON.stringify(AppState.yearScheduleMessages));
+        
+        renderAllTabs();
+        
+        var successMsg = getLang() === 'de' ? 'Ankündigung erfolgreich gesendet!' 
+                           : (getLang() === 'uk' || getLang() === 'ua' ? 'Оголошення успішно надіслано!' 
+                           : 'Объявление успешно отправлено!');
+        if (typeof window.showToast === "function") {
+          window.showToast(successMsg, "success");
+        } else {
+          showToastBanner(successMsg);
+        }
+        
+        setTimeout(function() {
+          if (saveBtn) {
+            saveBtn.disabled = false;
+            saveBtn.classList.remove("btn-saved-success");
+            saveBtn.textContent = origText;
+          }
+        }, 2000);
+      } else {
+        throw new Error((data && data.message) || "Unknown error");
+      }
+    }).catch(function (err) {
+      if (typeof window.hapticFeedback === "function") {
+        window.hapticFeedback([30, 50, 30]);
+      }
+      if (saveBtn) {
+        saveBtn.disabled = false;
+        saveBtn.textContent = origText;
+      }
+      var errorMsg = (getLang() === 'de' ? 'Fehler beim Senden: ' : (getLang() === 'uk' || getLang() === 'ua' ? 'Помилка надсилання: ' : 'Ошибка отправки: ')) + err.message;
+      if (typeof window.showToast === "function") {
+        window.showToast(errorMsg, "error");
+      } else {
+        showToastBanner(errorMsg);
+      }
+    });
+  }
+
+  function renderYearScheduleMessage() {
+    var container = document.getElementById("yearScheduleMessageContainer");
+    if (!container) return;
+    
+    var messages = (AppState && AppState.yearScheduleMessages) || {};
+    var currentLang = getLang();
+    var message = messages[currentLang] || "";
+    
+    if (message.trim()) {
+      var titles = {
+        ru: "Важное объявление",
+        uk: "Важливе оголошення",
+        ua: "Важливе оголошення",
+        de: "Wichtige Ankündigung"
+      };
+      var title = titles[currentLang] || titles.ru;
+      
+      container.innerHTML = 
+        '<span class="banner-icon">📢</span>' +
+        '<div class="banner-content">' +
+          '<h4 class="banner-title">' + title + '</h4>' +
+          '<p class="banner-text">' + message + '</p>' +
+        '</div>';
+      container.style.display = "flex";
+    } else {
+      container.style.display = "none";
+      container.innerHTML = "";
+    }
   }
 
   // ----- Экспорт глобального API -----
@@ -1974,6 +2501,119 @@
     getApiKey: function () { return API_KEY; },
     getLang: getLang
   };
+
+  // OneSignal Web Push Client Integration
+  function sendOneSignalNotificationClient(rec) {
+    if (!rec) return;
+
+    var names = [];
+    if (rec.names && Array.isArray(rec.names)) {
+      names = rec.names;
+    } else if (rec.cartNumber === 2) {
+      names = [rec.name3, rec.name4];
+    } else {
+      names = [rec.name1, rec.name2];
+    }
+
+    var clean = names.map(function(n) { return (n || "").toString().trim(); });
+    var hasName0 = !!clean[0];
+    var hasName1 = !!clean[1];
+    var isSingle = (hasName0 && !hasName1) || (!hasName0 && hasName1);
+
+    if (!isSingle) return;
+
+    fetch("https://onesignal.com/api/v1/notifications", {
+      method: "POST",
+      headers: {
+        "Authorization": "Basic os_v2_app_qf7kneivx5hjbiqou4io2bjbqrk5d67ekfce225odujaw2oy2u5tfjlbn7yx2guhp2kyqncshe5sd4q2qyy4lckr3nj7g5zadkfnjga",
+        "Content-Type": "application/json; charset=utf-8"
+      },
+      body: JSON.stringify({
+        "app_id": "817ea691-15bf-4e90-a20e-a710ed052184",
+        "included_segments": ["All"],
+        "headings": {
+          "en": "Нужен напарник!",
+          "de": "Partner gesucht!",
+          "uk": "Потрібен партнер!"
+        },
+        "contents": {
+          "en": "Новая одиночная запись на стенд. Нажмите, чтобы записаться напарником!",
+          "de": "Ein Verkündiger sucht einen Partner. Klicken zum Anmelden!",
+          "uk": "Новий одиночний запис. Натисніть, щоб приєднатися!"
+        },
+        "url": "https://cw-vitali2.vercel.app"
+      })
+    }).then(function(res) {
+      console.log("[OneSignal] Notification triggered from client, status:", res.status);
+    }).catch(function(err) {
+      console.warn("[OneSignal] Client-side push failed (likely CORS restriction):", err);
+    });
+  }
+
+  // OneSignal Subscription Button Management
+  window.OneSignalDeferred = window.OneSignalDeferred || [];
+  window.OneSignalDeferred.push(async function(OneSignal) {
+    function updatePushNotificationsButtonStatus() {
+      var btn = document.getElementById('btnPushNotifications');
+      if (!btn) return;
+
+      var lang = (document.documentElement.lang || "ru").toLowerCase();
+      if (lang.indexOf("uk") === 0 || lang.indexOf("ua") === 0) lang = "uk";
+      else if (lang.indexOf("de") === 0) lang = "de";
+      else lang = "ru";
+
+      var texts = {
+        ru: {
+          default: "🔔 Уведомления о напарниках",
+          active: "Уведомления активны ✅"
+        },
+        de: {
+          default: "🔔 Partner-Benachrichtigungen",
+          active: "Benachrichtigungen aktiv ✅"
+        },
+        uk: {
+          default: "🔔 Сповіщення про напарників",
+          active: "Сповіщення активні ✅"
+        }
+      };
+
+      var t = texts[lang] || texts.ru;
+
+      if (OneSignal.Notifications && OneSignal.Notifications.permission) {
+        btn.innerHTML = t.active;
+        btn.classList.add('active');
+      } else {
+        btn.innerHTML = t.default;
+        btn.classList.remove('active');
+      }
+    }
+
+    function initButton() {
+      var btn = document.getElementById('btnPushNotifications');
+      if (btn) {
+        btn.onclick = function() {
+          if (OneSignal.Notifications && typeof OneSignal.Notifications.requestPermission === "function") {
+            OneSignal.Notifications.requestPermission().then(function() {
+              updatePushNotificationsButtonStatus();
+            });
+          }
+        };
+        updatePushNotificationsButtonStatus();
+      }
+    }
+
+    if (document.readyState === "loading") {
+      document.addEventListener("DOMContentLoaded", initButton);
+    } else {
+      initButton();
+    }
+
+    if (OneSignal.Notifications && typeof OneSignal.Notifications.addEventListener === "function") {
+      OneSignal.Notifications.addEventListener('permissionChange', function(permission) {
+        updatePushNotificationsButtonStatus();
+      });
+    }
+  });
 
   // Инициализация переключателя тележек (из localStorage) и заполнение SVG-иконок
   initTrolleyFilter();

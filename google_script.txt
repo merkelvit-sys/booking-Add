@@ -111,6 +111,11 @@ function doGet(e) {
   }
 
   try {
+    var action = (e.parameter && e.parameter.action || "").toString().toLowerCase();
+    if (action === "checkAuth") {
+      return handleCheckAuth(e);
+    }
+
     var ss = getSS();
 
     // 1. Записи на служение — читаем ВСЕ три языковые вкладки и объединяем.
@@ -138,6 +143,7 @@ function doGet(e) {
     // 2. Годовой график — читаем ВСЕ три языковые вкладки и объединяем.
     //    (при необходимости заполняем текущий год в каждой вкладке)
     var schedule = [];
+    var yearScheduleMessages = {};
     for (var si = 0; si < ALLOWED_LANGS.length; si++) {
       var sLang = ALLOWED_LANGS[si];
       var sheetNameSchedule = "YearSchedule_" + sLang.toUpperCase();
@@ -150,6 +156,12 @@ function doGet(e) {
         ensureSchedulePopulated(sSheet);
         var sRows = readSchedule(sSheet, sLang);
         if (Array.isArray(sRows)) schedule = schedule.concat(sRows);
+        
+        var msgVal = "";
+        try {
+          msgVal = sSheet.getRange("H2").getValue().toString();
+        } catch (msgErr) {}
+        yearScheduleMessages[sLang] = msgVal;
       } catch (sErr) {
         Logger.log("doGet schedule read error (" + sheetNameSchedule + "): " + sErr);
       }
@@ -159,6 +171,7 @@ function doGet(e) {
       status: "success",
       bookings: bookings,
       schedule: schedule,
+      yearScheduleMessages: yearScheduleMessages,
       serverTime: new Date().toISOString()
     });
   } catch (err) {
@@ -202,6 +215,9 @@ function doPost(e) {
 
     if (action === "year_update") {
       return handleYearUpdate(data, lang);
+    }
+    if (action === "year_message_update") {
+      return handleYearMessageUpdate(data, lang);
     }
     // По умолчанию — работа с записями на служение
     return handleBooking(data, lang);
@@ -301,6 +317,29 @@ function handleYearUpdate(data, lang) {
   }
 
   return json({ status: "success", message: "День обновлён", date: date, cartNumber: cartNumber, trolley: trolley });
+}
+
+function handleYearMessageUpdate(data, lang) {
+  var email = (data.email || "").toString().trim().toLowerCase();
+  var message = (data.message || "").toString();
+  
+  if (!email) {
+    return json({ status: "error", message: "Email is required." });
+  }
+  if (!checkAdminRole(email)) {
+    return json({ status: "error", message: "Access denied: Admin only" });
+  }
+  if (!normalizeLang(lang)) {
+    return json({ status: "error", message: "Не указан язык (language: ru/ua/de)." });
+  }
+  
+  var ss = getSS();
+  var sheet = getScheduleSheet(ss, lang);
+  
+  sheet.getRange("H1").setValue("YearScheduleMessage").setFontWeight("bold");
+  sheet.getRange("H2").setValue(message);
+  
+  return json({ status: "success", message: "Сообщение сохранено", yearScheduleMessage: message });
 }
 
 // Возвращает (создаёт при необходимости) вкладку "YearSchedule_<LANG>"
@@ -474,6 +513,19 @@ function handleBooking(data, lang) {
 
     for (var k = 0; k < list.length; k++) {
       writeCart(sheet, list[k]);
+      
+      // Проверка на одиночную запись для отправки push-уведомления
+      var rec = list[k];
+      var clean = rec.names || [];
+      var hasName0 = !!(clean[0] && clean[0].toString().trim());
+      var hasName1 = !!(clean[1] && clean[1].toString().trim());
+      if ((hasName0 && !hasName1) || (!hasName0 && hasName1)) {
+        try {
+          sendOneSignalNotification();
+        } catch (e) {
+          console.log("Error sending OneSignal push: " + e.toString());
+        }
+      }
     }
 
     formatSheet(sheet);
@@ -877,3 +929,120 @@ function jsonError(message) {
 function accessDenied() {
   return ContentService.createTextOutput("Доступ запрещен");
 }
+
+// ----------------------------------------------------------------------------
+// Email authorization: checks the "Users" tab for a valid email with Active status.
+// ----------------------------------------------------------------------------
+
+function handleCheckAuth(e) {
+  var email = (e.parameter && e.parameter.email || "").toString().trim().toLowerCase();
+  var password = (e.parameter && e.parameter.password || "").toString().trim();
+  if (!email) {
+    return json({ status: "error", message: "Email is required." });
+  }
+  var authResult = checkUserAuth(email, password);
+  if (authResult === null) {
+    return json({ status: "error", message: "Email not found." });
+  }
+  if (authResult.error) {
+    if (authResult.error === "user_inactive") {
+      return json({ status: "error", message: "Email is not active." });
+    }
+    if (authResult.error === "wrong_password") {
+      return json({ status: "error", message: "Неверный пароль" });
+    }
+    return json({ status: "error", message: authResult.error });
+  }
+  return json({ status: "success", user: authResult.user });
+}
+
+function checkUserAuth(email, password) {
+  var ss = getSS();
+  var sheet = ss.getSheetByName("Users");
+  if (!sheet) return null;
+  var lastRow = sheet.getLastRow();
+  if (lastRow <= 1) return null;
+  
+  var data = sheet.getRange(2, 1, lastRow - 1, sheet.getLastColumn()).getValues();
+  for (var i = 0; i < data.length; i++) {
+    var rowEmail = String(data[i][0] || "").trim().toLowerCase();
+    
+    if (rowEmail === email) {
+      var rowStatus = String(data[i][2] || "").trim().toLowerCase();
+      if (rowStatus !== "active" && rowStatus !== "активен") {
+        return { error: "user_inactive" };
+      }
+      var rowPassword = String(data[i][3] || "").trim();
+      if (rowPassword !== password) {
+        return { error: "wrong_password" };
+      }
+      return {
+        user: {
+          email: data[i][0],
+          name: data[i][1] || "",
+          status: data[i][2] || "",
+          role: String(data[i][4] || "user")
+        }
+      };
+    }
+  }
+  return null;
+}
+
+function checkAdminRole(email) {
+  var ss = getSS();
+  var sheet = ss.getSheetByName("Users");
+  if (!sheet) return false;
+  var lastRow = sheet.getLastRow();
+  if (lastRow <= 1) return false;
+  
+  var data = sheet.getRange(2, 1, lastRow - 1, sheet.getLastColumn()).getValues();
+  for (var i = 0; i < data.length; i++) {
+    var rowEmail = String(data[i][0] || "").trim().toLowerCase();
+    if (rowEmail === email.toLowerCase()) {
+      var colDVal = data[i].length > 3 ? String(data[i][3] || "").trim().toLowerCase() : "";
+      var colEVal = data[i].length > 4 ? String(data[i][4] || "").trim().toLowerCase() : "";
+      
+      if (colDVal === "admin" || colDVal === "администратор" ||
+          colEVal === "admin" || colEVal === "администратор") {
+        return true;
+      }
+    }
+  }
+  return false;
+}
+
+function sendOneSignalNotification() {
+  var url = "https://onesignal.com/api/v1/notifications";
+  var payload = {
+    "app_id": "817ea691-15bf-4e90-a20e-a710ed052184",
+    "included_segments": ["All"],
+    "headings": {
+      "en": "Нужен напарник!",
+      "de": "Partner gesucht!",
+      "uk": "Потрібен партнер!"
+    },
+    "contents": {
+      "en": "Новая одиночная запись на стенд. Нажмите, чтобы записаться напарником!",
+      "de": "Ein Verkündiger sucht einen Partner. Klicken zum Anmelden!",
+      "uk": "Новий одиночний запис. Натисніть, щоб приєднатися!"
+    },
+    "url": "https://cw-vitali2.vercel.app"
+  };
+  var options = {
+    "method": "post",
+    "contentType": "application/json; charset=utf-8",
+    "headers": {
+      "Authorization": "Basic os_v2_app_qf7kneivx5hjbiqou4io2bjbqrk5d67ekfce225odujaw2oy2u5tfjlbn7yx2guhp2kyqncshe5sd4q2qyy4lckr3nj7g5zadkfnjga"
+    },
+    "payload": JSON.stringify(payload),
+    "muteHttpExceptions": true
+  };
+  try {
+    var response = UrlFetchApp.fetch(url, options);
+    console.log("OneSignal status: " + response.getResponseCode() + ", response: " + response.getContentText());
+  } catch (e) {
+    console.log("OneSignal error: " + e.toString());
+  }
+}
+

@@ -1118,7 +1118,6 @@
 /* Rich Tooltip / Popover */
 .year-tooltip {
     position: absolute;
-    display: none;
     z-index: 10005 !important;
     background-color: var(--card-bg, #fff);
     border: 1px solid var(--border, #e2e8f0);
@@ -1129,12 +1128,13 @@
     font-size: 0.8rem;
     color: var(--text, #1e293b);
     pointer-events: none;
-    transition: opacity 0.15s ease, transform 0.15s ease;
+    transition: opacity 0.15s ease, transform 0.15s ease, visibility 0.15s ease;
     transform: translateY(8px);
     opacity: 0;
+    visibility: hidden;
 }
 .year-tooltip.visible {
-    display: block;
+    visibility: visible;
     opacity: 1;
     transform: translateY(0);
 }
@@ -1761,4 +1761,116 @@ div[id*="vercel-toolbar"] {
     padding: 8px 12px;
     margin: 8px 0 12px 0;
   }
+}
+
+/* Conflict flash animation */
+.day-conflict-flash {
+  animation: conflictFlash 1.5s ease-out;
+  z-index: 10;
+  position: relative;
+}
+
+@keyframes conflictFlash {
+  0% {
+    transform: scale(1);
+    box-shadow: 0 0 0 0 rgba(220, 38, 38, 0.8);
+    background-color: #fef2f2;
+  }
+  20% {
+    transform: scale(1.15);
+    box-shadow: 0 0 0 12px rgba(220, 38, 38, 0);
+    background-color: #fca5a5;
+  }
+  40% {
+    transform: scale(0.95);
+    background-color: #fca5a5;
+  }
+  60% {
+    transform: scale(1.05);
+    background-color: #fecaca;
+  }
+  100% {
+    transform: scale(1);
+    box-shadow: 0 0 0 0 rgba(220, 38, 38, 0);
+  }
+}
+
+/* Smooth transitions for theme changes */
+body, .month-block, .day-cell, .modal-content, .auth-modal-box, .board-card {
+  transition: background-color 0.3s ease, color 0.3s ease, border-color 0.3s ease, box-shadow 0.3s ease;
+}
+
+/* ── Year Schedule Message Banner ── */
+.year-schedule-message-banner {
+    background: linear-gradient(135deg, rgba(26, 115, 232, 0.08), rgba(26, 115, 232, 0.02));
+    border: 1px solid rgba(26, 115, 232, 0.18);
+    border-radius: var(--radius-md, 12px);
+    padding: 16px 20px;
+    margin-bottom: 20px;
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
+    position: relative;
+    overflow: hidden;
+    animation: fadeInSlide 0.3s ease-out;
+}
+
+.year-schedule-message-banner::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 4px;
+    height: 100%;
+    background: var(--primary, #1a73e8);
+}
+
+.year-schedule-message-banner .banner-icon {
+    font-size: 1.5rem;
+    line-height: 1.2;
+}
+
+.year-schedule-message-banner .banner-content {
+    flex: 1;
+}
+
+.year-schedule-message-banner .banner-title {
+    margin: 0 0 4px 0;
+    font-size: 0.95rem;
+    font-weight: 700;
+    color: var(--primary, #1a73e8);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.year-schedule-message-banner .banner-text {
+    margin: 0;
+    font-size: 0.9rem;
+    color: var(--text-main, #333333);
+    line-height: 1.5;
+    word-break: break-word;
+    white-space: pre-wrap;
+}
+
+@keyframes fadeInSlide {
+    from {
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* Fix: tooltip contrast in light theme � force white text on dark background */
+.global-center-tooltip {
+    color: #ffffff;
+}
+.global-center-tooltip-close {
+    color: #ffffff;
+}
+.global-center-tooltip-close:hover {
+    color: #ffffff;
 }

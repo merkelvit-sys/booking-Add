@@ -1,4 +1,4 @@
-const CACHE_NAME = 'service-schedule-v37'; // <-- v37: исправлена CORS-ошибка Vercel SSO в SW
+const CACHE_NAME = 'service-schedule-v38'; // <-- v38: переведено с Stale-While-Revalidate на Cache-First для избежания рассинхронизации версий JS/CSS
 const ASSETS = [
   './',
   './index.html',
@@ -66,13 +66,7 @@ self.addEventListener('fetch', (e) => {
   e.respondWith(
     caches.match(e.request).then((cachedResponse) => {
       if (cachedResponse) {
-        // Stale-While-Revalidate: отдаём кэш, обновляем в фоне
-        fetch(e.request).then((networkResponse) => {
-          if (networkResponse && networkResponse.status === 200) {
-            caches.open(CACHE_NAME).then((cache) => cache.put(e.request, networkResponse.clone()));
-          }
-        }).catch(() => { /* Игнорируем ошибки сети в фоне */ });
-
+        // Cache-First: отдаём кэш сразу. Ресурсы обновятся целиком при новой версии SW.
         return cachedResponse;
       }
 

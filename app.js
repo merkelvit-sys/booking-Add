@@ -15,6 +15,16 @@ const I18N = {
     errCritical: "Критическая ошибка JS:\nСообщение: {msg}\nФайл: {file}\nСтрока: {line}",
     errUnhandled: "Необработанная ошибка (Promise):\nОписание: {reason}",
 
+    authTitle: "Доступ к расписанию",
+    authDesc: "Введите ваш email для авторизации. Доступ предоставляется только активным пользователям.",
+    authPlaceholder: "your@email.com",
+    authSubmit: "Войти",
+    authError: "Email не найден или не активен.",
+    authNetworkError: "Ошибка сети. Попробуйте ещё раз.",
+    authLoading: "Проверка...",
+    authLogout: "Выйти",
+    authWelcome: "Добро пожаловать, {name}!",
+
     pwaIos: `<div class="pwa-steps">
         <div class="pwa-step"><span class="pwa-step-num">1</span><span>Нажмите кнопку <strong>«Поделиться»</strong> (квадрат со стрелкой вверх) в меню Safari.</span></div>
         <div class="pwa-step"><span class="pwa-step-num">2</span><span>Прокрутите меню вниз и выберите <strong>«На экран «Домой»»</strong>.</span></div>
@@ -603,7 +613,7 @@ function bookingMatchesGroup(b, g) {
 // ----------------------------------------------------------------------------
 // Константы и состояние
 // ----------------------------------------------------------------------------
-const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwsBLJvAwCZCc2IGZ2M6XBOODm_YsXxgnKl2RllYOMg0Vi-eDq4AKspqIUtZJbbdj7Y/exec";
+const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwV6YsBIC2XhuugMp_qTd2kHd55MP0ZJAJhXf93YiWqs66k90zeULNhooVXs03o2DaH/exec";
 // Вы можете указать прямую постоянную ссылку на ваше приложение ниже, чтобы кнопка «Поделиться» отправляла именно её.
 // Если оставить пустым "", ссылка будет определяться автоматически на основе текущего адреса страницы с очисткой preview-адресов.
 const SHARE_APP_URL = "";
@@ -614,6 +624,157 @@ let previousActiveElement = null;
 let selectedQBLang = "";
 let databaseBookings = [];
 let currentWeekOffset = 0;
+
+// Auth state
+let authUser = null;
+const AUTH_KEY = "authUser";
+
+function getAuthUser() {
+  try {
+    const raw = localStorage.getItem(AUTH_KEY);
+    if (!raw) return null;
+    return JSON.parse(raw);
+  } catch (e) {
+    return null;
+  }
+}
+
+function setAuthUser(user) {
+  if (user) {
+    localStorage.setItem(AUTH_KEY, JSON.stringify(user));
+    window.currentUserRole = user.role;
+  } else {
+    localStorage.removeItem(AUTH_KEY);
+    window.currentUserRole = null;
+  }
+  authUser = user;
+  updateAuthUI();
+}
+
+function updateAuthUI() {
+  const logoutBtn = document.getElementById("btnLogout");
+  if (logoutBtn) {
+    logoutBtn.style.display = authUser ? "inline-flex" : "none";
+  }
+}
+
+function isAuthenticated() {
+  return authUser !== null && authUser.email !== undefined;
+}
+
+function handleLogout() {
+  setAuthUser(null);
+  showAuthModal();
+  showToast("Вы вышли из системы", "success");
+}
+
+function showAuthModal() {
+  const modal = document.getElementById("authModal");
+  if (modal) {
+    modal.style.display = "flex";
+    const emailInput = document.getElementById("authEmail");
+    const errorEl = document.getElementById("authError");
+    const submitBtn = document.getElementById("authSubmitBtn");
+    if (emailInput) emailInput.value = "";
+    const passwordInput = document.getElementById("authPassword");
+    if (passwordInput) passwordInput.value = "";
+    if (errorEl) errorEl.textContent = "";
+    if (submitBtn) submitBtn.disabled = false;
+    const spinner = document.getElementById("authSpinner");
+    const btnText = document.getElementById("authBtnText");
+    if (spinner) spinner.style.display = "none";
+    if (btnText) btnText.textContent = S("authSubmit");
+    if (emailInput) emailInput.focus();
+  }
+}
+
+function hideAuthModal() {
+  const modal = document.getElementById("authModal");
+  if (modal) modal.style.display = "none";
+}
+
+async function handleAuthSubmit(event) {
+  event.preventDefault();
+  const emailInput = document.getElementById("authEmail");
+  const passwordInput = document.getElementById("authPassword");
+  const errorEl = document.getElementById("authError");
+  const submitBtn = document.getElementById("authSubmitBtn");
+  const spinner = document.getElementById("authSpinner");
+  const btnText = document.getElementById("authBtnText");
+
+  const email = emailInput ? emailInput.value.trim().toLowerCase() : "";
+  const password = passwordInput ? passwordInput.value.trim() : "";
+  
+  if (!email) {
+    if (errorEl) errorEl.textContent = S("authError");
+    return;
+  }
+
+  if (submitBtn) submitBtn.disabled = true;
+  if (spinner) spinner.style.display = "inline-block";
+  if (btnText) btnText.textContent = S("authLoading");
+  if (errorEl) errorEl.textContent = "";
+
+  const url = GOOGLE_SCRIPT_URL + "?action=checkAuth&email=" + encodeURIComponent(email) + "&password=" + encodeURIComponent(password) + "&key=jw_144000";
+
+  const doFetch = async () => {
+    const fetcher = (window.SyncCore && SyncCore.fetchWithRetry) ? SyncCore.fetchWithRetry : fetch;
+    const response = await fetcher(url, { cache: "no-store" });
+    if (!response.ok) throw new Error("HTTP_" + response.status);
+    return response.json();
+  };
+
+  try {
+    const data = await withRetry(doFetch, 3, [1000, 3000, 5000]);
+
+    if (data.status === "success" && data.user) {
+      setAuthUser(data.user);
+      if (passwordInput) passwordInput.value = "";
+      hideAuthModal();
+      showToast(S("authWelcome", { name: data.user.name || data.user.email }), "success");
+      hapticFeedback([50, 50, 50]); // Success login feedback
+      if (typeof renderAllTabs === "function") renderAllTabs();
+    } else {
+      if (passwordInput) passwordInput.value = "";
+      if (errorEl) errorEl.textContent = data.message || S("authError");
+      hapticFeedback([30, 50, 30]); // Error/failure feedback
+      if (submitBtn) submitBtn.disabled = false;
+      if (spinner) spinner.style.display = "none";
+      if (btnText) btnText.textContent = S("authSubmit");
+    }
+  } catch (err) {
+    if (passwordInput) passwordInput.value = "";
+    if (errorEl) errorEl.textContent = S("authNetworkError");
+    hapticFeedback([30, 50, 30]); // Network error feedback
+    if (submitBtn) submitBtn.disabled = false;
+    if (spinner) spinner.style.display = "none";
+    if (btnText) btnText.textContent = S("authSubmit");
+  }
+}
+
+function withRetry(fn, maxAttempts, retryDelays) {
+  maxAttempts = maxAttempts || 3;
+  retryDelays = retryDelays || [1000, 3000, 5000];
+  function attempt(n) {
+    return fn().catch(function (err) {
+      if (n < maxAttempts) {
+        return new Promise(function (resolve) {
+          setTimeout(function () { resolve(attempt(n + 1)); }, retryDelays[n - 1] || 5000);
+        });
+      }
+      throw err;
+    });
+  }
+  return attempt(1);
+}
+
+function requireAuth() {
+  if (!isAuthenticated()) {
+    showAuthModal();
+    return false;
+  }
+  return true;
+}
 
 // Единый источник записей графика. app-sync.js (строгий режим IIFE) не может
 // писать в глобальную `databaseBookings`, поэтому он хранит данные в
@@ -765,6 +926,35 @@ function showPWAInstallBanner() {
 // Инициализация приложения
 // ----------------------------------------------------------------------------
 window.addEventListener('DOMContentLoaded', () => {
+  // Inject Stats button
+  const headerRight = document.querySelector('.header-right');
+  if (headerRight) {
+    const statsBtn = document.createElement('button');
+    statsBtn.type = 'button';
+    statsBtn.className = 'btn-refresh';
+    statsBtn.id = 'btnStats';
+    statsBtn.style.marginLeft = '4px';
+    
+    const lang = (localStorage.getItem("preferredLanguage") || "ru").toLowerCase();
+    let btnText = "📊 Статистика";
+    if (lang === "de") btnText = "📊 Statistik";
+    else if (lang === "uk" || lang === "ua") btnText = "📊 Статистика";
+    
+    statsBtn.innerHTML = btnText;
+    statsBtn.onclick = function() {
+      if (typeof showStatsModal === "function") showStatsModal();
+    };
+    headerRight.appendChild(statsBtn);
+  }
+
+  // Auth check: show modal if not authenticated
+  authUser = getAuthUser();
+  window.currentUserRole = authUser ? authUser.role : null;
+  updateAuthUI();
+  if (!isAuthenticated()) {
+    showAuthModal();
+  }
+
   // Регистрация Service Worker с автоматическим обновлением кэша.
   // SW работает только на http(s):// (secure context). При открытии через file://
   // (origin 'null') регистрация невозможна — пропускаем, чтобы не было ошибки.
@@ -926,6 +1116,23 @@ window.addEventListener('DOMContentLoaded', () => {
   const qbForm = document.getElementById('quickBookingForm');
   if (qbForm) {
     qbForm.addEventListener('submit', submitQuickBooking);
+    
+    // Auto-save draft of quick booking form as user types
+    const name1Input = document.getElementById('qbName1');
+    const name2Input = document.getElementById('qbName2');
+    if (name1Input && name2Input) {
+      const saveDraft = () => {
+        if (!name1Input.disabled || !name2Input.disabled) {
+          localStorage.setItem('qb_draft', JSON.stringify({
+            name1: name1Input.value,
+            name2: name2Input.value,
+            lang: typeof selectedQBLang !== 'undefined' ? selectedQBLang : ''
+          }));
+        }
+      };
+      name1Input.addEventListener('input', saveDraft);
+      name2Input.addEventListener('input', saveDraft);
+    }
   }
   document.addEventListener('keydown', handleQuickBookingKeydown);
 
@@ -1348,6 +1555,7 @@ function generateWeekStripFor(weekOffset, preselectDate) {
 }
 
 function switchTab(tabId) {
+  hapticFeedback(20); // Tab switch feedback
   if (tabId !== 'year') tabId = 'schedule';
   const tabs = ['schedule', 'year'];
   tabs.forEach(t => {
@@ -2154,7 +2362,38 @@ function showCurrentLocationOnMap() {
   showMapForLocationName(locName);
 }
 
-function showMapForLocationName(locName) {
+let leafletLoadingPromise = null;
+function loadLeafletLibrary() {
+  if (typeof L !== 'undefined') {
+    return Promise.resolve();
+  }
+  if (leafletLoadingPromise) {
+    return leafletLoadingPromise;
+  }
+  leafletLoadingPromise = new Promise((resolve, reject) => {
+    const link = document.createElement('link');
+    link.rel = 'stylesheet';
+    link.href = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css';
+    link.integrity = 'sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=';
+    link.crossOrigin = '';
+    document.head.appendChild(link);
+
+    const script = document.createElement('script');
+    script.src = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js';
+    script.integrity = 'sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=';
+    script.crossOrigin = '';
+    script.onload = () => resolve();
+    script.onerror = (err) => {
+      leafletLoadingPromise = null;
+      reject(err);
+    };
+    document.body.appendChild(script);
+  });
+  return leafletLoadingPromise;
+}
+
+async function showMapForLocationName(locName) {
+  try { await loadLeafletLibrary(); } catch(e) { showToast(S('leafletError') || 'Error loading map', 'error'); return; }
   const coords = getCoordsForLocation(locName);
 
   document.body.style.overflow = 'hidden';
@@ -2189,7 +2428,8 @@ function showMapForLocationName(locName) {
   }
 }
 
-function openMapInSelectionMode() {
+async function openMapInSelectionMode() {
+  try { await loadLeafletLibrary(); } catch(e) { showToast(S('leafletError') || 'Error loading map', 'error'); return; }
   document.body.style.overflow = 'hidden';
 
   // Temporarily hide addLocationForm if visible to avoid modal overlay stacking
@@ -2338,6 +2578,8 @@ function onModalBackdropClick(e) {
 async function handleFormSubmit(e) {
   e.preventDefault();
 
+  if (!requireAuth()) return;
+
   const selectedLocation = getSelectedLocation();
   const selectedTime = getSelectedTime();
 
@@ -2417,7 +2659,8 @@ async function handleFormSubmit(e) {
     setTimeout(() => {
       // Мгновенное локальное обновление единого состояния (Запись -> График -> Год)
       SyncCore.addBooking(payload);
-      showToast(S('shiftSaved'), "success");
+      localStorage.removeItem('qb_draft');
+    showToast(S('shiftSaved'), "success");
       btn.classList.add('success');
       spinner.style.display = 'none';
       btnText.textContent = S('btnSuccess');
@@ -2510,6 +2753,7 @@ async function handleFormSubmit(e) {
     // ЖЕЛЕЗНЫЙ СЦЕНАРИЙ УСПЕХА (выполняется ВСЕГДА при success от сервера)
     // Мгновенное локальное обновление единого состояния (Запись -> График -> Год)
     bookingRecords.forEach(function (rec) { SyncCore.addBookingRecord(rec); });
+    localStorage.removeItem('qb_draft');
     showToast(S('shiftSaved'), "success");
     btn.classList.add('success');
     spinner.style.display = 'none';
@@ -3279,7 +3523,7 @@ function renderScheduleBoard() {
           <span class="day-trolley-icon" data-group="${cls}" aria-hidden="true">${icon}</span>
           📦 ${S('cartLabel')} №${cartNum}
         </span>
-        <span class="board-names">+ ${S('quickBookBtn')}</span>
+        <span class="board-names">${S('quickBookBtn')}</span>
       </div>`;
   }
 
@@ -3379,6 +3623,11 @@ async function onRefreshClick() {
 }
 
 function showToast(msg, type) {
+  if (type === 'success') {
+    hapticFeedback([40, 40]);
+  } else {
+    hapticFeedback([30, 50, 30]);
+  }
   const toast = document.getElementById('toast');
   toast.className = `toast-container ${type}`;
   toast.innerHTML = `
@@ -3396,12 +3645,75 @@ function showToast(msg, type) {
   }, 3000);
 }
 
-function toggleInfo(infoId) {
-  const box = document.getElementById(infoId);
-  if (!box) return;
-  const isVisible = window.getComputedStyle(box).display === 'block';
-  box.style.display = isVisible ? 'none' : 'block';
+function showGlobalTooltip(text) {
+  const existing = document.getElementById('globalTooltipBackdrop');
+  if (existing) {
+    const tooltip = document.getElementById('globalCenterTooltip');
+    if (tooltip && tooltip.querySelector('.global-center-tooltip-content').textContent.trim() === text.trim()) {
+      removeGlobalTooltip();
+      return;
+    }
+    removeGlobalTooltip();
+  }
+  const backdrop = document.createElement('div');
+  backdrop.id = 'globalTooltipBackdrop';
+  backdrop.className = 'global-tooltip-backdrop';
+  backdrop.addEventListener('click', removeGlobalTooltip);
+  const tooltip = document.createElement('div');
+  tooltip.id = 'globalCenterTooltip';
+  tooltip.className = 'global-center-tooltip';
+  tooltip.innerHTML = '<button type="button" class="global-center-tooltip-close" aria-label="Закрыть">&times;</button><div class="global-center-tooltip-content">' + text + '</div>';
+  tooltip.querySelector('.global-center-tooltip-close').addEventListener('click', removeGlobalTooltip);
+  document.body.appendChild(backdrop);
+  document.body.appendChild(tooltip);
+  tooltip.querySelector('.global-center-tooltip-close').addEventListener('click', function(e) {
+    e.stopPropagation();
+    removeGlobalTooltip();
+  });
+  backdrop.addEventListener('click', function(e) {
+    if (e.target === backdrop) {
+      removeGlobalTooltip();
+    }
+  });
 }
+
+function removeGlobalTooltip() {
+  const backdrop = document.getElementById('globalTooltipBackdrop');
+  const tooltip = document.getElementById('globalCenterTooltip');
+  if (backdrop) backdrop.remove();
+  if (tooltip) tooltip.remove();
+}
+
+function toggleInfo(el) {
+  if (!el || !el.getAttribute) return;
+  const text = el.getAttribute('data-tooltip');
+  if (!text) return;
+  const existing = document.getElementById('globalTooltipBackdrop');
+  if (existing) {
+    const tooltip = document.getElementById('globalCenterTooltip');
+    if (tooltip && tooltip.querySelector('.global-center-tooltip-content').textContent.trim() === text.trim()) {
+      removeGlobalTooltip();
+      return;
+    }
+    removeGlobalTooltip();
+  }
+  showGlobalTooltip(text);
+}
+
+document.addEventListener('click', function(e) {
+  const backdrop = document.getElementById('globalTooltipBackdrop');
+  if (backdrop && e.target === backdrop) {
+    removeGlobalTooltip();
+  }
+});
+
+document.addEventListener('keydown', function(e) {
+  if (e.key === 'Escape') {
+    removeGlobalTooltip();
+  }
+});
+
+
 
 function jumpToToday() {
   currentWeekOffset = 0;
@@ -3475,6 +3787,7 @@ function autofillMyNames() {
 }
 
 function openQuickBookingModal(locName, dateISO, timeSlot, cartNum) {
+  hapticFeedback(30); // Quick modal open feedback
   const todayObj = new Date();
   const todayStr = `${todayObj.getFullYear()}-${String(todayObj.getMonth() + 1).padStart(2, '0')}-${String(todayObj.getDate()).padStart(2, '0')}`;
   if (dateISO < todayStr) {
@@ -3592,6 +3905,18 @@ function openQuickBookingModal(locName, dateISO, timeSlot, cartNum) {
     }
   }
 
+  // Restore draft if exists and slot is not fully occupied/single
+  if (!isOccupied && !isSingle) {
+    try {
+      const draft = JSON.parse(localStorage.getItem('qb_draft'));
+      if (draft) {
+        if (draft.name1) name1Input.value = draft.name1;
+        if (draft.name2) name2Input.value = draft.name2;
+        if (draft.lang) prefillLang = draft.lang.toLowerCase();
+      }
+    } catch (e) {}
+  }
+
   selectedQBLang = prefillLang;
   const labels = getTrolleyLabels();
   const qbLangPicker = document.getElementById("qbLangPicker");
@@ -3633,6 +3958,7 @@ function closeQuickBookingModal() {
   const qbLangPicker = document.getElementById("qbLangPicker");
   if (qbLangPicker) qbLangPicker.innerHTML = "";
   selectedQBLang = "";
+   removeGlobalTooltip();
 
   document.body.style.overflow = '';
 
@@ -3713,6 +4039,9 @@ function handleQuickBookingKeydown(e) {
 
 async function submitQuickBooking(e) {
   e.preventDefault();
+  hapticFeedback(40); // Quick booking submit button click feedback
+
+  if (!requireAuth()) return;
 
   const modal = document.getElementById('quickBookingModal');
   if (!modal) return;
@@ -3816,7 +4145,8 @@ async function submitQuickBooking(e) {
       justAddedSlot = { location: locName, date: dateISO, time: originalTimeSlot, cartNum: cartNum };
 
       SyncCore.addBookingRecord(record);
-      showToast(S('shiftSaved'), "success");
+      localStorage.removeItem('qb_draft');
+    showToast(S('shiftSaved'), "success");
 
       if (btn) btn.classList.add('success');
       if (spinner) spinner.style.display = 'none';
@@ -3864,6 +4194,18 @@ async function submitQuickBooking(e) {
 
     if (result && result.status === 'conflict') {
       showToast(result.message || S('bookingConflict'), "error");
+      
+      // Animate conflict cell in Year Grid
+      const conflictCell = document.querySelector(`.day-cell[data-date="${dateISO}"]`);
+      if (conflictCell) {
+        conflictCell.classList.remove('day-conflict-flash');
+        void conflictCell.offsetWidth; // trigger reflow
+        conflictCell.classList.add('day-conflict-flash');
+        setTimeout(() => {
+          conflictCell.classList.remove('day-conflict-flash');
+        }, 1600);
+      }
+
       justAddedSlot = null;
       if (btn) btn.disabled = false;
       if (spinner) spinner.style.display = 'none';
@@ -3881,6 +4223,7 @@ async function submitQuickBooking(e) {
       return;
     }
 
+    localStorage.removeItem('qb_draft');
     showToast(S('shiftSaved'), "success");
     if (btn) btn.classList.add('success');
     if (spinner) spinner.style.display = 'none';
@@ -3918,6 +4261,7 @@ async function submitQuickBooking(e) {
     console.warn('Network error during quick booking (kept locally):', err);
     if (navigator.onLine === false || /fetch|network|timeout/i.test(String(err))) {
       // Network is down — booking stays local, user is informed
+      localStorage.removeItem('qb_draft');
       showToast(S('savedLocally'), "info");
       if (btn) btn.classList.add('success');
       if (spinner) spinner.style.display = 'none';
@@ -4203,3 +4547,149 @@ function initFontSizeMode() {
   setTimeout(purge, 800);
   setTimeout(purge, 2500);
 })();
+
+
+// ----- Статистика расписания (Statistics Modal) -----
+function showStatsModal() {
+  let modal = document.getElementById('statsModal');
+  if (!modal) {
+    modal = document.createElement('div');
+    modal.id = 'statsModal';
+    modal.className = 'modal-backdrop';
+    modal.style.cssText = 'display: none; align-items: center; justify-content: center; z-index: 100020;';
+    modal.onclick = (e) => { if (e.target === modal) closeStatsModal(); };
+    document.body.appendChild(modal);
+  }
+
+  const lang = getLang();
+  let title = "Статистика расписания";
+  let closeBtn = "Закрыть";
+  let lblLocs = "Всего точек";
+  let lblBookings = "Всего записей";
+  let lblLangs = "По языкам литературы";
+  let lblTopLoc = "Самое популярное место";
+
+  if (lang === "de") {
+    title = "Statistiken";
+    closeBtn = "Schließen";
+    lblLocs = "Standorte gesamt";
+    lblBookings = "Buchungen gesamt";
+    lblLangs = "Nach Literatursprachen";
+    lblTopLoc = "Beliebtester Standort";
+  } else if (lang === "uk" || lang === "ua") {
+    title = "Статистика розкладу";
+    closeBtn = "Закрити";
+    lblLocs = "Всього місць";
+    lblBookings = "Всього записів";
+    lblLangs = "За мовами літератури";
+    lblTopLoc = "Найпопулярніше місце";
+  }
+
+  const bookings = getBookings();
+  const totalBookings = bookings.length;
+  const totalLocations = (safeGetLocalStorageJSON('customLocations', []) || []).length;
+
+  let ruCount = 0;
+  let uaCount = 0;
+  let deCount = 0;
+
+  bookings.forEach(b => {
+    if (b.cart1Lang) {
+      const l = b.cart1Lang.toLowerCase();
+      if (l === 'ru') ruCount++;
+      else if (l === 'ua' || l === 'uk') uaCount++;
+      else if (l === 'de') deCount++;
+    }
+    if (b.cart2Lang) {
+      const l = b.cart2Lang.toLowerCase();
+      if (l === 'ru') ruCount++;
+      else if (l === 'ua' || l === 'uk') uaCount++;
+      else if (l === 'de') deCount++;
+    }
+  });
+
+  const locCounts = {};
+  bookings.forEach(b => {
+    locCounts[b.location] = (locCounts[b.location] || 0) + 1;
+  });
+  let topLoc = "—";
+  let maxCount = 0;
+  for (const loc in locCounts) {
+    if (locCounts[loc] > maxCount) {
+      maxCount = locCounts[loc];
+      topLoc = loc;
+    }
+  }
+  if (topLoc !== "—" && maxCount > 0) {
+    topLoc = `${topLoc} (${maxCount})`;
+  }
+
+  modal.innerHTML = `
+    <div class="modal-content" style="max-width: 400px; padding: 24px; position: relative;">
+      <h3 style="margin-top: 0; margin-bottom: 18px; display: flex; align-items: center; gap: 8px;">📊 ${title}</h3>
+      
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 20px;">
+        <div style="background: rgba(120, 120, 120, 0.05); padding: 12px; border-radius: 8px; text-align: center;">
+          <div style="font-size: 0.75rem; color: var(--text-muted); margin-bottom: 4px;">${lblLocs}</div>
+          <div style="font-size: 1.5rem; font-weight: 700; color: var(--primary);">${totalLocations}</div>
+        </div>
+        <div style="background: rgba(120, 120, 120, 0.05); padding: 12px; border-radius: 8px; text-align: center;">
+          <div style="font-size: 0.75rem; color: var(--text-muted); margin-bottom: 4px;">${lblBookings}</div>
+          <div style="font-size: 1.5rem; font-weight: 700; color: var(--primary);">${totalBookings}</div>
+        </div>
+      </div>
+
+      <div style="margin-bottom: 20px; background: rgba(120, 120, 120, 0.03); padding: 12px; border-radius: 8px;">
+        <div style="font-size: 0.8rem; font-weight: 700; margin-bottom: 8px; border-bottom: 1px solid var(--border); padding-bottom: 4px;">${lblLangs}</div>
+        <div style="display: flex; flex-direction: column; gap: 6px;">
+          <div style="display: flex; justify-content: space-between; font-size: 0.8rem;">
+            <span>🇷🇺 Русский (RU)</span>
+            <span style="font-weight: 700;">${ruCount}</span>
+          </div>
+          <div style="display: flex; justify-content: space-between; font-size: 0.8rem;">
+            <span>🇺🇦 Українська (UA)</span>
+            <span style="font-weight: 700;">${uaCount}</span>
+          </div>
+          <div style="display: flex; justify-content: space-between; font-size: 0.8rem;">
+            <span>🇩🇪 Deutsch (DE)</span>
+            <span style="font-weight: 700;">${deCount}</span>
+          </div>
+        </div>
+      </div>
+
+      <div style="margin-bottom: 24px; background: rgba(120, 120, 120, 0.03); padding: 12px; border-radius: 8px;">
+        <div style="font-size: 0.75rem; color: var(--text-muted); margin-bottom: 4px;">${lblTopLoc}</div>
+        <div style="font-size: 0.85rem; font-weight: 700; color: var(--text);">${topLoc}</div>
+      </div>
+
+      <button type="button" class="btn-submit" onclick="closeStatsModal()" style="width: 100%; margin-top: 0; padding: 12px;">${closeBtn}</button>
+    </div>
+  `;
+
+  modal.style.display = 'flex';
+  document.body.style.overflow = 'hidden';
+}
+
+function closeStatsModal() {
+  const modal = document.getElementById('statsModal');
+  if (modal) {
+    modal.style.display = 'none';
+  }
+  document.body.style.overflow = '';
+}
+
+window.showStatsModal = showStatsModal;
+window.closeStatsModal = closeStatsModal;
+
+
+// ----- Глобальная утилита тактильной отдачи (Haptic Feedback) -----
+function hapticFeedback(pattern = 40) {
+  if (typeof navigator !== 'undefined' && navigator.vibrate) {
+    try {
+      navigator.vibrate(pattern);
+    } catch (e) {
+      console.warn("Haptic feedback error:", e);
+    }
+  }
+}
+window.hapticFeedback = hapticFeedback;
