@@ -519,7 +519,8 @@ function handleBooking(data, lang) {
       var clean = rec.names || [];
       var hasName0 = !!(clean[0] && clean[0].toString().trim());
       var hasName1 = !!(clean[1] && clean[1].toString().trim());
-      if ((hasName0 && !hasName1) || (!hasName0 && hasName1)) {
+      var sendPush = (data.sendPush === true || data.sendPush === "true");
+      if (((hasName0 && !hasName1) || (!hasName0 && hasName1)) && sendPush) {
         try {
           sendOneSignalNotification();
         } catch (e) {

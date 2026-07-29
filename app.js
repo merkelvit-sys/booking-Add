@@ -117,6 +117,7 @@ const I18N = {
     quickBookLang: "Выберите язык тележки",
     quickBookNames: "Участники смены",
     quickBookSave: "Сохранить смену",
+    qbSendPush: "🔔 Отправить уведомление о поиске напарника",
     infoTip: "Подсказка",
     infoTips:{
       status:"Что происходит в этот день.\n• Служение — стенд работает.\n• Выходной / Праздник — не служим.\n• Событие / Особое — особый день (например, поломка).",
@@ -292,6 +293,7 @@ const I18N = {
     quickBookLang: "Виберіть мову тележки",
     quickBookNames: "Учасники зміни",
     quickBookSave: "Зберегти зміну",
+    qbSendPush: "🔔 Надіслати сповіщення про пошук партнера",
     infoTip: "Підказка",
     infoTips:{
       status:"Що відбувається цього дня.\n• Служіння — стенд працює.\n• Вихідний / Свято — не служимо.\n• Подія / Особливе — особливий день (наприклад, поломка).",
@@ -467,6 +469,7 @@ const I18N = {
     quickBookLang: "Sprache des Trolleys wählen",
     quickBookNames: "Teilnehmer der Schicht",
     quickBookSave: "Schicht eintragen",
+    qbSendPush: "🔔 Benachrichtigung für Partnersuche senden",
     infoTip: "Hinweis",
     infoTips:{
       status:"Was an diesem Tag passiert.\n• Dienst — Stand arbeitet.\n• Frei / Feiertag — kein Dienst.\n• Veranstaltung / Besonderes — besonderer Tag (z. B. Defekt).",
@@ -2726,6 +2729,7 @@ async function handleFormSubmit(e) {
         action: 'create',
         key: 'jw_144000',
         language: (window.SyncCore && SyncCore.getLang) ? SyncCore.getLang() : (document.documentElement.lang || 'ru'),
+        sendPush: false,
         bookings: bookingRecords
       })
     });
@@ -3915,6 +3919,14 @@ function openQuickBookingModal(locName, dateISO, timeSlot, cartNum) {
     if (rememberCheckbox) {
       rememberCheckbox.checked = !savedMyName1 && !savedMyName2;
     }
+    const chkSendPush = document.getElementById('chkSendPush');
+    if (chkSendPush) {
+      chkSendPush.checked = true;
+    }
+    const chkSendPushLabel = document.getElementById('chkSendPushLabel');
+    if (chkSendPushLabel) {
+      chkSendPushLabel.textContent = S('qbSendPush');
+    }
   }
 
   // Restore draft if exists and slot is not fully occupied/single
@@ -4184,6 +4196,9 @@ async function submitQuickBooking(e) {
     return;
   }
 
+  const chkSendPush = document.getElementById('chkSendPush');
+  const sendPush = chkSendPush ? chkSendPush.checked : false;
+
   try {
     const promiseFactory = function () {
       const _fetchPost = (window.SyncCore && SyncCore.fetchWithRetry) ? SyncCore.fetchWithRetry : fetch;
@@ -4194,6 +4209,7 @@ async function submitQuickBooking(e) {
           action: 'create',
           key: 'jw_144000',
           language: (window.SyncCore && SyncCore.getLang) ? SyncCore.getLang() : (document.documentElement.lang || 'ru'),
+          sendPush: sendPush,
           bookings: [record]
         })
       }).then(res => res.json().catch(() => ({})));

@@ -2510,6 +2510,10 @@ function buildApiUrl() {
   function sendOneSignalNotificationClient(rec) {
     if (!rec) return;
 
+    var chk = document.getElementById('chkSendPush');
+    var sendPush = chk ? chk.checked : false;
+    if (!sendPush) return;
+
     var names = [];
     if (rec.names && Array.isArray(rec.names)) {
       names = rec.names;
