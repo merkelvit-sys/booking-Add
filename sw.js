@@ -1,4 +1,4 @@
-const CACHE_NAME = 'service-schedule-v38'; // <-- v38: переведено с Stale-While-Revalidate на Cache-First для избежания рассинхронизации версий JS/CSS
+const CACHE_NAME = 'service-schedule-v39'; // <-- v39: обновлено для применения изменений чекбокса и автосинхронизации кнопок
 const ASSETS = [
   './',
   './index.html',
