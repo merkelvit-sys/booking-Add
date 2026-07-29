@@ -966,7 +966,7 @@ window.addEventListener('DOMContentLoaded', () => {
   // SW работает только на http(s):// (secure context). При открытии через file://
   // (origin 'null') регистрация невозможна — пропускаем, чтобы не было ошибки.
   if ('serviceWorker' in navigator && window.location.protocol.startsWith('http')) {
-    navigator.serviceWorker.register('sw.js')
+    navigator.serviceWorker.register('sw.js', { scope: '/' })
       .then(reg => {
         function showUpdateToast() {
           if (document.getElementById('pwa-update-banner')) return;
