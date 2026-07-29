@@ -1863,3 +1863,14 @@ body, .month-block, .day-cell, .modal-content, .auth-modal-box, .board-card {
         transform: translateY(0);
     }
 }
+
+/* Fix: tooltip contrast in light theme — force white text on dark background */
+.global-center-tooltip {
+    color: #ffffff;
+}
+.global-center-tooltip-close {
+    color: #ffffff;
+}
+.global-center-tooltip-close:hover {
+    color: #ffffff;
+}

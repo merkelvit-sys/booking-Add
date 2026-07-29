@@ -1,0 +1,1000 @@
+// ============================================================================
+// Google Apps Script — Единый источник правды (Single Source of Truth)
+// Привязан к Google Таблице. Обслуживает:
+//   1) Записи на служение (bookings) — одна вкладка "Bookings" на весь год.
+//      Каждый временной слот может содержать ДВЕ независимые тележки
+//      (Тележка №1 и Тележка №2), у каждой — свой язык (RU/UA/DE).
+//   2) Годовой график (YearSchedule) — одна строка НА КАЖДУЮ тележку дня:
+//      колонка "CartNumber" (1 или 2) + язык тележки. Так в один день
+//      могут быть заняты разные тележки (например, №1 — RU, №2 — DE).
+//
+// doGet  -> возвращает ОБЪЕДИНЁННЫЙ объект { bookings:[], schedule:[] }
+// doPost -> создаёт/удаляет записи (action=create|delete) ИЛИ
+//           обновляет день годового графика (action=year_update)
+// ============================================================================
+
+// Ключ доступа (передаётся параметром ?key=... во все запросы)
+var API_KEY = "jw_144000";
+
+// Жёсткая привязка к конкретной таблице по ID.
+// Возьмите ID из адресной строки вашей таблицы: часть между "/d/" и "/edit".
+// Пример: для https://docs.google.com/spreadsheets/d/ABC123XYZ/edit ID = "ABC123XYZ"
+// ВСТАВЬТЕ СВОЙ ID ВМЕСТО ПЛЕЙСХОЛДЕРА НИЖЕ.
+var SPREADSHEET_ID = "1gHFdgQHzFuSactgzKeKGargMlzPwNcdi3jh3vuBQdGI";
+
+// Возвращает объект таблицы строго по заданному ID (без привязки к "активной").
+function getSS() {
+  return SpreadsheetApp.openById(SPREADSHEET_ID);
+}
+
+// Допустимые статусы дня в годовом графике
+var ALLOWED_STATUSES = ["available", "closed", "event", "holiday", "special"];
+
+// Допустимые коды языка тележки
+var ALLOWED_LANGS = ["ru", "ua", "de"];
+
+// ----------------------------------------------------------------------------
+// Разделение хранилища по языкам (RU / UA / DE)
+// Каждый язык пишется в СВОЮ вкладку, чтобы избежать «каши» в одной таблице.
+//   Bookings  -> Bookings_RU / Bookings_UA / Bookings_DE
+//   YearSchedule -> YearSchedule_RU / YearSchedule_UA / YearSchedule_DE
+// При чтении (doGet) данные из всех трёх вкладок ОБЪЕДИНЯЮТСЯ в один массив,
+// и к каждой записи добавляется поле language, чтобы клиент понимал, чья это запись.
+// ----------------------------------------------------------------------------
+
+// Возвращает корректный код языка (ru/ua/de) либо "" если неизвестен.
+function normalizeLang(lang) {
+  var l = (lang || "").toString().trim().toLowerCase();
+  if (ALLOWED_LANGS.indexOf(l) !== -1) return l;
+  return "";
+}
+
+// Формирует имя вкладки под конкретный язык:
+//   sheetName("Bookings", "ru")    -> "Bookings_RU"
+//   sheetName("YearSchedule", "ua") -> "YearSchedule_UA"
+function sheetName(base, lang) {
+  var l = normalizeLang(lang) || "ru"; // по умолчанию — русский (обратная совместимость)
+  var suffix = l === "ru" ? "RU" : (l === "ua" ? "UA" : "DE");
+  return base + "_" + suffix;
+}
+
+// ----------------------------------------------------------------------------
+// Человекочитаемые названия тележек (технический код -> красивое название)
+// ----------------------------------------------------------------------------
+var TROLLEY_NAMES = {
+  ru: "Русская тележка",
+  ua: "Украинская тележка",
+  de: "Немецкая тележка"
+};
+
+// Пастельные (мягкие, не слишком яркие) цвета групп для цветового кодирования
+// row  — фон всей строки (очень светлый оттенок)
+// cell — фон самой ячейки "Тележка" (чуть насыщеннее, чтобы было видно группу)
+var TROLLEY_COLORS = {
+  ru: { row: "#fff5f5", cell: "#ffebee" }, // нежно-розовый
+  ua: { row: "#f5fbff", cell: "#e3f2fd" }, // нежно-голубой
+  de: { row: "#fffef5", cell: "#fff9c4" }  // мягкий пастельно-жёлтый
+};
+
+// Код тележки (ru/ua/de) -> читаемое название. Если кода нет — пустая строка.
+function trolleyName(code) {
+  var c = (code || "").toString().trim().toLowerCase();
+  return TROLLEY_NAMES[c] || "";
+}
+
+// Значение (может быть кодом ИЛИ уже названием) -> код тележки (ru/ua/de), иначе "".
+// Устойчиво к смешанным/старым данным в таблице.
+function trolleyCode(value) {
+  if (!value) return "";
+  var v = value.toString().trim();
+  var vl = v.toLowerCase();
+  if (TROLLEY_NAMES[vl]) return vl;            // уже пришёл код
+  for (var k in TROLLEY_NAMES) {               // ищем совпадение по названию
+    if (TROLLEY_NAMES[k] === v) return k;
+  }
+  return "";
+}
+
+// Значение -> объект цветов группы {row, cell} либо null.
+function trolleyColor(value) {
+  return TROLLEY_COLORS[trolleyCode(value)] || null;
+}
+
+// ----------------------------------------------------------------------------
+// Точки входа (Web App)
+// ----------------------------------------------------------------------------
+
+function doGet(e) {
+  e = e || {};
+  if ((e.parameter && e.parameter.key) !== API_KEY) {
+    return accessDenied();
+  }
+
+  try {
+    var action = (e.parameter && e.parameter.action || "").toString().toLowerCase();
+    if (action === "checkAuth") {
+      return handleCheckAuth(e);
+    }
+
+    var ss = getSS();
+
+    // 1. Записи на служение — читаем ВСЕ три языковые вкладки и объединяем.
+    //    К каждой записи добавляем поле language, чтобы клиент понимал, чья это запись.
+    //    ВАЖНО: если лист для языка ещё не создан (например, Bookings_UA / Bookings_DE),
+    //    — просто пропускаем его, чтобы не затирать уже собранные данные из существующих листов.
+    var bookings = [];
+    for (var bi = 0; bi < ALLOWED_LANGS.length; bi++) {
+      var langCode = ALLOWED_LANGS[bi];
+      var sheetNameBookings = "Bookings_" + langCode.toUpperCase();
+      var bSheet = ss.getSheetByName(sheetNameBookings);
+      if (!bSheet) {
+        // Листа нет — пропускаем, не ломая сборку данных из существующих листов!
+        continue;
+      }
+      try {
+        var bRows = readAllBookings(bSheet, langCode);
+        if (Array.isArray(bRows)) bookings = bookings.concat(bRows);
+      } catch (bErr) {
+        // Ошибка чтения конкретного листа не должна ронять весь doGet
+        Logger.log("doGet bookings read error (" + sheetNameBookings + "): " + bErr);
+      }
+    }
+
+    // 2. Годовой график — читаем ВСЕ три языковые вкладки и объединяем.
+    //    (при необходимости заполняем текущий год в каждой вкладке)
+    var schedule = [];
+    var yearScheduleMessages = {};
+    for (var si = 0; si < ALLOWED_LANGS.length; si++) {
+      var sLang = ALLOWED_LANGS[si];
+      var sheetNameSchedule = "YearSchedule_" + sLang.toUpperCase();
+      var sSheet = ss.getSheetByName(sheetNameSchedule);
+      if (!sSheet) {
+        // Листа графика нет — создаём его (нужен для всех языков), иначе пропускаем при сбое.
+        try { sSheet = getScheduleSheet(ss, sLang); } catch (cErr) { continue; }
+      }
+      try {
+        ensureSchedulePopulated(sSheet);
+        var sRows = readSchedule(sSheet, sLang);
+        if (Array.isArray(sRows)) schedule = schedule.concat(sRows);
+        
+        var msgVal = "";
+        try {
+          msgVal = sSheet.getRange("H2").getValue().toString();
+        } catch (msgErr) {}
+        yearScheduleMessages[sLang] = msgVal;
+      } catch (sErr) {
+        Logger.log("doGet schedule read error (" + sheetNameSchedule + "): " + sErr);
+      }
+    }
+
+    return json({
+      status: "success",
+      bookings: bookings,
+      schedule: schedule,
+      yearScheduleMessages: yearScheduleMessages,
+      serverTime: new Date().toISOString()
+    });
+  } catch (err) {
+    return jsonError(err.toString());
+  }
+}
+
+function doPost(e) {
+  e = e || {};
+
+  // Тело запроса: либо JSON (e.postData), либо query-параметры (e.parameter)
+  var data = null;
+  if (e.postData && e.postData.contents) {
+    try { data = JSON.parse(e.postData.contents); } catch (_) { data = null; }
+  }
+  if (!data) data = e.parameter;
+  if (!data) data = {};
+
+  // Ключ доступа: из JSON-тела ИЛИ из query-параметра
+  var providedKey = (data && data.key) || (e.parameter && e.parameter.key);
+  if (providedKey !== API_KEY) {
+    return accessDenied();
+  }
+
+  // ── LockService в режиме ОЧЕРЕДИ (waitLock) ─────────────────────────────
+  // При 200+ пользователях запросы выстраиваются в ряд (до 15 с ожидания),
+  // а не получают немедленный отказ (tryLock). Так данные не теряются.
+  var lock = LockService.getScriptLock();
+  try {
+    lock.waitLock(15000); // ставим в очередь — все запросы обслуживаются
+  } catch (e) {
+    // Если за 15 сек блокировку получить не удалось — сервер реально перегружен
+    return json({ status: "error", message: "Сервер перегружен. Попробуйте ещё раз через минуту." });
+  }
+
+  try {
+    var action = (data.action || "create").toString().toLowerCase();
+
+    // Язык (language/lang) определяет, в какую вкладку писать данные.
+    var lang = normalizeLang((data && (data.language || data.lang)) || (e.parameter && (e.parameter.language || e.parameter.lang)));
+
+    if (action === "year_update") {
+      return handleYearUpdate(data, lang);
+    }
+    if (action === "year_message_update") {
+      return handleYearMessageUpdate(data, lang);
+    }
+    // По умолчанию — работа с записями на служение
+    return handleBooking(data, lang);
+  } catch (err) {
+    return jsonError(err.toString());
+  } finally {
+    try { lock.releaseLock(); } catch (_) {}
+  }
+}
+
+// ----------------------------------------------------------------------------
+// Годовой график (YearSchedule)
+// Структура: одна строка НА КАЖДУЮ тележку дня.
+//   Date | CartNumber | Trolley | Status | Description | Note | LastUpdated
+// CartNumber = 1 или 2 (номер тележки). Trolley = язык (RU/UA/DE).
+// ----------------------------------------------------------------------------
+
+function handleYearUpdate(data, lang) {
+  var date = (data.date || "").toString().trim();
+  var cartNumber = parseInt(data.cartNumber, 10);
+  if (!(cartNumber === 1 || cartNumber === 2)) cartNumber = 1;
+  var trolley = (data.trolley || "").toString().trim().toLowerCase();
+  var status = (data.status || "available").toString().trim();
+  var description = (data.description || "").toString();
+  var note = (data.note || "").toString();
+
+  // Валидация: дата обязательна. Тележка обязательна только для статуса
+  // "available" (Служение). Для выходных/праздников/событий/особых дней
+  // тележка может быть пустой — тогда в таблицу пишется только статус.
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) {
+    return jsonError("Неверный формат даты (ожидается YYYY-MM-DD).");
+  }
+  if (!normalizeLang(lang)) {
+    return jsonError("Не указан язык (language: ru/ua/de).");
+  }
+  if (trolley !== "" && ALLOWED_LANGS.indexOf(trolley) === -1) {
+    return jsonError("Неизвестный язык тележки (ru/ua/de).");
+  }
+  if (status === "available" && trolley === "") {
+    return jsonError("Для служения выберите тележку (ru/ua/de).");
+  }
+  if (ALLOWED_STATUSES.indexOf(status) === -1) status = "available";
+  if (description.length > 500) description = description.substring(0, 500);
+  if (note.length > 500) note = note.substring(0, 500);
+
+  var ss = getSS();
+  var sheet = getScheduleSheet(ss, lang);
+
+  // Индексы колонок по заголовкам (устойчиво к порядку/старым таблицам)
+  var colDate = getColIndex(sheet, "Date");
+  var colCart = getColIndex(sheet, "CartNumber");
+  var colStatus = getColIndex(sheet, "Status");
+  var colTrolley = getColIndex(sheet, "Trolley");
+  var colDesc = getColIndex(sheet, "Description");
+  var colNote = getColIndex(sheet, "Note");
+  var colUpd = getColIndex(sheet, "LastUpdated");
+
+  // Защита от неинициализированных/отсутствующих колонок: без них писать некуда.
+  if (colDate < 1 || colCart < 1 || colStatus < 1 || colTrolley < 1 ||
+      colDesc < 1 || colNote < 1 || colUpd < 1) {
+    return jsonError("Структура листа повреждена: отсутствуют обязательные колонки.");
+  }
+
+  var lastDataRow = Math.max(sheet.getLastRow() - 1, 0);
+  var rowFound = false;
+  var foundRow = -1;
+  if (lastDataRow > 0) {
+    var dateVals = sheet.getRange(2, colDate, lastDataRow, 1).getValues();
+    for (var i = 0; i < dateVals.length; i++) {
+      if (String(dateVals[i][0]) === date) {
+        // Ищем именно строку с нужным номером тележки
+        var cV = sheet.getRange(i + 2, colCart, 1, 1).getValue();
+        if (parseInt(cV, 10) === cartNumber) { foundRow = i + 2; rowFound = true; break; }
+      }
+    }
+  }
+
+  var nowStr = Utilities.formatDate(new Date(), Session.getScriptTimeZone(), "yyyy-MM-dd HH:mm:ss");
+
+  // Собираем строку по индексам колонок (дырки заполняем пустыми)
+  var rowValues = [];
+  rowValues[colDate - 1] = date;
+  rowValues[colCart - 1] = cartNumber;
+  rowValues[colStatus - 1] = status;
+  // Пишем в таблицу именно ЧИТАЕМОЕ название тележки (Русская/Украинская/Немецкая)
+  rowValues[colTrolley - 1] = trolleyName(trolley);
+  rowValues[colDesc - 1] = description;
+  rowValues[colNote - 1] = note;
+  rowValues[colUpd - 1] = nowStr;
+  for (var c = 0; c < rowValues.length; c++) { if (rowValues[c] === undefined) rowValues[c] = ""; }
+
+  if (!rowFound) {
+    // Строка не найдена (например, лист только что создан и пуст) — добавляем новую.
+    sheet.appendRow(rowValues);
+  } else {
+    sheet.getRange(foundRow, 1, 1, rowValues.length).setValues([rowValues]);
+  }
+
+  return json({ status: "success", message: "День обновлён", date: date, cartNumber: cartNumber, trolley: trolley });
+}
+
+function handleYearMessageUpdate(data, lang) {
+  var email = (data.email || "").toString().trim().toLowerCase();
+  var message = (data.message || "").toString();
+  
+  if (!email) {
+    return json({ status: "error", message: "Email is required." });
+  }
+  if (!checkAdminRole(email)) {
+    return json({ status: "error", message: "Access denied: Admin only" });
+  }
+  if (!normalizeLang(lang)) {
+    return json({ status: "error", message: "Не указан язык (language: ru/ua/de)." });
+  }
+  
+  var ss = getSS();
+  var sheet = getScheduleSheet(ss, lang);
+  
+  sheet.getRange("H1").setValue("YearScheduleMessage").setFontWeight("bold");
+  sheet.getRange("H2").setValue(message);
+  
+  return json({ status: "success", message: "Сообщение сохранено", yearScheduleMessage: message });
+}
+
+// Возвращает (создаёт при необходимости) вкладку "YearSchedule_<LANG>"
+// и гарантирует наличие всех нужных колонок (в т.ч. "CartNumber", "Trolley").
+function getScheduleSheet(ss, lang) {
+  var name = sheetName("YearSchedule", lang);
+  var sheet = ss.getSheetByName(name);
+  if (!sheet) sheet = ss.insertSheet(name);
+  ensureScheduleColumns(sheet);
+  return sheet;
+}
+
+// Гарантирует, что в шапке есть все обязательные колонки.
+// Недостающие добавляются в конец (устойчиво к уже существующим таблицам).
+function ensureScheduleColumns(sheet) {
+  var needed = ["Date", "CartNumber", "Trolley", "Status", "Description", "Note", "LastUpdated"];
+  var lastCol = sheet.getLastColumn();
+  var headers = lastCol ? sheet.getRange(1, 1, 1, lastCol).getValues()[0] : [];
+  var existing = {};
+  for (var i = 0; i < headers.length; i++) existing[String(headers[i]).trim()] = true;
+
+  var added = false;
+  for (var j = 0; j < needed.length; j++) {
+    if (!existing[needed[j]]) {
+      var col = sheet.getLastColumn() + 1;
+      sheet.getRange(1, col).setValue(needed[j]).setFontWeight("bold");
+      existing[needed[j]] = true;
+      added = true;
+    }
+  }
+  styleHeader(sheet, sheet.getLastColumn());
+  // Форматируем таблицу ТОЛЬКО когда реально добавили колонки,
+  // иначе 365 строк перекрашиваются при каждом чтении (doGet/автообновление).
+  if (added) formatYearScheduleSheet(sheet);
+}
+
+// Возвращает 1-based индекс колонки по имени из шапки (регистронезависимо)
+function getColIndex(sheet, name) {
+  var lastCol = sheet.getLastColumn();
+  if (!lastCol) return -1;
+  var headers = sheet.getRange(1, 1, 1, lastCol).getValues()[0];
+  for (var i = 0; i < headers.length; i++) {
+    if (String(headers[i]).trim().toLowerCase() === name.toLowerCase()) return i + 1;
+  }
+  return -1;
+}
+
+// При первом запуске заполняет вкладку днями текущего И следующего года
+// (по 2 тележки на день), чтобы планировать смены наперёд на стыке лет.
+function ensureSchedulePopulated(sheet) {
+  if (sheet.getLastRow() > 1) return;
+
+  var currentYear = new Date().getFullYear();
+  var rows = [];
+
+  // Текущий и следующий год
+  for (var y = 0; y < 2; y++) {
+    var year = currentYear + y;
+    var d = new Date(year, 0, 1);
+    while (d.getFullYear() === year) {
+      var iso = Utilities.formatDate(d, Session.getScriptTimeZone(), "yyyy-MM-dd");
+      // Тележка №1
+      rows.push([iso, 1, "", "available", "", "", ""]); // Date, CartNumber, Trolley, Status, Description, Note, LastUpdated
+      // Тележка №2
+      rows.push([iso, 2, "", "available", "", "", ""]); // Date, CartNumber, Trolley, Status, Description, Note, LastUpdated
+      d.setDate(d.getDate() + 1);
+    }
+  }
+
+  if (rows.length > 0) {
+    sheet.getRange(2, 1, rows.length, 7).setValues(rows);
+    // Применяем полное красивое форматирование после первичного заполнения
+    formatYearScheduleSheet(sheet);
+  }
+}
+
+function readSchedule(sheet, lang) {
+  var out = [];
+  var last = sheet.getLastRow();
+  if (last <= 1) return out;
+
+  var langCode = normalizeLang(lang) || "";
+
+  var colDate = getColIndex(sheet, "Date");
+  var colCart = getColIndex(sheet, "CartNumber");
+  var colStatus = getColIndex(sheet, "Status");
+  var colTrolley = getColIndex(sheet, "Trolley");
+  var colDesc = getColIndex(sheet, "Description");
+  var colNote = getColIndex(sheet, "Note");
+  if (colDate === -1 || colStatus === -1) return out;
+
+  var rows = sheet.getDataRange().getValues();
+  for (var i = 1; i < rows.length; i++) {
+    var r = rows[i];
+    // В таблице хранится ЧИТАЕМОЕ название ("Русская тележка"). Для логики
+    // фронтенда (фильтры, цвета, верификация) всегда отдаём код (ru/ua/de),
+    // а рядом — понятное название.
+    var tCode = colTrolley > -1 ? trolleyCode(r[colTrolley - 1]) : "";
+    var cartNum = colCart > -1 ? parseInt(r[colCart - 1], 10) : 0;
+    if (!(cartNum === 1 || cartNum === 2)) cartNum = 1;
+    out.push({
+      date: normalizeDateStr(r[colDate - 1]),
+      cartNumber: cartNum,
+      status: String(r[colStatus - 1] || "available"),
+      trolley: tCode,
+      trolleyName: trolleyName(tCode),
+      description: colDesc > -1 && r[colDesc - 1] ? String(r[colDesc - 1]) : "",
+      note: colNote > -1 && r[colNote - 1] ? String(r[colNote - 1]) : "",
+      language: langCode
+    });
+  }
+  return out;
+}
+
+// ----------------------------------------------------------------------------
+// Записи на служение (bookings) — ДВЕ независимые тележки в одном слоте.
+// Одна вкладка "Bookings", колонки:
+//   Zeitstempel | Datum | Standort | Zeitfenster |
+//   Cart1Lang | Trolley 1 - Name 1 | Trolley 1 - Name 2 |
+//   Cart2Lang | Trolley 2 - Name 1 | Trolley 2 - Name 2
+// ----------------------------------------------------------------------------
+
+// Комментарий-легенда колонок листа "Bookings":
+//   col1 Zeitstempel | col2 Datum | col3 Standort | col4 Zeitfenster |
+//   col5 Cart1Lang | col6 Trolley 1 - Name 1 | col7 Trolley 1 - Name 2 |
+//   col8 Cart2Lang | col9 Trolley 2 - Name 1 | col10 Trolley 2 - Name 2
+//
+// CART_COLS — 1-based индексы для sheet.getRange(row, col)
+var CART_COLS = {
+  1: { lang: 5, n1: 6, n2: 7 },
+  2: { lang: 8, n1: 9, n2: 10 }
+};
+// CART_COLS_0 — 0-based индексы для доступа через array[index]
+var CART_COLS_0 = {
+  1: { lang: 4, n1: 5, n2: 6 },
+  2: { lang: 7, n1: 8, n2: 9 }
+};
+
+function handleBooking(data, lang) {
+  var action = (data.action || "create").toString().toLowerCase();
+  var ss = getSS();
+  var sheet = getBookingsSheet(ss, lang);
+
+  // ---- СОЗДАНИЕ / ДОЗАПИСЬ НАПАРНИКА ----
+  // Клиент шлёт data.bookings = [
+  //   { date, time, location, cartNumber:1|2, language:"ru"|"ua"|"de", names:[name1,name2] }, ...
+  // ]
+  // При добавлении напарника (isSingle-режим) оба имени приходят вместе.
+  // isCartTaken проверяет, что ОБА места заняты; если только одно — пропускаем
+  // проверку конфликта, а writeCart дозапишет второе имя в существующую строку.
+  if (action === "create") {
+    console.log("handleBooking create: raw=" + JSON.stringify(data.bookings));
+    var list = normalizeBookingList(data.bookings);
+    console.log("handleBooking create: normalized count=" + list.length);
+    if (!list.length) {
+      return jsonError("Нет записей для сохранения.");
+    }
+
+    // Первая же конфликтующая тележка — отказ (атомарность на уровне всего слота).
+    var conflictMsg = "";
+    for (var c = 0; c < list.length; c++) {
+      var rec = list[c];
+      if (isCartTaken(sheet, rec.date, rec.location, rec.time, rec.cartNumber)) {
+        conflictMsg = "Эта тележка на данное время уже полностью забронирована!";
+        break;
+      }
+    }
+    if (conflictMsg) {
+      return json({ status: "conflict", message: conflictMsg });
+    }
+
+    for (var k = 0; k < list.length; k++) {
+      writeCart(sheet, list[k]);
+    }
+
+    formatSheet(sheet);
+    cleanupOldBookings(sheet);
+    // Возвращаем точный адрес таблицы, куда произведена запись (для отладки:
+    // если клиент не видит строку — он смотрит не ту таблицу).
+    var debugUrl = getSS().getUrl();
+    return json({ status: "success", message: "Запись успешно добавлена!", saved: list.length, debugUrl: debugUrl });
+  }
+
+  // ---- УДАЛЕНИЕ (по конкретной тележке, чтобы не задеть вторую) ----
+  if (action === "delete") {
+    if (!normalizeLang(lang)) {
+      return jsonError("Не указан язык (language: ru/ua/de).");
+    }
+    var dateVal = (data.date || "").toString().trim();
+    var location = (data.location || "").toString().trim();
+    var time = (data.time || "").toString().trim();
+    var cartNumber = parseInt(data.cartNumber, 10); // 1 | 2 | NaN (обе)
+
+    var rows = sheet.getDataRange().getValues();
+    var targetRow = -1;
+
+    for (var i = 1; i < rows.length; i++) {
+      var row = rows[i];
+      var rowDate = normalizeDateStr(row[1]);
+      if (rowDate === dateVal && String(row[2]) === location && String(row[3]) === time) {
+        targetRow = i + 1;
+        break;
+      }
+    }
+
+    if (targetRow === -1) {
+      return json({ status: "error", message: "Запись не найдена." });
+    }
+
+    if (cartNumber === 1 || cartNumber === 2) {
+      // Очищаем ТОЛЬКО выбранную тележку (вторую не трогаем)
+      // CART_COLS — 1-based индексы для getRange()
+      var cols = CART_COLS[cartNumber];
+      sheet.getRange(targetRow, cols.lang).setValue("");
+      sheet.getRange(targetRow, cols.n1).setValue("");
+      sheet.getRange(targetRow, cols.n2).setValue("");
+    } else {
+      // cartNumber не задан — очищаем обе тележки (колонки 5-10, 1-based)
+      sheet.getRange(targetRow, 5, 1, 6).setValues([["", "", "", "", "", ""]]);
+    }
+
+    // Проверяем, остались ли имена (0-based индексы массива)
+    var updated = sheet.getRange(targetRow, 1, 1, 10).getValues()[0];
+    var hasNames = updated[CART_COLS_0[1].n1] || updated[CART_COLS_0[1].n2] || updated[CART_COLS_0[2].n1] || updated[CART_COLS_0[2].n2];
+    if (!hasNames) sheet.deleteRow(targetRow);
+
+    return json({ status: "success", message: "Запись успешно удалена!" });
+  }
+
+  return jsonError("Неизвестное действие: " + action);
+}
+
+// Приводит data.bookings к валидному массиву записей {date,time,location,cartNumber,language,names[]}
+function normalizeBookingList(raw) {
+  if (!raw) return [];
+  if (!Array.isArray(raw)) raw = [raw];
+  var out = [];
+  for (var i = 0; i < raw.length; i++) {
+    var b = raw[i];
+    if (!b) continue;
+    var cn = parseInt(b.cartNumber, 10);
+    if (cn !== 1 && cn !== 2) cn = 1;
+    var lang = (b.language || b.trolley || "").toString().trim().toLowerCase();
+    if (ALLOWED_LANGS.indexOf(lang) === -1) continue; // язык обязателен
+    var names = Array.isArray(b.names) ? b.names : [b.name1, b.name2];
+    var clean = (names || []).map(function (n) { return (n || "").toString().trim(); });
+    if (!clean[0] && !clean[1]) continue; // оба имени пусты — пропускаем
+    var date = (b.date || "").toString().trim();
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) date = normalizeDateStr(b.date || "");
+    out.push({
+      date: date,
+      time: (b.time || "").toString().trim(),
+      location: (b.location || "").toString().trim(),
+      cartNumber: cn,
+      language: lang,
+      names: clean
+    });
+  }
+  return out;
+}
+
+// ----------------------------------------------------------------------------
+// КЛЮЧЕВОЕ ИСПРАВЛЕНИЕ (v2):
+// isCartTaken возвращает true ТОЛЬКО когда ОБА места в тележке заняты.
+// Ранее: r[cols.n1] || r[cols.n2] → любое имя = "занято" → напарник не мог
+//   присоединиться к одиночной записи (получал "conflict").
+// Теперь: r[cols.n1] && r[cols.n2] → оба имени = "занято" → если только
+//   одно имя есть, слот открыт для напарника и writeCart его дозапишет.
+// ----------------------------------------------------------------------------
+
+// Занята ли конкретная тележка (cartNumber) в этом слоте?
+// Возвращает true только если ОБА имени заполнены (тележка полностью занята).
+function isCartTaken(sheet, dateVal, location, time, cartNumber) {
+  // Используем 0-based индексы для чтения из массива getValues()
+  var cols = CART_COLS_0[cartNumber] || CART_COLS_0[1];
+  var data = sheet.getDataRange().getValues();
+  for (var i = 1; i < data.length; i++) {
+    var r = data[i];
+    if (normalizeDateStr(r[1]) === dateVal && String(r[2]) === location && String(r[3]) === time) {
+      // FIX: была ошибка — || (OR) считал тележку занятой при любом одном имени,
+      // что блокировало добавление напарника к соло-записи.
+      // Правильно: && (AND) — тележка полностью занята только когда ОБА имени есть.
+      if (r[cols.n1] && r[cols.n2]) return true;
+    }
+  }
+  return false;
+}
+
+// Записывает одну тележку в нужный слот (до-записывая в существующую строку или добавляя новую).
+function writeCart(sheet, rec) {
+  // 1-based для getRange(), 0-based для массивов
+  var cols = CART_COLS[rec.cartNumber] || CART_COLS[1];
+  var cols0 = CART_COLS_0[rec.cartNumber] || CART_COLS_0[1];
+  var data = sheet.getDataRange().getValues();
+  var existingRow = -1;
+
+  for (var i = 1; i < data.length; i++) {
+    var r = data[i];
+    if (normalizeDateStr(r[1]) === rec.date && String(r[2]) === rec.location && String(r[3]) === rec.time) {
+      existingRow = i + 1;
+      break;
+    }
+  }
+
+  if (existingRow !== -1) {
+    // Обновление существующей строки: getRange использует 1-based CART_COLS
+    var ex = sheet.getRange(existingRow, 1, 1, 10).getValues()[0];
+    sheet.getRange(existingRow, cols.lang).setValue(rec.language);
+    sheet.getRange(existingRow, cols.n1).setValue(rec.names[0] || ex[cols0.n1] || "");
+    sheet.getRange(existingRow, cols.n2).setValue(rec.names[1] || ex[cols0.n2] || "");
+    console.log("writeCart: updated existing row " + existingRow + " cart " + rec.cartNumber);
+  } else {
+    // Новая строка: appendRow принимает 0-based массив, используем CART_COLS_0
+    var timestamp = new Date();
+    var row10 = ["", "", "", "", "", "", "", "", "", ""];
+    row10[0] = timestamp;
+    row10[1] = rec.date;
+    row10[2] = rec.location;
+    row10[3] = rec.time;
+    row10[cols0.lang] = rec.language;
+    row10[cols0.n1] = rec.names[0] || "";
+    row10[cols0.n2] = rec.names[1] || "";
+    sheet.appendRow(row10);
+    console.log("writeCart: appended new row cart " + rec.cartNumber + " date " + rec.date);
+  }
+}
+function readAllBookings(sheet, lang) {
+  var registrations = [];
+  if (sheet.getLastRow() <= 1) return registrations;
+
+  var langCode = normalizeLang(lang) || "";
+
+  var data = sheet.getDataRange().getValues();
+  for (var i = 1; i < data.length; i++) {
+    var row = data[i];
+    // Ячейка Datum в Google Таблице может прийти как объект Date (при чтении
+    // через getValues) и при JSON-сериализации превратиться в ISO со сдвигом
+    // таймзоны ("2026-07-17T22:00:00.000Z"). Принудительно форматируем в
+    // строгий "yyyy-MM-dd" в часовом поясе скрипта, чтобы совпадал с клиентом.
+    var rawDate = row[1];
+    var formattedDate = "";
+    if (rawDate instanceof Date) {
+      formattedDate = Utilities.formatDate(rawDate, Session.getScriptTimeZone(), "yyyy-MM-dd");
+    } else if (typeof rawDate === "string" && /^\d{4}-\d{2}-\d{2}$/.test(rawDate.trim())) {
+      formattedDate = rawDate.trim();
+    } else {
+      formattedDate = normalizeDateStr(rawDate);
+    }
+    registrations.push({
+      timestamp: row[0],
+      date: formattedDate,
+      location: row[2],
+      time: row[3],
+      cart1Lang: row[4] ? String(row[4]).trim().toLowerCase() : "",
+      name1: row[5],
+      name2: row[6],
+      cart2Lang: row[7] ? String(row[7]).trim().toLowerCase() : "",
+      name3: row[8],
+      name4: row[9],
+      language: langCode
+    });
+  }
+  return registrations;
+}
+
+// Возвращает (создаёт при необходимости) вкладку "Bookings_<LANG>" с нужной шапкой.
+function getBookingsSheet(ss, lang) {
+  var name = sheetName("Bookings", lang);
+  var sheet = ss.getSheetByName(name);
+  if (!sheet) {
+    sheet = ss.insertSheet(name);
+    sheet.appendRow([
+      "Zeitstempel", "Datum", "Standort", "Zeitfenster",
+      "Cart1Lang", "Trolley 1 - Name 1", "Trolley 1 - Name 2",
+      "Cart2Lang", "Trolley 2 - Name 1", "Trolley 2 - Name 2"
+    ]);
+    sheet.getRange(1, 1, 1, 10).setFontWeight("bold");
+    formatSheet(sheet);
+  }
+  return sheet;
+}
+
+function styleHeader(sheet, cols) {
+  var headerRange = sheet.getRange(1, 1, 1, cols);
+  headerRange.setFontWeight("bold");
+  headerRange.setBackground("#2563eb");
+  headerRange.setFontColor("#ffffff");
+  headerRange.setHorizontalAlignment("center");
+  headerRange.setVerticalAlignment("middle");
+  sheet.setFrozenRows(1);
+  sheet.setRowHeight(1, 30);
+}
+
+// Полное красивое форматирование листа YearSchedule
+function formatYearScheduleSheet(sheet) {
+  try {
+    var lastRow = sheet.getLastRow();
+    var lastCol = sheet.getLastColumn();
+    if (lastCol === 0) return;
+
+    // --- Шапка (пастельно-зелёный фон, белый жирный текст) ---
+    var headerRange = sheet.getRange(1, 1, 1, lastCol);
+    headerRange.setBackground("#1a7a4a");      // насыщенный зелёный
+    headerRange.setFontColor("#ffffff");
+    headerRange.setFontWeight("bold");
+    headerRange.setFontSize(11);
+    headerRange.setHorizontalAlignment("center");
+    headerRange.setVerticalAlignment("middle");
+    headerRange.setWrap(false);
+    sheet.setRowHeight(1, 32);
+    sheet.setFrozenRows(1);
+
+    // --- Строки данных ---
+    if (lastRow > 1) {
+      var dataRange = sheet.getRange(2, 1, lastRow - 1, lastCol);
+      dataRange.setFontFamily("Arial");
+      dataRange.setFontSize(10);
+      dataRange.setVerticalAlignment("middle");
+
+      // Цветовое кодирование по тележке: строки/ячейки с тележкой окрашиваются
+      // в мягкие пастельные цвета группы (РУ — розовый, УА — голубой, DE — жёлтый).
+      var colTrolley = getColIndex(sheet, "Trolley");
+      var trolleyVals = colTrolley > -1
+        ? sheet.getRange(2, colTrolley, Math.max(lastRow - 1, 0), 1).getValues()
+        : [];
+
+      for (var r = 2; r <= lastRow; r++) {
+        var tVal = colTrolley > -1 ? (trolleyVals[r - 2] ? trolleyVals[r - 2][0] : "") : "";
+        var colors = trolleyColor(tVal);
+        var rowRange = sheet.getRange(r, 1, 1, lastCol);
+
+        if (colors) {
+          // Вся строка — очень светлый оттенок группы
+          rowRange.setBackground(colors.row);
+          // Ячейка "Trolley" — чуть насыщеннее, чтобы группа была очевидна
+          if (colTrolley > -1) sheet.getRange(r, colTrolley, 1, 1).setBackground(colors.cell);
+        } else {
+          // Нет тележки — чередование зебры (светло-зелёный / белый)
+          rowRange.setBackground(r % 2 === 0 ? "#f0faf5" : "#ffffff");
+        }
+      }
+
+      // Выравнивание по колонкам
+      sheet.getRange(2, 1, lastRow - 1, 1).setHorizontalAlignment("center"); // Date
+      sheet.getRange(2, 2, lastRow - 1, 1).setHorizontalAlignment("center"); // CartNumber
+      sheet.getRange(2, 3, lastRow - 1, 1).setHorizontalAlignment("center"); // Status
+      sheet.getRange(2, 4, lastRow - 1, 1).setHorizontalAlignment("center"); // Trolley
+      if (lastCol >= 5) sheet.getRange(2, 5, lastRow - 1, 1).setHorizontalAlignment("left"); // Description
+      if (lastCol >= 6) sheet.getRange(2, 6, lastRow - 1, 1).setHorizontalAlignment("left"); // Note
+      if (lastCol >= 7) sheet.getRange(2, 7, lastRow - 1, 1).setHorizontalAlignment("center"); // LastUpdated
+
+      // Границы ячеек
+      dataRange.setBorder(
+        true, true, true, true, true, true,
+        "#b2dfdb",
+        SpreadsheetApp.BorderStyle.SOLID
+      );
+    }
+
+    // Внешняя жирная рамка
+    if (lastRow > 0) {
+      sheet.getRange(1, 1, lastRow, lastCol).setBorder(
+        true, true, true, true, false, false,
+        "#1a7a4a",
+        SpreadsheetApp.BorderStyle.SOLID_MEDIUM
+      );
+    }
+
+    // Авто-ширина колонок с небольшим запасом
+    for (var col = 1; col <= lastCol; col++) {
+      sheet.autoResizeColumn(col);
+      var currentWidth = sheet.getColumnWidth(col);
+      sheet.setColumnWidth(col, Math.max(currentWidth + 16, 80));
+    }
+  } catch (e) {
+    // Игнорируем ошибки форматирования — не критично
+  }
+}
+
+function formatSheet(sheet) {
+  try {
+    var lastRow = sheet.getLastRow();
+    var lastColumn = sheet.getLastColumn();
+    if (lastRow === 0 || lastColumn === 0) return;
+
+    var headerRange = sheet.getRange(1, 1, 1, lastColumn);
+    headerRange.setFontWeight("bold");
+    headerRange.setBackground("#2563eb");
+    headerRange.setFontColor("#ffffff");
+    headerRange.setHorizontalAlignment("center");
+    headerRange.setVerticalAlignment("middle");
+    sheet.setRowHeight(1, 28);
+
+    if (lastRow > 1) {
+      var dataRange = sheet.getRange(2, 1, lastRow - 1, lastColumn);
+      dataRange.setBorder(true, true, true, true, true, true, "#cbd5e1", SpreadsheetApp.BorderStyle.SOLID);
+      dataRange.setFontFamily("Arial");
+      dataRange.setFontSize(10);
+      dataRange.setVerticalAlignment("middle");
+      for (var r = 2; r <= lastRow; r++) sheet.setRowHeight(r, 22);
+      sheet.getRange(2, 1, lastRow - 1, 1).setHorizontalAlignment("center");
+      sheet.getRange(2, 2, lastRow - 1, 1).setHorizontalAlignment("center");
+      sheet.getRange(2, 3, lastRow - 1, 1).setHorizontalAlignment("left");
+      sheet.getRange(2, 4, lastRow - 1, 1).setHorizontalAlignment("center");
+      sheet.getRange(2, 5, lastRow - 1, 5).setHorizontalAlignment("left");
+      if (lastColumn >= 10) sheet.getRange(2, 10, lastRow - 1, 1).setHorizontalAlignment("left");
+    }
+    sheet.setFrozenRows(1);
+    for (var col = 1; col <= lastColumn; col++) {
+      sheet.autoResizeColumn(col);
+      sheet.setColumnWidth(col, Math.max(sheet.getColumnWidth(col) + 20, 100));
+    }
+  } catch (e) { /* ignore */ }
+}
+
+function cleanupOldBookings(sheet) {
+  return; // ДЕАКТИВИРОВАНО: Сохраняем всю историю записей
+  try {
+    var lastRow = sheet.getLastRow();
+    if (lastRow <= 1) return;
+
+    var now = new Date();
+    var cutoffDate = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+    cutoffDate.setHours(0, 0, 0, 0);
+
+    var lastColumn = sheet.getLastColumn();
+    var dataRange = sheet.getRange(2, 1, lastRow - 1, lastColumn);
+    var values = dataRange.getValues();
+
+    for (var i = values.length - 1; i >= 0; i--) {
+      var row = values[i];
+      var dateStr = row[1];
+      if (dateStr) {
+        var bookingDate = new Date(dateStr);
+        if (!isNaN(bookingDate.getTime()) && bookingDate < cutoffDate) {
+          sheet.deleteRow(i + 2);
+        }
+      }
+    }
+  } catch (e) { /* ignore */ }
+}
+
+// Преобразует значение даты (Date / строка) в строку YYYY-MM-DD
+function normalizeDateStr(value) {
+  if (!value) return "";
+  // Уже корректная строка YYYY-MM-DD — возвращаем как есть (без парсинга new Date(),
+  // которое в американском часовом поясе скрипта может сдвинуть дату на день назад).
+  if (typeof value === "string" && /^\d{4}-\d{2}-\d{2}$/.test(value.trim())) {
+    return value.trim();
+  }
+  if (value instanceof Date && !isNaN(value.getTime())) {
+    return Utilities.formatDate(value, Session.getScriptTimeZone(), "yyyy-MM-dd");
+  }
+  var d = new Date(value);
+  if (!isNaN(d.getTime())) {
+    return Utilities.formatDate(d, Session.getScriptTimeZone(), "yyyy-MM-dd");
+  }
+  return String(value);
+}
+
+// ----------------------------------------------------------------------------
+// Утилиты ответа
+// ----------------------------------------------------------------------------
+
+function json(obj) {
+  return ContentService.createTextOutput(JSON.stringify(obj))
+    .setMimeType(ContentService.MimeType.JSON);
+}
+
+function jsonError(message) {
+  return json({ status: "error", message: message });
+}
+
+function accessDenied() {
+  return ContentService.createTextOutput("Доступ запрещен");
+}
+
+// ----------------------------------------------------------------------------
+// Email authorization: checks the "Users" tab for a valid email with Active status.
+// ----------------------------------------------------------------------------
+
+function handleCheckAuth(e) {
+  var email = (e.parameter && e.parameter.email || "").toString().trim().toLowerCase();
+  var password = (e.parameter && e.parameter.password || "").toString().trim();
+  if (!email) {
+    return json({ status: "error", message: "Email is required." });
+  }
+  var authResult = checkUserAuth(email, password);
+  if (authResult === null) {
+    return json({ status: "error", message: "Email not found." });
+  }
+  if (authResult.error) {
+    if (authResult.error === "user_inactive") {
+      return json({ status: "error", message: "Email is not active." });
+    }
+    if (authResult.error === "wrong_password") {
+      return json({ status: "error", message: "Неверный пароль" });
+    }
+    return json({ status: "error", message: authResult.error });
+  }
+  return json({ status: "success", user: authResult.user });
+}
+
+function checkUserAuth(email, password) {
+  var ss = getSS();
+  var sheet = ss.getSheetByName("Users");
+  if (!sheet) return null;
+  var lastRow = sheet.getLastRow();
+  if (lastRow <= 1) return null;
+  
+  var data = sheet.getRange(2, 1, lastRow - 1, sheet.getLastColumn()).getValues();
+  for (var i = 0; i < data.length; i++) {
+    var rowEmail = String(data[i][0] || "").trim().toLowerCase();
+    
+    if (rowEmail === email) {
+      var rowStatus = String(data[i][2] || "").trim().toLowerCase();
+      if (rowStatus !== "active" && rowStatus !== "активен") {
+        return { error: "user_inactive" };
+      }
+      var rowPassword = String(data[i][3] || "").trim();
+      if (rowPassword !== password) {
+        return { error: "wrong_password" };
+      }
+      return {
+        user: {
+          email: data[i][0],
+          name: data[i][1] || "",
+          status: data[i][2] || "",
+          role: String(data[i][4] || "user")
+        }
+      };
+    }
+  }
+  return null;
+}
+
+function checkAdminRole(email) {
+  var ss = getSS();
+  var sheet = ss.getSheetByName("Users");
+  if (!sheet) return false;
+  var lastRow = sheet.getLastRow();
+  if (lastRow <= 1) return false;
+  
+  var data = sheet.getRange(2, 1, lastRow - 1, sheet.getLastColumn()).getValues();
+  for (var i = 0; i < data.length; i++) {
+    var rowEmail = String(data[i][0] || "").trim().toLowerCase();
+    if (rowEmail === email.toLowerCase()) {
+      var colDVal = data[i].length > 3 ? String(data[i][3] || "").trim().toLowerCase() : "";
+      var colEVal = data[i].length > 4 ? String(data[i][4] || "").trim().toLowerCase() : "";
+      
+      if (colDVal === "admin" || colDVal === "администратор" ||
+          colEVal === "admin" || colEVal === "администратор") {
+        return true;
+      }
+    }
+  }
+  return false;
+}
