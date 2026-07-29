@@ -1042,7 +1042,7 @@ window.addEventListener('DOMContentLoaded', () => {
         }
 
         function checkUpdate(registration) {
-          if (registration.waiting) {
+          if (registration.waiting && navigator.serviceWorker.controller) {
             showUpdateToast();
             return;
           }
