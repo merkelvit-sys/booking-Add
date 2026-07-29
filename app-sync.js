@@ -548,6 +548,13 @@ function buildApiUrl() {
           console.error("[SyncCore] Offline action rejected by server:", action, result);
           return true; 
         }
+        if (action.type === "create") {
+          try {
+            sendOneSignalNotificationClient(action.data.record);
+          } catch (e) {
+            console.error("[OneSignal] Error calling client-side push:", e);
+          }
+        }
         return true;
       }).catch(function (err) {
         console.warn("[SyncCore] Offline action network fail, will retry later:", action, err);
@@ -991,12 +998,22 @@ function buildApiUrl() {
 
     if (typeof serverCreatePromiseFactory !== "function") {
       isSyncLocked = false;
+      try {
+        sendOneSignalNotificationClient(rec);
+      } catch (e) {
+        console.error("[OneSignal] Error calling client-side push:", e);
+      }
       return Promise.resolve(true);
     }
 
     var p = serverCreatePromiseFactory();
     if (!p || typeof p.then !== "function") {
       isSyncLocked = false;
+      try {
+        sendOneSignalNotificationClient(rec);
+      } catch (e) {
+        console.error("[OneSignal] Error calling client-side push:", e);
+      }
       return Promise.resolve(true);
     }
 
@@ -1004,6 +1021,11 @@ function buildApiUrl() {
       isSyncLocked = false;
       if (result && (result.status === "error" || result.status === "conflict")) {
         throw new Error(result.message || "SERVER_ERROR");
+      }
+      try {
+        sendOneSignalNotificationClient(rec);
+      } catch (e) {
+        console.error("[OneSignal] Error calling client-side push:", e);
       }
       renderAllTabs();
       return result;
@@ -2479,6 +2501,119 @@ function buildApiUrl() {
     getApiKey: function () { return API_KEY; },
     getLang: getLang
   };
+
+  // OneSignal Web Push Client Integration
+  function sendOneSignalNotificationClient(rec) {
+    if (!rec) return;
+
+    var names = [];
+    if (rec.names && Array.isArray(rec.names)) {
+      names = rec.names;
+    } else if (rec.cartNumber === 2) {
+      names = [rec.name3, rec.name4];
+    } else {
+      names = [rec.name1, rec.name2];
+    }
+
+    var clean = names.map(function(n) { return (n || "").toString().trim(); });
+    var hasName0 = !!clean[0];
+    var hasName1 = !!clean[1];
+    var isSingle = (hasName0 && !hasName1) || (!hasName0 && hasName1);
+
+    if (!isSingle) return;
+
+    fetch("https://onesignal.com/api/v1/notifications", {
+      method: "POST",
+      headers: {
+        "Authorization": "Basic os_v2_app_qf7kneivx5hjbiqou4io2bjbqrk5d67ekfce225odujaw2oy2u5tfjlbn7yx2guhp2kyqncshe5sd4q2qyy4lckr3nj7g5zadkfnjga",
+        "Content-Type": "application/json; charset=utf-8"
+      },
+      body: JSON.stringify({
+        "app_id": "817ea691-15bf-4e90-a20e-a710ed052184",
+        "included_segments": ["All"],
+        "headings": {
+          "en": "Нужен напарник!",
+          "de": "Partner gesucht!",
+          "uk": "Потрібен партнер!"
+        },
+        "contents": {
+          "en": "Новая одиночная запись на стенд. Нажмите, чтобы записаться напарником!",
+          "de": "Ein Verkündiger sucht einen Partner. Klicken zum Anmelden!",
+          "uk": "Новий одиночний запис. Натисніть, щоб приєднатися!"
+        },
+        "url": "https://cw-vitali2.vercel.app"
+      })
+    }).then(function(res) {
+      console.log("[OneSignal] Notification triggered from client, status:", res.status);
+    }).catch(function(err) {
+      console.warn("[OneSignal] Client-side push failed (likely CORS restriction):", err);
+    });
+  }
+
+  // OneSignal Subscription Button Management
+  window.OneSignalDeferred = window.OneSignalDeferred || [];
+  window.OneSignalDeferred.push(async function(OneSignal) {
+    function updatePushNotificationsButtonStatus() {
+      var btn = document.getElementById('btnPushNotifications');
+      if (!btn) return;
+
+      var lang = (document.documentElement.lang || "ru").toLowerCase();
+      if (lang.indexOf("uk") === 0 || lang.indexOf("ua") === 0) lang = "uk";
+      else if (lang.indexOf("de") === 0) lang = "de";
+      else lang = "ru";
+
+      var texts = {
+        ru: {
+          default: "🔔 Уведомления о напарниках",
+          active: "Уведомления активны ✅"
+        },
+        de: {
+          default: "🔔 Partner-Benachrichtigungen",
+          active: "Benachrichtigungen aktiv ✅"
+        },
+        uk: {
+          default: "🔔 Сповіщення про напарників",
+          active: "Сповіщення активні ✅"
+        }
+      };
+
+      var t = texts[lang] || texts.ru;
+
+      if (OneSignal.Notifications && OneSignal.Notifications.permission) {
+        btn.innerHTML = t.active;
+        btn.classList.add('active');
+      } else {
+        btn.innerHTML = t.default;
+        btn.classList.remove('active');
+      }
+    }
+
+    function initButton() {
+      var btn = document.getElementById('btnPushNotifications');
+      if (btn) {
+        btn.onclick = function() {
+          if (OneSignal.Notifications && typeof OneSignal.Notifications.requestPermission === "function") {
+            OneSignal.Notifications.requestPermission().then(function() {
+              updatePushNotificationsButtonStatus();
+            });
+          }
+        };
+        updatePushNotificationsButtonStatus();
+      }
+    }
+
+    if (document.readyState === "loading") {
+      document.addEventListener("DOMContentLoaded", initButton);
+    } else {
+      initButton();
+    }
+
+    if (OneSignal.Notifications && typeof OneSignal.Notifications.addEventListener === "function") {
+      OneSignal.Notifications.addEventListener('permissionChange', function(permission) {
+        updatePushNotificationsButtonStatus();
+      });
+    }
+  });
 
   // Инициализация переключателя тележек (из localStorage) и заполнение SVG-иконок
   initTrolleyFilter();

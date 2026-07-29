@@ -2,6 +2,15 @@
 <html lang="uk">
 <head>
     <meta charset="UTF-8">
+    <script src="https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.page.js" defer></script>
+    <script>
+      window.OneSignalDeferred = window.OneSignalDeferred || [];
+      OneSignalDeferred.push(async function(OneSignal) {
+        await OneSignal.init({
+          appId: "817ea691-15bf-4e90-a20e-a710ed052184",
+        });
+      });
+    </script>
     <script>
         (function() {
             var currentLang = "ua";
@@ -1494,220 +1503,29 @@
             height: 16px;
         }
 
-        /* Global Center Tooltip */
-        .global-tooltip-backdrop {
-            position: fixed;
-            inset: 0;
-            background: rgba(0, 0, 0, 0.45);
-            z-index: 99999;
-            backdrop-filter: blur(3px);
-            -webkit-backdrop-filter: blur(3px);
-            animation: globalTooltipFadeIn 0.3s ease-out;
-        }
-        .global-center-tooltip {
-            position: fixed;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            z-index: 100000;
-            width: 80%;
-            max-width: 300px;
-            background: rgba(30, 30, 40, 0.85);
-            backdrop-filter: blur(20px);
-            -webkit-backdrop-filter: blur(20px);
-            border-radius: 14px;
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            box-shadow: 0 12px 40px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(255, 255, 255, 0.05) inset;
-            padding: 18px 22px;
-            color: var(--text, #e0e0e0);
-            font-size: 0.82rem;
-            line-height: 1.55;
-            animation: globalTooltipIn 0.3s ease-out forwards;
-            text-align: center;
-            box-sizing: border-box;
-        }
-        .global-center-tooltip-close {
-            position: absolute;
-            top: 6px;
-            right: 10px;
-            background: none;
-            border: none;
-            color: var(--text-muted, #888);
-            font-size: 1.3rem;
-            cursor: pointer;
-            padding: 4px 8px;
-            border-radius: 6px;
-            line-height: 1;
-            transition: color 0.2s, background-color 0.2s;
-            opacity: 0.7;
-        }
-        .global-center-tooltip-close:hover {
-            color: var(--text, #e0e0e0);
-            background-color: rgba(255, 255, 255, 0.08);
-            opacity: 1;
-        }
-        .global-center-tooltip-content {
-            margin-top: 4px;
-        }
-        @keyframes globalTooltipIn {
-            from { top: 45%; opacity: 0; }
-            to { top: 50%; opacity: 1; }
-        }
-        @keyframes globalTooltipFadeIn {
-            from { opacity: 0; }
-            to { opacity: 1; }
-        }
-        /* Auth Modal Styles */
-        .auth-modal-overlay {
-            position: fixed;
-            inset: 0;
-            background: rgba(0,0,0,0.6);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            z-index: 10000;
-            padding: 16px;
-            backdrop-filter: blur(4px);
-            animation: fadeInOverlay 0.2s ease;
-        }
-
-        .auth-modal-box {
-            background: var(--card-bg);
-            border-radius: var(--radius-lg);
-            padding: 32px 24px;
-            max-width: 400px;
-            width: 100%;
-            box-shadow: var(--shadow-lg);
-            border: 1px solid var(--border);
-            animation: modalPop 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
-            text-align: center;
-        }
-
-        .auth-modal-title {
-            font-size: 1.15rem;
-            font-weight: 700;
-            margin-bottom: 8px;
-            color: var(--text);
-        }
-
-        .auth-modal-desc {
-            font-size: 0.85rem;
-            color: var(--text-muted);
-            margin-bottom: 20px;
-            line-height: 1.5;
-        }
-
-        .auth-modal-input {
-            width: 100%;
-            padding: 12px 14px;
-            border: 1px solid var(--border);
-            border-radius: var(--radius-sm);
-            font-family: var(--font-sans);
-            font-size: 0.95rem;
-            background-color: var(--card-bg);
-            color: var(--text);
-            outline: none;
-            transition: all 0.2s ease;
-            margin-bottom: 12px;
-            box-sizing: border-box;
-            text-align: center;
-        }
-
-        .auth-modal-input:focus {
-            border-color: var(--primary);
-            box-shadow: 0 0 0 3px var(--primary-container);
-        }
-
-        .auth-modal-error {
-            font-size: 0.82rem;
-            color: var(--error);
-            margin-bottom: 12px;
-            min-height: 1.2em;
-        }
-
-        .auth-modal-btn {
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            width: 100%;
-            padding: 14px;
-            background-color: var(--primary);
-            color: white;
-            border: none;
-            border-radius: var(--radius-md);
-            font-family: var(--font-sans);
-            font-size: 0.95rem;
-            font-weight: 600;
-            cursor: pointer;
-            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-            position: relative;
-            overflow: hidden;
-            box-shadow: var(--shadow);
-            margin-top: 4px;
-        }
-
-        .auth-modal-btn:hover:not(:disabled) {
-            background-color: var(--primary-hover);
-            transform: translateY(-1px);
-            box-shadow: var(--shadow-lg);
-        }
-
-        .auth-modal-btn:disabled {
-            background-color: var(--border);
-            color: var(--text-muted);
-            cursor: not-allowed;
-            transform: none;
-            box-shadow: none;
-        }
-
-        .auth-modal-spinner {
-            width: 18px;
-            height: 18px;
-            border: 2px solid rgba(255,255,255,0.3);
-            border-radius: 50%;
-            border-top-color: white;
-            animation: spin 0.8s linear infinite;
+        .info-helper-box {
             display: none;
-            margin-right: 6px;
-        }
-
-        .logout-btn {
-            background: none;
-            border: 1px solid var(--border);
-            color: var(--text-muted);
-            cursor: pointer;
-            padding: 4px 10px;
-            font-size: 0.72rem;
-            font-weight: 600;
-            border-radius: var(--radius-sm);
-            transition: all 0.2s ease;
-            display: inline-flex;
-            align-items: center;
-            gap: 4px;
-            margin-left: 6px;
-        }
-
-        .logout-btn:hover {
-            background-color: var(--error-bg);
-            color: var(--error);
-            border-color: var(--error);
-        }
-
-        .header-auth-info {
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 8px;
-            margin-top: 6px;
-            font-size: 0.82rem;
-            color: var(--text-muted);
-        }
-
-        .header-auth-info .user-email {
-            font-weight: 600;
+            background-color: var(--primary-container);
             color: var(--primary);
+            border-left: 4px solid var(--primary);
+            border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+            padding: 8px 12px;
+            font-size: 0.75rem;
+            font-weight: 500;
+            margin-top: 6px;
+            margin-bottom: 10px;
+            animation: helperBoxFade 0.2s ease-out forwards;
+            line-height: 1.4;
+            text-align: left;
+            transform: none !important;
+            width: 100% !important;
+            box-sizing: border-box !important;
         }
 
+        @keyframes helperBoxFade {
+            from { opacity: 0; transform: translateY(-4px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
     </style>
     <link rel="stylesheet" href="app-sync.css">
 </head>
@@ -1804,7 +1622,6 @@
                     <svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24" style="vertical-align: middle;"><path d="M8.684 10.742l5.632-2.816m0 8.148l-5.632-2.816M21 12a3 3 0 11-6 0 3 3 0 016 0zm-12-6a3 3 0 11-6 0 3 3 0 016 0zm0 12a3 3 0 11-6 0 3 3 0 016 0z" stroke-linecap="round" stroke-linejoin="round"/></svg>
                     Поділитися
                 </button>
-                <button type="button" class="logout-btn" id="btnLogout" onclick="handleLogout()" style="display:none;">Вийти</button>
             </div>
             <h1>Служіння з візками</h1>
             <p class="subtitle">Стенди в місті Марбург, Німеччина</p>
@@ -1813,6 +1630,11 @@
                     <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24"><path d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0" stroke-linecap="round" stroke-linejoin="round"/></svg>
                     Зібрання: Українське
                 </span>
+            </div>
+            <div style="text-align:center; margin-top: 10px;">
+                <button type="button" class="lang-btn share-btn" id="btnPushNotifications" style="margin: 0 auto; display: inline-flex; align-items: center; justify-content: center; gap: 6px; height: 32px; padding: 0 12px; font-size: 0.85rem; border-radius: 6px;">
+                    🔔 Сповіщення про напарників
+                </button>
             </div>
         </header>
 
@@ -1831,12 +1653,15 @@
             <h2 class="section-title">
                 <span>
                     Виберіть дату
-                    <button type="button" class="btn-info-toggle" onclick="toggleInfo(this)" title="Показати підказку" data-tooltip="Дата проведення зміни (тільки для читання)">
+                    <button type="button" class="btn-info-toggle" onclick="toggleInfo('dateInfo')" title="Показати підказку">
                         <svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z" fill="currentColor"/></svg>
                     </button>
                 </span>
                 <button type="button" onclick="jumpToToday()" style="background:none; border:none; color:var(--primary); font-size:0.75rem; font-weight:700; cursor:pointer; padding: 4px 8px;">Сьогодні</button>
             </h2>
+            <div id="dateInfo" class="info-helper-box">
+                Виберіть тиждень (Поточний, Наступний або Через один) у перемикачі, а потім натисніть на потрібну дату в круглій стрічці днів.
+            </div>
             <div class="week-switcher">
                 <button type="button" class="week-btn" id="btnPrevWeek" onclick="switchWeek('prev')">Минулий тиждень</button>
                 <button type="button" class="week-btn active" id="btnThisWeek" onclick="switchWeek('this')">Поточний тиждень</button>
@@ -1862,7 +1687,6 @@
                 </button>
             </div>
             <div id="scheduleWeatherWidget" class="schedule-weather-widget"></div>
-            <div id="yearScheduleMessageContainer" class="year-schedule-message-banner" style="display: none;"></div>
             <div class="schedule-board" id="scheduleBoard">
                 <!-- Сюда вставляється живий розклад -->
             </div>
@@ -1927,23 +1751,6 @@
         </div>
     </div>
 
-    <!-- Auth Modal -->
-    <div id="authModal" class="auth-modal-overlay" style="display: none;" role="dialog" aria-modal="true" aria-labelledby="authModalTitle">
-        <div class="auth-modal-box">
-            <div class="auth-modal-title" id="authModalTitle">Доступ до розкладу</div>
-            <div class="auth-modal-desc">Введіть ваш email та пароль для авторизації. Доступ надається лише активним користувачам.</div>
-            <form id="authForm" onsubmit="handleAuthSubmit(event)">
-                <input type="email" id="authEmail" class="auth-modal-input" placeholder="your@email.com" required autocomplete="email" aria-label="Email">
-                <input type="password" id="authPassword" class="auth-modal-input" placeholder="Пароль" required autocomplete="current-password" aria-label="Пароль">
-                <div class="auth-modal-error" id="authError"></div>
-                <button type="submit" class="auth-modal-btn" id="authSubmitBtn">
-                    <span class="auth-modal-spinner" id="authSpinner"></span>
-                    <span id="authBtnText">Увійти</span>
-                </button>
-            </form>
-        </div>
-    </div>
-
     <!-- Модальное окно КАРТЫ -->
     <div id="mapModal" class="modal-backdrop" style="display: none;" onclick="onModalBackdropClick(event)">
         <div class="modal-content">
@@ -2003,19 +1810,21 @@
                     <div>
                         <div style="display: flex; align-items: center; gap: 4px; margin-bottom: 4px;">
                             <label class="compact-label" id="qbDateLabel" style="margin-bottom: 0;">Дата</label>
-                            <button type="button" class="btn-info-toggle" onclick="toggleInfo(this)" style="padding: 2px; height: 18px; display: inline-flex; align-items: center;" data-tooltip="Дата проведення зміни (тільки для читання)">
+                            <button type="button" class="btn-info-toggle" onclick="toggleInfo('qbDateInfo')" style="padding: 2px; height: 18px; display: inline-flex; align-items: center;">
                                 <svg viewBox="0 0 24 24" style="width: 14px; height: 14px;"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z" fill="currentColor"/></svg>
                             </button>
                         </div>
+                        <div id="qbDateInfo" class="info-helper-box" style="margin-top: 4px; margin-bottom: 6px;">Дата проведення зміни (тільки для читання)</div>
                         <input type="text" id="qbDate" class="input-field" disabled style="background-color: var(--primary-container); border-color: var(--border); opacity: 0.85; cursor: not-allowed;">
                     </div>
                     <div>
                         <div style="display: flex; align-items: center; gap: 4px; margin-bottom: 4px;">
                             <label class="compact-label" id="qbTimeLabel" style="margin-bottom: 0;">Час</label>
-                            <button type="button" class="btn-info-toggle" onclick="toggleInfo(this)" style="padding: 2px; height: 18px; display: inline-flex; align-items: center;" data-tooltip="Час чергування. Можна вказати нестандартний інтервал, наприклад, 10:30 - 12:30.">
+                            <button type="button" class="btn-info-toggle" onclick="toggleInfo('qbTimeInfo')" style="padding: 2px; height: 18px; display: inline-flex; align-items: center;">
                                 <svg viewBox="0 0 24 24" style="width: 14px; height: 14px;"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z" fill="currentColor"/></svg>
                             </button>
                         </div>
+                        <div id="qbTimeInfo" class="info-helper-box" style="margin-top: 4px; margin-bottom: 6px;">Час чергування. Можна вказати нестандартний інтервал, наприклад, 10:30 - 12:30.</div>
                         <input type="text" id="qbTime" class="input-field" disabled style="background-color: var(--primary-container); border-color: var(--border); opacity: 0.85; cursor: not-allowed;" placeholder="наприклад, 10:00 - 12:00">
                     </div>
                 </div>
@@ -2023,19 +1832,21 @@
                     <div>
                         <div style="display: flex; align-items: center; gap: 4px; margin-bottom: 4px;">
                             <label class="compact-label" id="qbLocationLabel" style="margin-bottom: 0;">Місце</label>
-                            <button type="button" class="btn-info-toggle" onclick="toggleInfo(this)" style="padding: 2px; height: 18px; display: inline-flex; align-items: center;" data-tooltip="Вибрана локація проведення служіння (тільки для читання)">
+                            <button type="button" class="btn-info-toggle" onclick="toggleInfo('qbLocationInfo')" style="padding: 2px; height: 18px; display: inline-flex; align-items: center;">
                                 <svg viewBox="0 0 24 24" style="width: 14px; height: 14px;"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z" fill="currentColor"/></svg>
                             </button>
                         </div>
+                        <div id="qbLocationInfo" class="info-helper-box" style="margin-top: 4px; margin-bottom: 6px;">Вибрана локація проведення служіння (тільки для читання)</div>
                         <input type="text" id="qbLocation" class="input-field" disabled style="background-color: var(--primary-container); border-color: var(--border); opacity: 0.85; cursor: not-allowed;">
                     </div>
                     <div>
                         <div style="display: flex; align-items: center; gap: 4px; margin-bottom: 4px;">
                             <label class="compact-label" id="qbCartLabel" style="margin-bottom: 0;">Візок</label>
-                            <button type="button" class="btn-info-toggle" onclick="toggleInfo(this)" style="padding: 2px; height: 18px; display: inline-flex; align-items: center;" data-tooltip="Номер стенду-візка для цієї зміни (тільки для читання)">
+                            <button type="button" class="btn-info-toggle" onclick="toggleInfo('qbCartInfo')" style="padding: 2px; height: 18px; display: inline-flex; align-items: center;">
                                 <svg viewBox="0 0 24 24" style="width: 14px; height: 14px;"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z" fill="currentColor"/></svg>
                             </button>
                         </div>
+                        <div id="qbCartInfo" class="info-helper-box" style="margin-top: 4px; margin-bottom: 6px;">Номер стенду-візка для цієї зміни (тільки для читання)</div>
                         <input type="text" id="qbCart" class="input-field" disabled style="background-color: var(--primary-container); border-color: var(--border); opacity: 0.85; cursor: not-allowed;">
                     </div>
                 </div>
@@ -2043,10 +1854,11 @@
                 <div class="form-section-compact">
                     <div style="display: flex; align-items: center; gap: 4px; margin-bottom: 6px;">
                         <label class="compact-label" id="qbLangLabel" style="margin-bottom: 0;">Виберіть мову візка</label>
-                        <button type="button" class="btn-info-toggle" onclick="toggleInfo(this)" style="padding: 2px; height: 18px; display: inline-flex; align-items: center;" data-tooltip="Виберіть мову літератури, яка буде представлена на цьому стенді.">
+                        <button type="button" class="btn-info-toggle" onclick="toggleInfo('qbLangInfo')" style="padding: 2px; height: 18px; display: inline-flex; align-items: center;">
                             <svg viewBox="0 0 24 24" style="width: 14px; height: 14px;"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z" fill="currentColor"/></svg>
                         </button>
                     </div>
+                    <div id="qbLangInfo" class="info-helper-box" style="margin-top: 4px; margin-bottom: 6px;">Виберіть мову літератури, яка буде представлена на цьому стенді.</div>
                     <div id="qbLangPicker"></div>
                 </div>
 
@@ -2054,7 +1866,7 @@
                     <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px;">
                         <div style="display: flex; align-items: center; gap: 4px;">
                             <label class="compact-label" id="qbNamesLabel" style="margin-bottom: 0;">Учасники зміни</label>
-                            <button type="button" class="btn-info-toggle" onclick="toggleInfo(this)" style="padding: 2px; height: 18px; display: inline-flex; align-items: center;" data-tooltip="Вкажіть імена двох вісників для цього чергування.">
+                            <button type="button" class="btn-info-toggle" onclick="toggleInfo('qbNamesInfo')" style="padding: 2px; height: 18px; display: inline-flex; align-items: center;">
                                 <svg viewBox="0 0 24 24" style="width: 14px; height: 14px;"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z" fill="currentColor"/></svg>
                             </button>
                         </div>
@@ -2070,6 +1882,7 @@
                             display: none;
                         ">⚡ Вставити мої імена</button>
                     </div>
+                    <div id="qbNamesInfo" class="info-helper-box" style="margin-top: 4px; margin-bottom: 6px;">Вкажіть імена двох вісників для цього чергування.</div>
                     <input type="text" id="qbName1" class="input-field" placeholder="Вісник 1 (ПІБ)" required autocomplete="off" style="margin-bottom: 8px;">
                     <input type="text" id="qbName2" class="input-field" placeholder="Вісник 2 (ПІБ)" autocomplete="off" style="margin-bottom: 8px;">
                     
@@ -2123,6 +1936,14 @@
     </div>
 
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+        <script>
+        function toggleInfo(infoId) {
+            const box = document.getElementById(infoId);
+            if (!box) return;
+            const isVisible = window.getComputedStyle(box).display === 'block';
+            box.style.display = isVisible ? 'none' : 'block';
+        }
+    </script>
     <!-- ── Підтвердження зміни зібрання (UA) ──────────────── -->
     <div id="langConfirmOverlay" class="lang-confirm-overlay" style="display:none;" role="dialog" aria-modal="true" aria-labelledby="langConfirmTitle">
         <div class="lang-confirm-box">
@@ -2140,7 +1961,6 @@
     <script>
     (function() {
         window.langSwitchConfirm = function(e, langCode, url, langName) {
-            if (typeof window.hapticFeedback === 'function') window.hapticFeedback(20);
             e.preventDefault();
             var msg = 'Ви дійсно бажаєте перейти на графік ' + langName + ' зібрання?';
             document.getElementById('langConfirmMsg').textContent = msg;

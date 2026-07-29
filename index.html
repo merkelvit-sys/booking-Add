@@ -2,6 +2,15 @@
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
+    <script src="https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.page.js" defer></script>
+    <script>
+      window.OneSignalDeferred = window.OneSignalDeferred || [];
+      OneSignalDeferred.push(async function(OneSignal) {
+        await OneSignal.init({
+          appId: "817ea691-15bf-4e90-a20e-a710ed052184",
+        });
+      });
+    </script>
     <script>
         (function() {
             var currentLang = "ru";
@@ -1818,6 +1827,11 @@
                     <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24"><path d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0" stroke-linecap="round" stroke-linejoin="round"/></svg>
                     Собрание: Русскоязычное
                 </span>
+            </div>
+            <div style="text-align:center; margin-top: 10px;">
+                <button type="button" class="lang-btn share-btn" id="btnPushNotifications" style="margin: 0 auto; display: inline-flex; align-items: center; justify-content: center; gap: 6px; height: 32px; padding: 0 12px; font-size: 0.85rem; border-radius: 6px;">
+                    🔔 Уведомления о напарниках
+                </button>
             </div>
         </header>
 
