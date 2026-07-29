@@ -1125,19 +1125,21 @@ window.addEventListener('DOMContentLoaded', () => {
         });
         window.addEventListener('focus', manualCheck);
 
-        // Initialize OneSignal ONLY after Service Worker is successfully registered
-        window.OneSignalDeferred = window.OneSignalDeferred || [];
-        window.OneSignalDeferred.push(async function(OneSignal) {
-          await OneSignal.init({
-            appId: "817ea691-15bf-4e90-a20e-a710ed052184",
-            serviceWorkerPath: "sw.js",
-            serviceWorkerParam: { scope: "/" },
-            serviceWorkerOverrideForCustomPage: true
+        // Initialize OneSignal ONLY after Service Worker is successfully active and ready
+        navigator.serviceWorker.ready.then(() => {
+          window.OneSignalDeferred = window.OneSignalDeferred || [];
+          window.OneSignalDeferred.push(async function(OneSignal) {
+            await OneSignal.init({
+              appId: "817ea691-15bf-4e90-a20e-a710ed052184",
+              serviceWorkerPath: "sw.js",
+              serviceWorkerParam: { scope: "/" },
+              serviceWorkerOverrideForCustomPage: true
+            });
+            window.oneSignalReady = true;
+            if (typeof window.syncNotificationButtonState === 'function') {
+              window.syncNotificationButtonState();
+            }
           });
-          window.oneSignalReady = true;
-          if (typeof window.syncNotificationButtonState === 'function') {
-            window.syncNotificationButtonState();
-          }
         });
       })
       .catch(err => console.log('Service Worker Failed', err));
