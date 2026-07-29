@@ -830,6 +830,10 @@ function buildApiUrl() {
     else if (typeof renderScheduleBoard === "function") renderScheduleBoard();
     if (typeof renderYearGrid === "function") renderYearGrid();
 
+    if (typeof window.syncNotificationButtonState === "function") {
+      window.syncNotificationButtonState();
+    }
+
     try {
       var activeTab = document.querySelector('.tab-content.active');
       if (activeTab) {
@@ -2551,66 +2555,109 @@ function buildApiUrl() {
   }
 
   // OneSignal Subscription Button Management
+  function syncNotificationButtonState() {
+    var btn = document.getElementById('btnPushNotifications');
+    if (!btn) return;
+
+    var lang = (document.documentElement.lang || "ru").toLowerCase();
+    if (lang.indexOf("uk") === 0 || lang.indexOf("ua") === 0) lang = "uk";
+    else if (lang.indexOf("de") === 0) lang = "de";
+    else lang = "ru";
+
+    var texts = {
+      ru: {
+        default: "🔔 Уведомления о напарниках",
+        active: "✅ Уведомления активны"
+      },
+      de: {
+        default: "🔔 Partner-Benachrichtigungen",
+        active: "✅ Benachrichtigungen aktiv"
+      },
+      uk: {
+        default: "🔔 Сповіщення про напарників",
+        active: "✅ Сповіщення активні"
+      }
+    };
+
+    var t = texts[lang] || texts.ru;
+
+    var isGranted = (typeof Notification !== 'undefined' && Notification.permission === 'granted') ||
+                    (typeof window.OneSignal !== 'undefined' && window.OneSignal.Notifications && window.OneSignal.Notifications.permission);
+
+    if (isGranted) {
+      btn.innerHTML = t.active;
+      btn.classList.add('active');
+    } else {
+      btn.innerHTML = t.default;
+      btn.classList.remove('active');
+    }
+  }
+  window.syncNotificationButtonState = syncNotificationButtonState;
+
+  function initNotificationButton() {
+    var btn = document.getElementById('btnPushNotifications');
+    if (!btn) return;
+
+    btn.onclick = function() {
+      if (typeof window.OneSignal !== 'undefined' && window.OneSignal.Notifications && typeof window.OneSignal.Notifications.requestPermission === "function") {
+        try {
+          var res = window.OneSignal.Notifications.requestPermission();
+          if (res && typeof res.then === "function") {
+            res.then(function() {
+              syncNotificationButtonState();
+            }).catch(function(err) {
+              console.warn("[OneSignal] requestPermission rejected:", err);
+              syncNotificationButtonState();
+            });
+          } else {
+            setTimeout(syncNotificationButtonState, 1000);
+          }
+        } catch (e) {
+          console.warn("[OneSignal] requestPermission crashed, falling back to native:", e);
+          requestNativePermission();
+        }
+      } else {
+        requestNativePermission();
+      }
+    };
+
+    syncNotificationButtonState();
+  }
+
+  function requestNativePermission() {
+    if (typeof Notification !== 'undefined' && typeof Notification.requestPermission === 'function') {
+      try {
+        var res = Notification.requestPermission();
+        if (res && typeof res.then === "function") {
+          res.then(function() {
+            syncNotificationButtonState();
+          }).catch(function() {
+            syncNotificationButtonState();
+          });
+        } else {
+          Notification.requestPermission(function() {
+            syncNotificationButtonState();
+          });
+        }
+      } catch (e) {
+        console.error("Native requestPermission failed:", e);
+      }
+    }
+  }
+
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", initNotificationButton);
+  } else {
+    initNotificationButton();
+  }
+
   window.OneSignalDeferred = window.OneSignalDeferred || [];
   window.OneSignalDeferred.push(async function(OneSignal) {
-    function updatePushNotificationsButtonStatus() {
-      var btn = document.getElementById('btnPushNotifications');
-      if (!btn) return;
-
-      var lang = (document.documentElement.lang || "ru").toLowerCase();
-      if (lang.indexOf("uk") === 0 || lang.indexOf("ua") === 0) lang = "uk";
-      else if (lang.indexOf("de") === 0) lang = "de";
-      else lang = "ru";
-
-      var texts = {
-        ru: {
-          default: "🔔 Уведомления о напарниках",
-          active: "Уведомления активны ✅"
-        },
-        de: {
-          default: "🔔 Partner-Benachrichtigungen",
-          active: "Benachrichtigungen aktiv ✅"
-        },
-        uk: {
-          default: "🔔 Сповіщення про напарників",
-          active: "Сповіщення активні ✅"
-        }
-      };
-
-      var t = texts[lang] || texts.ru;
-
-      if (OneSignal.Notifications && OneSignal.Notifications.permission) {
-        btn.innerHTML = t.active;
-        btn.classList.add('active');
-      } else {
-        btn.innerHTML = t.default;
-        btn.classList.remove('active');
-      }
-    }
-
-    function initButton() {
-      var btn = document.getElementById('btnPushNotifications');
-      if (btn) {
-        btn.onclick = function() {
-          if (OneSignal.Notifications && typeof OneSignal.Notifications.requestPermission === "function") {
-            OneSignal.Notifications.requestPermission().then(function() {
-              updatePushNotificationsButtonStatus();
-            });
-          }
-        };
-        updatePushNotificationsButtonStatus();
-      }
-    }
-
-    if (document.readyState === "loading") {
-      document.addEventListener("DOMContentLoaded", initButton);
-    } else {
-      initButton();
-    }
+    syncNotificationButtonState();
 
     if (OneSignal.Notifications && typeof OneSignal.Notifications.addEventListener === "function") {
       OneSignal.Notifications.addEventListener('permissionChange', function(permission) {
-        updatePushNotificationsButtonStatus();
+        syncNotificationButtonState();
       });
     }
   });

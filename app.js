@@ -656,6 +656,10 @@ function updateAuthUI() {
   if (logoutBtn) {
     logoutBtn.style.display = authUser ? "inline-flex" : "none";
   }
+
+  if (typeof window.syncNotificationButtonState === 'function') {
+    window.syncNotificationButtonState();
+  }
 }
 
 function isAuthenticated() {
@@ -1277,6 +1281,10 @@ function selectDate(dateISO) {
   if (typeof updateScheduleWeatherWidget === 'function') {
     updateScheduleWeatherWidget(dateISO);
   }
+
+  if (typeof window.syncNotificationButtonState === 'function') {
+    window.syncNotificationButtonState();
+  }
 }
 
 // ----------------------------------------------------------------------------
@@ -1568,6 +1576,10 @@ function switchTab(tabId) {
   if (dateBlock) dateBlock.style.display = (tabId === 'schedule') ? '' : 'none';
   if (tabId === 'schedule') renderScheduleTab();
   if (tabId === 'year' && window.SyncCore) SyncCore.renderYearGrid();
+
+  if (typeof window.syncNotificationButtonState === 'function') {
+    window.syncNotificationButtonState();
+  }
 }
 
 // Канонические имена для единого менеджера состояния (app-sync.js -> renderAllTabs).
