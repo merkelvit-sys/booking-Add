@@ -1134,8 +1134,8 @@ window.addEventListener('DOMContentLoaded', () => {
         window.OneSignalDeferred.push(async function(OneSignal) {
           await OneSignal.init({
             appId: "817ea691-15bf-4e90-a20e-a710ed052184",
-            serviceWorkerPath: "onesignal/OneSignalSDKWorker.js",
-            serviceWorkerParam: { scope: "/onesignal/" }
+            serviceWorkerPath: "sw.js",
+            serviceWorkerParam: { scope: "/" }
           });
           window.oneSignalReady = true;
           if (typeof window.syncNotificationButtonState === 'function') {
