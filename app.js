@@ -966,6 +966,14 @@ window.addEventListener('DOMContentLoaded', () => {
   // SW работает только на http(s):// (secure context). При открытии через file://
   // (origin 'null') регистрация невозможна — пропускаем, чтобы не было ошибки.
   if ('serviceWorker' in navigator && window.location.protocol.startsWith('http')) {
+    let refreshing = false;
+    navigator.serviceWorker.addEventListener('controllerchange', () => {
+      if (!refreshing) {
+        refreshing = true;
+        window.location.reload();
+      }
+    });
+
     navigator.serviceWorker.register('sw.js', { scope: '/' })
       .then(reg => {
         function showUpdateToast() {
@@ -1021,7 +1029,11 @@ window.addEventListener('DOMContentLoaded', () => {
             transition: opacity 0.2s;
           `;
           btn.addEventListener('click', () => {
-            window.location.reload();
+            if (reg && reg.waiting) {
+              reg.waiting.postMessage({ type: 'SKIP_WAITING' });
+            } else {
+              window.location.reload();
+            }
           });
           
           banner.appendChild(textSpan);
