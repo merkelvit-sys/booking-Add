@@ -1,0 +1,763 @@
+diff --git a/app-sync.css b/app-sync.css
+index fcc94ef..c94afd3 100644
+--- a/app-sync.css
++++ b/app-sync.css
+@@ -752,6 +752,38 @@
+     background-color: rgba(120, 120, 120, 0.04);
+ }
+ 
++/* ===== Яркие стильные цветные бейджи языков тележек (RU, UA, DE) ===== */
++.trolley-lang-badge {
++    display: inline-flex;
++    align-items: center;
++    justify-content: center;
++    padding: 3px 8px;
++    font-size: 0.68rem;
++    font-weight: 800;
++    letter-spacing: 0.6px;
++    border-radius: 6px;
++    line-height: 1;
++    margin-left: 6px;
++    vertical-align: middle;
++    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.15);
++    text-transform: uppercase;
++}
++.trolley-lang-badge.lang-badge-ru {
++    background-color: #dc2626;
++    color: #ffffff;
++    border: 1px solid #b91c1c;
++}
++.trolley-lang-badge.lang-badge-ua {
++    background-color: #2563eb;
++    color: #ffffff;
++    border: 1px solid #1d4ed8;
++}
++.trolley-lang-badge.lang-badge-de {
++    background-color: #d97706;
++    color: #ffffff;
++    border: 1px solid #b45309;
++}
++
+ .board-cart-info.empty {
+     cursor: pointer;
+     touch-action: manipulation;
+diff --git a/app.js b/app.js
+index 55b3f65..6542a43 100644
+--- a/app.js
++++ b/app.js
+@@ -736,10 +736,14 @@ window.addEventListener('DOMContentLoaded', () => {
+   }
+ 
+   // Заполнить сохранённые имена
+-  document.getElementById('name1').value = localStorage.getItem('pwaName1') || '';
+-  document.getElementById('name2').value = localStorage.getItem('pwaName2') || '';
+-  document.getElementById('name3').value = localStorage.getItem('pwaName3') || '';
+-  document.getElementById('name4').value = localStorage.getItem('pwaName4') || '';
++  const n1 = document.getElementById('name1');
++  const n2 = document.getElementById('name2');
++  const n3 = document.getElementById('name3');
++  const n4 = document.getElementById('name4');
++  if (n1) n1.value = localStorage.getItem('pwaName1') || '';
++  if (n2) n2.value = localStorage.getItem('pwaName2') || '';
++  if (n3) n3.value = localStorage.getItem('pwaName3') || '';
++  if (n4) n4.value = localStorage.getItem('pwaName4') || '';
+ 
+   generateWeekStrip();
+   loadCustomLocations();
+@@ -754,7 +758,10 @@ window.addEventListener('DOMContentLoaded', () => {
+   // Примечание: запуск SyncCore.runAppLaunch() и startAutoSync() вынесен в
+   // ensureAutoSyncStarts() ниже — он срабатывает гарантированно, даже если
+   // DOMContentLoaded уже прошёл до загрузки app-sync.js. Здесь НЕ дублируем.
+-  document.getElementById('bookingForm').addEventListener('submit', handleFormSubmit);
++  const bookingFormEl = document.getElementById('bookingForm');
++  if (bookingFormEl) {
++    bookingFormEl.addEventListener('submit', handleFormSubmit);
++  }
+ 
+   const qbForm = document.getElementById('quickBookingForm');
+   if (qbForm) {
+@@ -994,19 +1001,16 @@ function generateWeekStripFor(weekOffset, preselectDate) {
+ }
+ 
+ function switchTab(tabId) {
+-  const tabs = ['booking', 'schedule', 'year'];
++  if (tabId !== 'year') tabId = 'schedule';
++  const tabs = ['schedule', 'year'];
+   tabs.forEach(t => {
+     const btn = document.getElementById('btnTab' + t.charAt(0).toUpperCase() + t.slice(1));
+     const content = document.getElementById(t + 'TabContent');
+     if (btn) btn.classList.toggle('active', tabId === t);
+     if (content) content.classList.toggle('active', tabId === t);
+   });
+-  // Блок выбора даты нужен во вкладках «Запись» И «График» (в Графике по нему
+-  // переключаются дни недели). Прячем его только в «Год».
+   const dateBlock = document.getElementById('dateSelectBlock');
+-  if (dateBlock) dateBlock.style.display = (tabId === 'booking' || tabId === 'schedule') ? '' : 'none';
+-  // Мгновенный показ из единого состояния (БЕЗ сетевых запросов)
+-  if (tabId === 'booking') renderBookingTab();
++  if (dateBlock) dateBlock.style.display = (tabId === 'schedule') ? '' : 'none';
+   if (tabId === 'schedule') renderScheduleTab();
+   if (tabId === 'year' && window.SyncCore) SyncCore.renderYearGrid();
+ }
+@@ -1273,11 +1277,10 @@ function toggleFormState(disabled) {
+     if (status) status.textContent = disabled ? S('selectLocation') : S('statusAvailable');
+   });
+ 
+-  document.getElementById('name1').disabled = disabled;
+-  document.getElementById('name2').disabled = disabled;
+-  document.getElementById('name3').disabled = disabled;
+-  document.getElementById('name4').disabled = disabled;
+-  document.getElementById('submitBtn').disabled = disabled;
++  ['name1', 'name2', 'name3', 'name4', 'submitBtn'].forEach(id => {
++    const el = document.getElementById(id);
++    if (el) el.disabled = disabled;
++  });
+ }
+ 
+ // ----------------------------------------------------------------------------
+@@ -1624,11 +1627,11 @@ function onTimeChange() {
+ 
+   const cartBox1 = document.getElementById('cartBox1');
+   const cartBox2 = document.getElementById('cartBox2');
+-
+   const name1 = document.getElementById('name1');
+   const name2 = document.getElementById('name2');
+   const name3 = document.getElementById('name3');
+   const name4 = document.getElementById('name4');
++  if (!cartBox1 || !name1) return;
+ 
+   // Не перезаписываем поля имён, пока пользователь их редактирует
+   // (защита от потери введённых данных при фоновой синхронизации).
+@@ -1918,13 +1921,15 @@ async function handleFormSubmit(e) {
+     return;
+   }
+ 
+-  const name1Val = document.getElementById('name1').value.trim();
+-  const name2Val = document.getElementById('name2').value.trim();
+-  const name3Val = document.getElementById('name3').value.trim();
+-  const name4Val = document.getElementById('name4').value.trim();
++  const name1El = document.getElementById('name1');
++  if (!name1El) return;
++  const name1Val = name1El.value.trim();
++  const name2Val = (document.getElementById('name2') || {}).value || '';
++  const name3Val = (document.getElementById('name3') || {}).value || '';
++  const name4Val = (document.getElementById('name4') || {}).value || '';
+ 
+-  const isCart1Enabled = !document.getElementById('name1').disabled;
+-  const isCart2Enabled = !document.getElementById('name3').disabled;
++  const isCart1Enabled = !name1El.disabled;
++  const isCart2Enabled = !(document.getElementById('name3') || {}).disabled;
+ 
+   if (isCart1Enabled && (!name1Val || !name2Val)) {
+     showToast(S('fillCart1'), "error");
+@@ -2540,6 +2545,7 @@ function renderScheduleBoard() {
+   function normLang(g) {
+     g = (g || "").toString().trim().toLowerCase();
+     if (g === "ru" || g === "ua" || g === "de") return g;
++    if (g === "uk") return "ua";
+     if (g === "р" || g === "у" || g === "н") return { "р": "ru", "у": "ua", "н": "de" }[g];
+     return "";
+   }
+@@ -2592,25 +2598,31 @@ function renderScheduleBoard() {
+     }
+     const s = slotMap[key];
+     const cNum = parseInt(b.cartNumber, 10);
++    const bLang = normLang(b.cart1Lang || b.cart2Lang || b.language || b.group);
++
+     if (cNum === 1) {
+-      if (b.cart1Lang) s.cart1Lang = normLang(b.cart1Lang);
++      if (bLang) s.cart1Lang = bLang;
+       if (b.name1) s.name1 = b.name1;
+       if (b.name2) s.name2 = b.name2;
++      if (!s.name1 && b.names && b.names[0]) s.name1 = b.names[0];
++      if (!s.name2 && b.names && b.names[1]) s.name2 = b.names[1];
+       s.cart1ActualTime = b.time;
+     } else if (cNum === 2) {
+-      if (b.cart2Lang) s.cart2Lang = normLang(b.cart2Lang);
++      if (bLang) s.cart2Lang = bLang;
+       if (b.name3) s.name3 = b.name3;
+       if (b.name4) s.name4 = b.name4;
++      if (!s.name3 && b.names && b.names[0]) s.name3 = b.names[0];
++      if (!s.name4 && b.names && b.names[1]) s.name4 = b.names[1];
+       s.cart2ActualTime = b.time;
+     } else {
+-      if (b.cart1Lang) {
+-        s.cart1Lang = normLang(b.cart1Lang);
++      if (normLang(b.cart1Lang) || bLang) {
++        s.cart1Lang = normLang(b.cart1Lang) || bLang;
+         s.name1 = b.name1 || (b.names && b.names[0]) || "";
+         s.name2 = b.name2 || (b.names && b.names[1]) || "";
+         s.cart1ActualTime = b.time;
+       }
+-      if (b.cart2Lang) {
+-        s.cart2Lang = normLang(b.cart2Lang);
++      if (normLang(b.cart2Lang) || bLang) {
++        s.cart2Lang = normLang(b.cart2Lang) || bLang;
+         s.name3 = b.name3 || (b.names && b.names[0]) || "";
+         s.name4 = b.name4 || (b.names && b.names[1]) || "";
+         s.cart2ActualTime = b.time;
+@@ -2620,23 +2632,25 @@ function renderScheduleBoard() {
+ 
+   const LANG_BADGE = { ru: "RU", ua: "UA", de: "DE" };
+   const LANG_LABEL = {
+-    ru: { RU: "Русская тележка", UA: "Украинская тележка", DE: "Немецкая тележка" },
+-    uk: { RU: "Російська тележка", UA: "Українська тележка", DE: "Німецька тележка" },
+-    de: { RU: "Russische Trolley", UA: "Ukrainische Trolley", DE: "Deutsche Trolley" }
++    ru: { ru: "Русская", ua: "Украинская", de: "Немецкая" },
++    uk: { ru: "Російська", ua: "Українська", de: "Німецька" },
++    de: { ru: "Russisch", ua: "Ukrainisch", de: "Deutsch" }
+   };
+-  const langLabel = LANG_LABEL[getLang()] || LANG_LABEL.ru;
++  const langLabelMap = LANG_LABEL[getLang()] || LANG_LABEL.ru;
+ 
+   const todayObj = new Date();
+   const todayStr = `${todayObj.getFullYear()}-${String(todayObj.getMonth() + 1).padStart(2, '0')}-${String(todayObj.getDate()).padStart(2, '0')}`;
+   const isPastDate = selectedDateISO < todayStr;
+ 
+   function cartCardHTML(cartNum, lang, n1, n2, locName, time, hasNames, actualTime) {
+-    const cls = lang || "none";
++    const cls = (lang || "").toLowerCase() || "none";
+     const icon = (window.TrolleyUI) ? window.TrolleyUI.getMiniSVG() : '';
+-    const badge = lang ? LANG_BADGE[lang] : "";
+-    
++    const badgeText = (lang && LANG_BADGE[cls]) ? LANG_BADGE[cls] : "";
++    const badgeHTML = badgeText ? `<span class="trolley-lang-badge lang-badge-${cls}">${badgeText}</span>` : "";
++
+     const timeDisplay = (actualTime && actualTime !== time) ? ` (${actualTime})` : "";
+-    const title = lang ? `${langLabel[lang.toUpperCase()]}${timeDisplay}` : S('free');
++    const langName = langLabelMap[cls] ? `${langLabelMap[cls]} ` : "";
++    const title = lang ? `${langName}${S('cartLabel', 'тележка')}${timeDisplay}` : `${S('cartLabel', 'Тележка')} №${cartNum}`;
+ 
+     const isJustAdded = justAddedSlot &&
+                         justAddedSlot.location === locName &&
+@@ -2656,7 +2670,7 @@ function renderScheduleBoard() {
+           <div class="cart-info-header">
+             <span class="board-cart-title">
+               <span class="day-trolley-icon" data-group="${cls}" aria-hidden="true">${icon}</span>
+-              📦 ${title}
++              📦 ${title} ${badgeHTML}
+             </span>
+             ${deleteBtn}
+           </div>
+@@ -2901,24 +2915,14 @@ function openQuickBookingModal(locName, dateISO, timeSlot, cartNum) {
+   document.getElementById('qbDate').value = formatDateReadable(dateISO);
+   document.getElementById('qbTime').value = timeSlot;
+   document.getElementById('qbLocation').value = locName;
+-  document.getElementById('qbCart').value = `${S('cartLabel')} №${cartNum}`;
++  const qbCartInput = document.getElementById('qbCart');
++  if (qbCartInput) qbCartInput.value = `${S('cartLabel')} №${cartNum}`;
+ 
+-  let defaultName1 = "";
+-  let defaultName2 = "";
+-  if (cartNum === 1) {
+-    defaultName1 = localStorage.getItem('pwaName1') || localStorage.getItem('pwaName3') || '';
+-    defaultName2 = localStorage.getItem('pwaName2') || localStorage.getItem('pwaName4') || '';
+-  } else {
+-    defaultName1 = localStorage.getItem('pwaName3') || localStorage.getItem('pwaName1') || '';
+-    defaultName2 = localStorage.getItem('pwaName4') || localStorage.getItem('pwaName2') || '';
+-  }
++  switchQBCart(cartNum);
+ 
+   const name1Input = document.getElementById('qbName1');
+   const name2Input = document.getElementById('qbName2');
+ 
+-  name1Input.value = defaultName1;
+-  name2Input.value = defaultName2;
+-
+   name1Input.placeholder = getLang() === 'uk' ? 'Вісник 1 (ПІБ)' : (getLang() === 'de' ? 'Verkündiger 1 (Name)' : 'Возвещатель 1 (ФИО)');
+   name2Input.placeholder = getLang() === 'uk' ? 'Вісник 2 (ПІБ)' : (getLang() === 'de' ? 'Verkündiger 2 (Name)' : 'Возвещатель 2 (ФИО)');
+ 
+@@ -2940,6 +2944,39 @@ function openQuickBookingModal(locName, dateISO, timeSlot, cartNum) {
+   }, 50);
+ }
+ 
++function switchQBCart(cartNum) {
++  const modal = document.getElementById('quickBookingModal');
++  if (!modal) return;
++  modal.dataset.cartNum = cartNum;
++
++  const btn1 = document.getElementById('qbCartBtn1');
++  const btn2 = document.getElementById('qbCartBtn2');
++  if (btn1) {
++    btn1.style.background = cartNum === 1 ? 'var(--primary-container)' : 'var(--card-bg)';
++    btn1.style.borderColor = cartNum === 1 ? 'var(--primary)' : 'var(--border)';
++    btn1.style.color = cartNum === 1 ? 'var(--primary)' : 'var(--text-muted)';
++  }
++  if (btn2) {
++    btn2.style.background = cartNum === 2 ? 'var(--primary-container)' : 'var(--card-bg)';
++    btn2.style.borderColor = cartNum === 2 ? 'var(--primary)' : 'var(--border)';
++    btn2.style.color = cartNum === 2 ? 'var(--primary)' : 'var(--text-muted)';
++  }
++
++  let defaultName1 = "";
++  let defaultName2 = "";
++  if (cartNum === 1) {
++    defaultName1 = localStorage.getItem('pwaName1') || localStorage.getItem('pwaName3') || '';
++    defaultName2 = localStorage.getItem('pwaName2') || localStorage.getItem('pwaName4') || '';
++  } else {
++    defaultName1 = localStorage.getItem('pwaName3') || localStorage.getItem('pwaName1') || '';
++    defaultName2 = localStorage.getItem('pwaName4') || localStorage.getItem('pwaName2') || '';
++  }
++  const n1 = document.getElementById('qbName1');
++  const n2 = document.getElementById('qbName2');
++  if (n1) n1.value = defaultName1;
++  if (n2) n2.value = defaultName2;
++}
++
+ function closeQuickBookingModal() {
+   const modal = document.getElementById('quickBookingModal');
+   if (!modal) return;
+@@ -3073,10 +3110,14 @@ async function submitQuickBooking(e) {
+     localStorage.setItem('pwaName4', name2);
+   }
+ 
+-  document.getElementById('name1').value = localStorage.getItem('pwaName1') || '';
+-  document.getElementById('name2').value = localStorage.getItem('pwaName2') || '';
+-  document.getElementById('name3').value = localStorage.getItem('pwaName3') || '';
+-  document.getElementById('name4').value = localStorage.getItem('pwaName4') || '';
++  const n1 = document.getElementById('name1');
++  const n2 = document.getElementById('name2');
++  const n3 = document.getElementById('name3');
++  const n4 = document.getElementById('name4');
++  if (n1) n1.value = localStorage.getItem('pwaName1') || '';
++  if (n2) n2.value = localStorage.getItem('pwaName2') || '';
++  if (n3) n3.value = localStorage.getItem('pwaName3') || '';
++  if (n4) n4.value = localStorage.getItem('pwaName4') || '';
+ 
+   const btn = document.getElementById('qbSubmitBtn');
+   const spinner = document.getElementById('qbBtnSpinner');
+@@ -3086,12 +3127,15 @@ async function submitQuickBooking(e) {
+   if (spinner) spinner.style.display = 'inline-block';
+   if (btnText) btnText.textContent = S('btnSaving');
+ 
++  const langUpper = (selectedQBLang || "RU").toUpperCase();
+   const record = {
+     date: dateISO,
+     time: timeSlot,
+     location: locName,
+     cartNumber: cartNum,
+-    language: selectedQBLang,
++    language: langUpper,
++    cart1Lang: cartNum === 1 ? langUpper : "",
++    cart2Lang: cartNum === 2 ? langUpper : "",
+     names: [name1, name2]
+   };
+ 
+diff --git a/index.html b/index.html
+index 55afb1d..6f521ad 100644
+--- a/index.html
++++ b/index.html
+@@ -1351,7 +1351,7 @@
+ 
+     <div class="container" id="app">
+         <header>
+-            <div class="logo-container" id="logoHome" onclick="switchTab('booking')" style="cursor: pointer;" title="На главную / + Запись">
++            <div class="logo-container" id="logoHome" onclick="switchTab('schedule')" style="cursor: pointer;" title="На главную (График)">
+                 <svg class="logo-icon" viewBox="0 0 24 24">
+                     <rect x="7" y="3" width="10" height="14" rx="1.5" />
+                     <line x1="12" y1="3" x2="12" y2="17" />
+@@ -1375,10 +1375,6 @@
+         </header>
+ 
+         <div class="tabs">
+-            <button class="tab-btn" id="btnTabBooking" onclick="switchTab('booking')">
+-                <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 4v16m8-8H4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+-                Запись
+-            </button>
+             <button class="tab-btn active" id="btnTabSchedule" onclick="switchTab('schedule')">
+                 <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                 График
+@@ -1413,102 +1409,7 @@
+             </div>
+         </div>
+ 
+-        <!-- Вкладка ЗАПИСЬ -->
+-        <div id="bookingTabContent" class="tab-content">
+-            <form id="bookingForm">
+-                
+-                <div class="form-section">
+-                    <h2 class="section-title">
+-                        <span style="display: inline-flex; align-items: center;">
+-                            1. Выберите локацию
+-                            <button type="button" class="btn-info-toggle" onclick="toggleInfo('locationInfo')" title="Показать подсказку">
+-                                <svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z" fill="currentColor"/></svg>
+-                            </button>
+-                        </span>
+-                        <button type="button" class="btn-show-map" style="text-transform: none; font-size: 0.7rem;" onclick="showCurrentLocationOnMap()">🗺 На карте</button>
+-                    </h2>
+-                    <div id="locationInfo" class="info-helper-box">
+-                        Выберите место для служения. Кнопка «На карте» покажет точную геопозицию стенда. Кнопка «+ Своё место» позволяет добавить новую точку вручную или выбрав на карте.
+-                    </div>
+-                    <div class="location-grid" id="locationGrid">
+-                        <!-- Сюда будут вставляться кастомные локации -->
+-                    </div>
+-                </div>
+ 
+-                <div class="form-section">
+-                    <h2 class="section-title">
+-                        <span>2. Выберите время</span>
+-                        <button type="button" class="btn-info-toggle" onclick="toggleInfo('timeInfo')" title="Показать подсказку">
+-                            <svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z" fill="currentColor"/></svg>
+-                        </button>
+-                    </h2>
+-                    <div id="timeInfo" class="info-helper-box">
+-                        Выберите часовой интервал смены. Если карточка времени заблокирована (серая), значит все стенды на это время уже забронированы.
+-                    </div>
+-                    <div class="time-grid" id="timeGrid">
+-                        <!-- Сюда будут вставляться кастомные или дефолтные карточки времени -->
+-                    </div>
+-                </div>
+-
+-                <div class="form-section">
+-                    <h2 class="section-title">
+-                        <span>3. Участники смены (до 2 тележек)</span>
+-                        <button type="button" class="btn-info-toggle" onclick="toggleInfo('namesInfo')" title="Показать подсказку">
+-                            <svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z" fill="currentColor"/></svg>
+-                        </button>
+-                    </h2>
+-                    <div id="namesInfo" class="info-helper-box">
+-                        На каждую смену выделяется до двух тележек (по 2 человека на каждую). Введите имена участников. Если первая тележка уже занята кем-то другим, заполните имена для второй свободной тележки.
+-                    </div>
+-                    <div class="carts-container">
+-
+-                        <!-- Cart 1 -->
+-                        <div class="cart-box" id="cartBox1">
+-                            <div class="cart-header">
+-                                <svg class="cart-header-icon" viewBox="0 0 24 24">
+-                                    <circle cx="12" cy="12" r="10" />
+-                                    <text x="9" y="16" font-size="12" font-weight="bold" fill="currentColor">1</text>
+-                                </svg>
+-                                📦 Тележка №1 (Стенд 1)
+-                            </div>
+-                            <div class="cart-lang-label">
+-                                <span>Выберите язык тележки</span>
+-                            </div>
+-                            <div class="cart-lang-picker" id="cart1LangPicker" aria-label="Язык тележки №1"></div>
+-                            <div class="input-group">
+-                                <input type="text" id="name1" class="input-field" placeholder="Возвещатель 1 (ФИО)" required autocomplete="off">
+-                                <input type="text" id="name2" class="input-field" placeholder="Возвещатель 2 (ФИО)" required autocomplete="off">
+-                            </div>
+-                        </div>
+-
+-                        <!-- Cart 2 -->
+-                        <div class="cart-box" id="cartBox2">
+-                            <div class="cart-header">
+-                                <svg class="cart-header-icon" viewBox="0 0 24 24">
+-                                    <circle cx="12" cy="12" r="10" />
+-                                    <text x="9" y="16" font-size="12" font-weight="bold" fill="currentColor">2</text>
+-                                </svg>
+-                                📦 Тележка №2 (Стенд 2)
+-                            </div>
+-                            <div class="cart-lang-label">
+-                                <span>Выберите язык тележки</span>
+-                            </div>
+-                            <div class="cart-lang-picker" id="cart2LangPicker" aria-label="Язык тележки №2"></div>
+-                            <div class="input-group">
+-                                <input type="text" id="name3" class="input-field" placeholder="Возвещатель 1 (ФИО)" autocomplete="off">
+-                                <input type="text" id="name4" class="input-field" placeholder="Возвещатель 2 (ФИО)" autocomplete="off">
+-                            </div>
+-                        </div>
+-
+-                    </div>
+-                </div>
+-
+-                <button type="submit" id="submitBtn" class="btn-submit">
+-                    <span class="spinner" id="btnSpinner"></span>
+-                    <span id="btnText">Записать смену</span>
+-                </button>
+-            </form>
+-        </div>
+ 
+         <!-- Вкладка ГРАФИК -->
+         <div id="scheduleTabContent" class="tab-content active">
+@@ -1657,7 +1558,10 @@
+                     </div>
+                     <div>
+                         <label class="compact-label" id="qbCartLabel">Тележка</label>
+-                        <input type="text" id="qbCart" class="input-field" disabled style="background-color: var(--primary-container); border-color: var(--border); opacity: 0.85; cursor: not-allowed;">
++                        <div id="qbCartToggleGroup" style="display: flex; gap: 4px;">
++                            <button type="button" class="qb-cart-btn" id="qbCartBtn1" onclick="switchQBCart(1)" style="flex:1; padding: 6px 4px; font-size: 0.75rem; font-weight: 700; border: 1px solid var(--border); border-radius: var(--radius-sm); background: var(--card-bg); color: var(--text); cursor: pointer;">📦 №1</button>
++                            <button type="button" class="qb-cart-btn" id="qbCartBtn2" onclick="switchQBCart(2)" style="flex:1; padding: 6px 4px; font-size: 0.75rem; font-weight: 700; border: 1px solid var(--border); border-radius: var(--radius-sm); background: var(--card-bg); color: var(--text); cursor: pointer;">📦 №2</button>
++                        </div>
+                     </div>
+                 </div>
+                 
+diff --git a/index_de.html b/index_de.html
+index b197d31..4e25fa7 100644
+--- a/index_de.html
++++ b/index_de.html
+@@ -1345,7 +1345,7 @@
+ 
+     <div class="container" id="app">
+         <header>
+-            <div class="logo-container" id="logoHome" onclick="switchTab('booking')" style="cursor: pointer;" title="Startseite / + Anmeldung">
++            <div class="logo-container" id="logoHome" onclick="switchTab('schedule')" style="cursor: pointer;" title="Zur Hauptseite (Zeitplan)">
+                 <svg class="logo-icon" viewBox="0 0 24 24">
+                     <rect x="7" y="3" width="10" height="14" rx="1.5" />
+                     <line x1="12" y1="3" x2="12" y2="17" />
+@@ -1369,10 +1369,6 @@
+         </header>
+ 
+         <div class="tabs">
+-            <button class="tab-btn" id="btnTabBooking" onclick="switchTab('booking')">
+-                <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 4v16m8-8H4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+-                Anmeldung
+-            </button>
+             <button class="tab-btn active" id="btnTabSchedule" onclick="switchTab('schedule')">
+                 <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                 Zeitplan
+@@ -1407,103 +1403,6 @@
+             </div>
+         </div>
+ 
+-        <!-- TAB BOOKING -->
+-        <div id="bookingTabContent" class="tab-content">
+-            <form id="bookingForm">
+-                
+-                <div class="form-section">
+-                    <h2 class="section-title">
+-                        <span style="display: inline-flex; align-items: center;">
+-                            1. Standort auswählen
+-                            <button type="button" class="btn-info-toggle" onclick="toggleInfo('locationInfo')" title="Hilfe anzeigen">
+-                                <svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z" fill="currentColor"/></svg>
+-                            </button>
+-                        </span>
+-                        <button type="button" class="btn-show-map" style="text-transform: none; font-size: 0.7rem;" onclick="showCurrentLocationOnMap()">🗺 Auf Karte</button>
+-                    </h2>
+-                    <div id="locationInfo" class="info-helper-box">
+-                        Wählen Sie einen Dienstort. Die Schaltfläche „Auf Karte“ zeigt den genauen Standort des Standes. Mit „+ Eigener Ort“ können Sie manuell einen neuen Standort hinzufügen oder auf der Karte markieren.
+-                    </div>
+-                    <div class="location-grid" id="locationGrid">
+-                        <!-- Custom locations UI -->
+-                    </div>
+-                </div>
+-
+-                <div class="form-section">
+-                    <h2 class="section-title">
+-                        <span>2. Uhrzeit auswählen</span>
+-                        <button type="button" class="btn-info-toggle" onclick="toggleInfo('timeInfo')" title="Hilfe anzeigen">
+-                            <svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z" fill="currentColor"/></svg>
+-                        </button>
+-                    </h2>
+-                    <div id="timeInfo" class="info-helper-box">
+-                        Wählen Sie das Zeitintervall für Ihre Schicht. Wenn ein Zeitfenster ausgegraut ist, sind alle Trolleys für dieses Zeitfenster bereits ausgebucht.
+-                    </div>
+-                    <div class="time-grid" id="timeGrid">
+-                        <!-- Custom time cards inserted here -->
+-                    </div>
+-                </div>
+-
+-                <div class="form-section">
+-                    <h2 class="section-title">
+-                        <span>3. Schichtteilnehmer (bis zu 2 Trolleys)</span>
+-                        <button type="button" class="btn-info-toggle" onclick="toggleInfo('namesInfo')" title="Hilfe anzeigen">
+-                            <svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z" fill="currentColor"/></svg>
+-                        </button>
+-                    </h2>
+-                    <div id="namesInfo" class="info-helper-box">
+-                        Für jede Schicht stehen bis zu zwei Trolleys zur Verfügung (jeweils 2 Personen). Geben Sie die Namen der Teilnehmer ein. Wenn der erste Trolley bereits von jemand anderem besetzt ist, füllen Sie die Namen für den zweiten freien Trolley aus.
+-                    </div>
+-                    <div class="carts-container">
+-                        
+-                        <!-- Cart 1 -->
+-                        <div class="cart-box" id="cartBox1">
+-                            <div class="cart-header">
+-                                <svg class="cart-header-icon" viewBox="0 0 24 24">
+-                                    <circle cx="12" cy="12" r="10" />
+-                                    <text x="9" y="16" font-size="12" font-weight="bold" fill="currentColor">1</text>
+-                                </svg>
+-                                📦 Trolley Nr. 1 (Stand 1)
+-                            </div>
+-                            <div class="cart-lang-label">
+-                                <span>Sprache des Trolleys wählen</span>
+-                            </div>
+-                            <div class="cart-lang-picker" id="cart1LangPicker" aria-label="Sprache Trolley Nr. 1"></div>
+-                            <div class="input-group">
+-                                <input type="text" id="name1" class="input-field" placeholder="Verkündiger 1 (Name)" required autocomplete="off">
+-                                <input type="text" id="name2" class="input-field" placeholder="Verkündiger 2 (Name)" required autocomplete="off">
+-                            </div>
+-                        </div>
+-
+-                        <!-- Cart 2 -->
+-                        <div class="cart-box" id="cartBox2">
+-                            <div class="cart-header">
+-                                <svg class="cart-header-icon" viewBox="0 0 24 24">
+-                                    <circle cx="12" cy="12" r="10" />
+-                                    <text x="9" y="16" font-size="12" font-weight="bold" fill="currentColor">2</text>
+-                                </svg>
+-                                📦 Trolley Nr. 2 (Stand 2)
+-                            </div>
+-                            <div class="cart-lang-label">
+-                                <span>Sprache des Trolleys wählen</span>
+-                            </div>
+-                            <div class="cart-lang-picker" id="cart2LangPicker" aria-label="Sprache Trolley Nr. 2"></div>
+-                            <div class="input-group">
+-                                <input type="text" id="name3" class="input-field" placeholder="Verkündiger 1 (Name)" autocomplete="off">
+-                                <input type="text" id="name4" class="input-field" placeholder="Verkündiger 2 (Name)" autocomplete="off">
+-                            </div>
+-                        </div>
+-
+-                    </div>
+-                </div>
+-
+-                <button type="submit" id="submitBtn" class="btn-submit">
+-                    <span class="spinner" id="btnSpinner"></span>
+-                    <span id="btnText">Schicht eintragen</span>
+-                </button>
+-            </form>
+-        </div>
+-
+         <!-- TAB SCHEDULE -->
+         <div id="scheduleTabContent" class="tab-content active">
+             <div class="refresh-row" style="gap: 16px;">
+@@ -1651,7 +1550,10 @@
+                     </div>
+                     <div>
+                         <label class="compact-label" id="qbCartLabel">Trolley</label>
+-                        <input type="text" id="qbCart" class="input-field" disabled style="background-color: var(--primary-container); border-color: var(--border); opacity: 0.85; cursor: not-allowed;">
++                        <div id="qbCartToggleGroup" style="display: flex; gap: 4px;">
++                            <button type="button" class="qb-cart-btn" id="qbCartBtn1" onclick="switchQBCart(1)" style="flex:1; padding: 6px 4px; font-size: 0.75rem; font-weight: 700; border: 1px solid var(--border); border-radius: var(--radius-sm); background: var(--card-bg); color: var(--text); cursor: pointer;">📦 Nr. 1</button>
++                            <button type="button" class="qb-cart-btn" id="qbCartBtn2" onclick="switchQBCart(2)" style="flex:1; padding: 6px 4px; font-size: 0.75rem; font-weight: 700; border: 1px solid var(--border); border-radius: var(--radius-sm); background: var(--card-bg); color: var(--text); cursor: pointer;">📦 Nr. 2</button>
++                        </div>
+                     </div>
+                 </div>
+                 
+diff --git a/index_ua.html b/index_ua.html
+index c7e783c..dd0c052 100644
+--- a/index_ua.html
++++ b/index_ua.html
+@@ -1345,7 +1345,7 @@
+ 
+     <div class="container" id="app">
+         <header>
+-            <div class="logo-container" id="logoHome" onclick="switchTab('booking')" style="cursor: pointer;" title="На головну / + Запис">
++            <div class="logo-container" id="logoHome" onclick="switchTab('schedule')" style="cursor: pointer;" title="На головну (Розклад)">
+                 <svg class="logo-icon" viewBox="0 0 24 24">
+                     <rect x="7" y="3" width="10" height="14" rx="1.5" />
+                     <line x1="12" y1="3" x2="12" y2="17" />
+@@ -1369,10 +1369,6 @@
+         </header>
+ 
+         <div class="tabs">
+-            <button class="tab-btn" id="btnTabBooking" onclick="switchTab('booking')">
+-                <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 4v16m8-8H4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+-                Запис
+-            </button>
+             <button class="tab-btn active" id="btnTabSchedule" onclick="switchTab('schedule')">
+                 <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                 Розклад
+@@ -1407,102 +1403,7 @@
+             </div>
+         </div>
+ 
+-        <!-- Вкладка ЗАПИС -->
+-        <div id="bookingTabContent" class="tab-content">
+-            <form id="bookingForm">
+-                
+-                <div class="form-section">
+-                    <h2 class="section-title">
+-                        <span style="display: inline-flex; align-items: center;">
+-                            1. Виберіть локацию
+-                            <button type="button" class="btn-info-toggle" onclick="toggleInfo('locationInfo')" title="Показати підказку">
+-                                <svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z" fill="currentColor"/></svg>
+-                            </button>
+-                        </span>
+-                        <button type="button" class="btn-show-map" style="text-transform: none; font-size: 0.7rem;" onclick="showCurrentLocationOnMap()">🗺 На карті</button>
+-                    </h2>
+-                    <div id="locationInfo" class="info-helper-box">
+-                        Виберіть місце для служіння. Кнопка «На карті» покаже точную геопозицию стенда. Кнопка «+ Своє місце» дозволяє додати нову точку вручну або вибравши на карті.
+-                    </div>
+-                    <div class="location-grid" id="locationGrid">
+-                        <!-- Сюда будуть вставлятися кастомні локации -->
+-                    </div>
+-                </div>
+ 
+-                <div class="form-section">
+-                    <h2 class="section-title">
+-                        <span>2. Виберіть час</span>
+-                        <button type="button" class="btn-info-toggle" onclick="toggleInfo('timeInfo')" title="Показати підказку">
+-                            <svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z" fill="currentColor"/></svg>
+-                        </button>
+-                    </h2>
+-                    <div id="timeInfo" class="info-helper-box">
+-                        Виберіть годинний інтервал зміни. Якщо картка часу заблокована (сіра), це означає, що всі стенди на цей час уже заброньовані.
+-                    </div>
+-                    <div class="time-grid" id="timeGrid">
+-                        <!-- Сюда будуть вставляться кастомні або дефолтные карточки часу -->
+-                    </div>
+-                </div>
+-
+-                <div class="form-section">
+-                    <h2 class="section-title">
+-                        <span>3. Учасники зміни (до 2 стендів)</span>
+-                        <button type="button" class="btn-info-toggle" onclick="toggleInfo('namesInfo')" title="Показати підказку">
+-                            <svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z" fill="currentColor"/></svg>
+-                        </button>
+-                    </h2>
+-                    <div id="namesInfo" class="info-helper-box">
+-                        На кожну зміну виділяється до двох стендів (по 2 особи на кожен). Введіть імена учасників. Якщо перший стенд вже зайнятий кимось іншим, заповніть імена для другого вільного стенду.
+-                    </div>
+-                    <div class="carts-container">
+-                        
+-                        <!-- Cart 1 -->
+-                        <div class="cart-box" id="cartBox1">
+-                            <div class="cart-header">
+-                                <svg class="cart-header-icon" viewBox="0 0 24 24">
+-                                    <circle cx="12" cy="12" r="10" />
+-                                    <text x="9" y="16" font-size="12" font-weight="bold" fill="currentColor">1</text>
+-                                </svg>
+-                                📦 Тележка №1 (Стенд 1)
+-                            </div>
+-                            <div class="cart-lang-label">
+-                                <span>Виберіть мову тележки</span>
+-                            </div>
+-                            <div class="cart-lang-picker" id="cart1LangPicker" aria-label="Мова тележки №1"></div>
+-                            <div class="input-group">
+-                                <input type="text" id="name1" class="input-field" placeholder="Вісник 1 (ПІБ)" required autocomplete="off">
+-                                <input type="text" id="name2" class="input-field" placeholder="Вісник 2 (ПІБ)" required autocomplete="off">
+-                            </div>
+-                        </div>
+-
+-                        <!-- Cart 2 -->
+-                        <div class="cart-box" id="cartBox2">
+-                            <div class="cart-header">
+-                                <svg class="cart-header-icon" viewBox="0 0 24 24">
+-                                    <circle cx="12" cy="12" r="10" />
+-                                    <text x="9" y="16" font-size="12" font-weight="bold" fill="currentColor">2</text>
+-                                </svg>
+-                                📦 Тележка №2 (Стенд 2)
+-                            </div>
+-                            <div class="cart-lang-label">
+-                                <span>Виберіть мову тележки</span>
+-                            </div>
+-                            <div class="cart-lang-picker" id="cart2LangPicker" aria-label="Мова тележки №2"></div>
+-                            <div class="input-group">
+-                                <input type="text" id="name3" class="input-field" placeholder="Вісник 1 (ПІБ)" autocomplete="off">
+-                                <input type="text" id="name4" class="input-field" placeholder="Вісник 2 (ПІБ)" autocomplete="off">
+-                            </div>
+-                        </div>
+-
+-                    </div>
+-                </div>
+-
+-                <button type="submit" id="submitBtn" class="btn-submit">
+-                    <span class="spinner" id="btnSpinner"></span>
+-                    <span id="btnText">Записати зміну</span>
+-                </button>
+-            </form>
+-        </div>
+ 
+         <!-- Вкладка ГРАФИК -->
+         <div id="scheduleTabContent" class="tab-content active">
+@@ -1651,7 +1552,10 @@
+                     </div>
+                     <div>
+                         <label class="compact-label" id="qbCartLabel">Тележка</label>
+-                        <input type="text" id="qbCart" class="input-field" disabled style="background-color: var(--primary-container); border-color: var(--border); opacity: 0.85; cursor: not-allowed;">
++                        <div id="qbCartToggleGroup" style="display: flex; gap: 4px;">
++                            <button type="button" class="qb-cart-btn" id="qbCartBtn1" onclick="switchQBCart(1)" style="flex:1; padding: 6px 4px; font-size: 0.75rem; font-weight: 700; border: 1px solid var(--border); border-radius: var(--radius-sm); background: var(--card-bg); color: var(--text); cursor: pointer;">📦 №1</button>
++                            <button type="button" class="qb-cart-btn" id="qbCartBtn2" onclick="switchQBCart(2)" style="flex:1; padding: 6px 4px; font-size: 0.75rem; font-weight: 700; border: 1px solid var(--border); border-radius: var(--radius-sm); background: var(--card-bg); color: var(--text); cursor: pointer;">📦 №2</button>
++                        </div>
+                     </div>
+                 </div>
+                 

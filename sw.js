@@ -7,7 +7,7 @@ self.addEventListener('message', (event) => {
   }
 });
 
-const CACHE_NAME = 'service-schedule-v41'; // <-- v41: merged with OneSignal
+const CACHE_NAME = 'service-schedule-v42';
 const ASSETS = [
   './',
   './index.html',
