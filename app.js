@@ -974,25 +974,7 @@ window.addEventListener('DOMContentLoaded', () => {
       }
     });
 
-    // Clean up old OneSignalSDKWorker registrations on the root scope '/' to prevent conflicts
-    if (typeof navigator.serviceWorker.getRegistrations === 'function') {
-      navigator.serviceWorker.getRegistrations().then(registrations => {
-        for (let r of registrations) {
-          try {
-            const scopePath = new URL(r.scope).pathname;
-            if (scopePath === '/') {
-              const scriptURL = (r.active && r.active.scriptURL) || 
-                                (r.waiting && r.waiting.scriptURL) || 
-                                (r.installing && r.installing.scriptURL);
-              if (scriptURL && scriptURL.indexOf('OneSignalSDKWorker.js') !== -1) {
-                console.log('[PWA] Unregistering old root-scope OneSignal service worker:', scriptURL);
-                r.unregister().catch(() => {});
-              }
-            }
-          } catch (err) {}
-        }
-      }).catch(() => {});
-    }
+
 
     navigator.serviceWorker.register('sw.js', { scope: '/' })
       .then(reg => {
