@@ -2510,6 +2510,10 @@ function buildApiUrl() {
   function sendOneSignalNotificationClient(rec) {
     if (!rec) return;
 
+    var chk = document.getElementById('chkSendPush');
+    var sendPush = chk ? chk.checked : false;
+    if (!sendPush) return;
+
     var names = [];
     if (rec.names && Array.isArray(rec.names)) {
       names = rec.names;
@@ -2564,63 +2568,147 @@ function buildApiUrl() {
     else if (lang.indexOf("de") === 0) lang = "de";
     else lang = "ru";
 
-    var texts = {
+    var titles = {
       ru: {
-        default: "🔔 Уведомления о напарниках",
-        active: "✅ Уведомления активны"
+        enable: "Включить уведомления о напарниках",
+        disable: "Отключить уведомления о напарниках"
       },
       de: {
-        default: "🔔 Partner-Benachrichtigungen",
-        active: "✅ Benachrichtigungen aktiv"
+        enable: "Partner-Benachrichtigungen aktivieren",
+        disable: "Partner-Benachrichtigungen deaktivieren"
       },
       uk: {
-        default: "🔔 Сповіщення про напарників",
-        active: "✅ Сповіщення активні"
+        enable: "Увімкнути сповіщення про напарників",
+        disable: "Вимкнути сповіщення про напарників"
       }
     };
 
-    var t = texts[lang] || texts.ru;
+    var t = titles[lang] || titles.ru;
 
-    var isGranted = (typeof Notification !== 'undefined' && Notification.permission === 'granted') ||
-                    (typeof window.OneSignal !== 'undefined' && window.OneSignal.Notifications && window.OneSignal.Notifications.permission);
+    var isGranted = (typeof Notification !== 'undefined' && Notification.permission === 'granted');
+    var isOptedIn = true;
+    if (typeof window.OneSignal !== 'undefined' && window.OneSignal.User && window.OneSignal.User.pushSubscription) {
+      isOptedIn = window.OneSignal.User.pushSubscription.optedIn;
+    }
 
-    if (isGranted) {
-      btn.innerHTML = t.active;
+    var isActive = isGranted && isOptedIn;
+
+    btn.innerHTML = '🔔';
+
+    if (isActive) {
+      btn.title = t.disable;
       btn.classList.add('active');
     } else {
-      btn.innerHTML = t.default;
+      btn.title = t.enable;
       btn.classList.remove('active');
     }
   }
   window.syncNotificationButtonState = syncNotificationButtonState;
 
-  window.OneSignalDeferred = window.OneSignalDeferred || [];
-  window.OneSignalDeferred.push(async function(OneSignal) {
-    // Sync immediately upon OneSignal initialization
-    syncNotificationButtonState();
+  function initNotificationButton() {
+    var btn = document.getElementById('btnPushNotifications');
+    if (!btn) return;
 
-    function initButton() {
-      var btn = document.getElementById('btnPushNotifications');
-      if (btn) {
-        btn.onclick = function() {
-          if (OneSignal.Notifications && typeof OneSignal.Notifications.requestPermission === "function") {
-            OneSignal.Notifications.requestPermission().then(function() {
-              syncNotificationButtonState();
-            });
+    btn.onclick = function() {
+      if (typeof window.OneSignal !== 'undefined' && window.OneSignal.User && window.OneSignal.User.pushSubscription) {
+        var isOptedIn = window.OneSignal.User.pushSubscription.optedIn;
+        var isGranted = (typeof Notification !== 'undefined' && Notification.permission === 'granted');
+
+        if (isOptedIn && isGranted) {
+          try {
+            window.OneSignal.User.pushSubscription.optOut();
+            setTimeout(syncNotificationButtonState, 500);
+          } catch (e) {
+            console.error("OneSignal optOut failed:", e);
           }
-        };
-        syncNotificationButtonState();
+        } else {
+          if (!isGranted) {
+            requestPermissionAndOptIn();
+          } else {
+            try {
+              window.OneSignal.User.pushSubscription.optIn();
+              setTimeout(syncNotificationButtonState, 500);
+            } catch (e) {
+              console.error("OneSignal optIn failed:", e);
+            }
+          }
+        }
+      } else {
+        requestNativePermission();
+      }
+    };
+
+    syncNotificationButtonState();
+  }
+
+  function requestPermissionAndOptIn() {
+    if (typeof window.OneSignal !== 'undefined' && window.OneSignal.Notifications && typeof window.OneSignal.Notifications.requestPermission === "function") {
+      try {
+        var res = window.OneSignal.Notifications.requestPermission();
+        if (res && typeof res.then === "function") {
+          res.then(function() {
+            try {
+              window.OneSignal.User.pushSubscription.optIn();
+            } catch (e) {}
+            setTimeout(syncNotificationButtonState, 500);
+          }).catch(function(err) {
+            console.warn("[OneSignal] requestPermission rejected:", err);
+            syncNotificationButtonState();
+          });
+        } else {
+          try {
+            window.OneSignal.User.pushSubscription.optIn();
+          } catch (e) {}
+          setTimeout(syncNotificationButtonState, 1000);
+        }
+      } catch (e) {
+        console.warn("[OneSignal] requestPermission crashed, falling back to native:", e);
+        requestNativePermission();
+      }
+    } else {
+      requestNativePermission();
+    }
+  }
+
+  function requestNativePermission() {
+    if (typeof Notification !== 'undefined' && typeof Notification.requestPermission === 'function') {
+      try {
+        var res = Notification.requestPermission();
+        if (res && typeof res.then === "function") {
+          res.then(function() {
+            syncNotificationButtonState();
+          }).catch(function() {
+            syncNotificationButtonState();
+          });
+        } else {
+          Notification.requestPermission(function() {
+            syncNotificationButtonState();
+          });
+        }
+      } catch (e) {
+        console.error("Native requestPermission failed:", e);
       }
     }
+  }
 
-    if (document.readyState === "loading") {
-      document.addEventListener("DOMContentLoaded", initButton);
-    } else {
-      initButton();
-    }
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", initNotificationButton);
+  } else {
+    initNotificationButton();
+  }
+
+  window.OneSignalDeferred = window.OneSignalDeferred || [];
+  window.OneSignalDeferred.push(async function(OneSignal) {
+    syncNotificationButtonState();
 
     if (OneSignal.Notifications && typeof OneSignal.Notifications.addEventListener === "function") {
       OneSignal.Notifications.addEventListener('permissionChange', function(permission) {
+        syncNotificationButtonState();
+      });
+    }
+
+    if (OneSignal.User && OneSignal.User.pushSubscription && typeof OneSignal.User.pushSubscription.addEventListener === "function") {
+      OneSignal.User.pushSubscription.addEventListener('change', function() {
         syncNotificationButtonState();
       });
     }
