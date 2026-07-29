@@ -1,4 +1,4 @@
-# VibeMemories — Slot Booking System / Schichtbuchungssystem / Система бронирования смен
+# Trolley Dienst / Запись на тележке — Slot Booking System / Schichtbuchungssystem / Система бронирования смен
 
 [English](#english) | [Deutsch](#deutsch) | [Русский](#русский)
 
@@ -6,7 +6,7 @@
 
 ## English
 
-VibeMemories is a modern Progressive Web Application (PWA) built with an **Offline-First** architecture. It is designed to manage shift schedules and book slots for public trolley witnessing, optimized for mobile devices, and integrated with a Google Sheets database.
+**Trolley Dienst** is a modern Progressive Web Application (PWA) built with an **Offline-First** architecture. It is designed to manage shift schedules and book slots for public trolley witnessing, optimized for mobile devices, and integrated with a Google Sheets database.
 
 ### 1. Architecture & Tech Stack
 
@@ -66,7 +66,7 @@ User data is stored on the **`Users`** sheet. Columns must be structured as foll
 
 ## Deutsch
 
-VibeMemories ist eine moderne Progressive Web App (PWA) mit einer **Offline-First-Architektur** zur Schichtplanung und Slot-Buchung für das Trolley-Predigtwerk. Das System ist für Mobilgeräte optimiert und nutzt Google Tabellen als Datenbank.
+**Trolley Dienst** ist eine moderne Progressive Web App (PWA) mit einer **Offline-First-Architektur** zur Schichtplanung und Slot-Buchung für das Trolley-Predigtwerk. Das System ist für Mobilgeräte optimiert und nutzt Google Tabellen als Datenbank.
 
 ### 1. Architektur & Technologie-Stack
 
@@ -124,7 +124,7 @@ Benutzerdaten werden im Tabellenblatt **`Users`** verwaltet. Die Spaltenstruktur
 
 ## Русский
 
-VibeMemories — это современное PWA-приложение (Progressive Web Application) с архитектурой **Offline-First**, разработанное для управления графиком дежурств и бронирования смен для служения с тележками.
+**Запись на тележке** (Trolley Dienst) — это современное PWA-приложение (Progressive Web Application) с архитектурой **Offline-First**, разработанное для управления графиком дежурств и бронирования смен для служения с тележками.
 
 ### 1. Архитектура и стек технологий
 
