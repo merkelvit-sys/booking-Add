@@ -1031,6 +1031,15 @@ window.addEventListener('DOMContentLoaded', () => {
           btn.addEventListener('click', () => {
             if (reg && reg.waiting) {
               reg.waiting.postMessage({ type: 'SKIP_WAITING' });
+              // Fallback: if the old waiting worker doesn't support SKIP_WAITING,
+              // unregister it and force reload after 800ms to break the deadlock.
+              setTimeout(() => {
+                reg.unregister().then(() => {
+                  window.location.reload();
+                }).catch(() => {
+                  window.location.reload();
+                });
+              }, 800);
             } else {
               window.location.reload();
             }
