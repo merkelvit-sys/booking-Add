@@ -15,6 +15,7 @@
       weekdays: ["Пн","Вт","Ср","Чт","Пт","Сб","Вс"],
       statuses: { available:"Служение", closed:"Выходной", event:"Событие", holiday:"Праздник", special:"Особое" },
       dayEditorTitle:"День служения", statusLabel:"Статус", descLabel:"Описание события", noteLabel:"Заметка", trolleyLabel:"Тележка", trolleyPlaceholder:"— выберите —", trolleys:{ru:"Русская",ua:"Украинская",de:"Немецкая"}, noTrolley:"Выберите тележку",
+      yearMessageLabel:"Объявление на вкладке График (YearSchedule)", yearMessagePlaceholder:"Введите текст объявления...", saveYearMessage:"Отправить объявление",
       cart1Name:"Тележка №1 (Стенд 1)", cart2Name:"Тележка №2 (Стенд 2)", cart1Lang:"Язык тележки №1", cart2Lang:"Язык тележки №2", bookingsTitle:"📋 Записи на этот день:", goToSchedule:"📅 В график", noBookings:"Записей на этот день нет (свободно)",
       preacher1:"Возвещатель 1 (ФИО)", preacher2:"Возвещатель 2 (ФИО)",
       save:"Сохранить", cancel:"Отмена", confirmDeleteYes:"Да, удалить", savedTitle:"Сохранено", errorTitle:"Ошибка", ok:"OK", daySaved:"Данные дня успешно сохранены!", saving:"Сохранение…", saved:"Данные сохранены", edit:"Редактировать", saveChanges:"Сохранить изменения", saveError:"Ошибка сохранения", saveVerifyFail:"Сервер не сохранил изменения. Пересоздайте Web App (Deploy → New version) с новым кодом google_script.txt.",
@@ -42,6 +43,7 @@
       weekdays: ["Пн","Вт","Ср","Чт","Пт","Сб","Нд"],
       statuses: { available:"Служіння", closed:"Вихідний", event:"Подія", holiday:"Свято", special:"Особливе" },
       dayEditorTitle:"День служіння", statusLabel:"Статус", descLabel:"Опис події", noteLabel:"Примітка", trolleyLabel:"Візок", trolleyPlaceholder:"— оберіть —", trolleys:{ru:"Російська",ua:"Українська",de:"Німецька"}, noTrolley:"Оберіть візок",
+      yearMessageLabel:"Оголошення на вкладці Графік (YearSchedule)", yearMessagePlaceholder:"Введіть текст оголошення...", saveYearMessage:"Надіслати оголошення",
       cart1Name:"Візок №1 (Стенд 1)", cart2Name:"Візок №2 (Стенд 2)", cart1Lang:"Мова візка №1", cart2Lang:"Мова візка №2", bookingsTitle:"📋 Записи на цей день:", goToSchedule:"📅 До розкладу", noBookings:"Записів на цей день немає (вільно)",
       preacher1:"Возвіщувач 1 (ПІБ)", preacher2:"Возвіщувач 2 (ПІБ)",
       save:"Зберегти", cancel:"Скасувати", confirmDeleteYes:"Так, видалити", savedTitle:"Збережено", errorTitle:"Помилка", ok:"OK", daySaved:"Дані дня успішно збережено!", saving:"Збереження…", saved:"Дані збережено", edit:"Редагувати", saveChanges:"Зберегти зміни", saveError:"Помилка збереження", saveVerifyFail:"Сервер не зберіг зміни. Перевидіть Web App (Deploy → New version) з новим кодом google_script.txt.",
@@ -69,6 +71,7 @@
       weekdays: ["Mo","Di","Mi","Do","Fr","Sa","So"],
       statuses: { available:"Dienst", closed:"Frei", event:"Veranstaltung", holiday:"Feiertag", special:"Besonderes" },
       dayEditorTitle:"Diensttag", statusLabel:"Status", descLabel:"Ereignisbeschreibung", noteLabel:"Notiz", trolleyLabel:"Trolley", trolleyPlaceholder:"— auswählen —", trolleys:{ru:"Russisch",ua:"Ukrainisch",de:"Deutsch"}, noTrolley:"Trolley auswählen",
+      yearMessageLabel:"Ankündigung auf der Registerkarte Zeitplan (YearSchedule)", yearMessagePlaceholder:"Geben Sie den Text der Ankündigung ein...", saveYearMessage:"Ankündigung senden",
       cart1Name:"Trolley №1 (Stand 1)", cart2Name:"Trolley №2 (Stand 2)", cart1Lang:"Sprache Trolley №1", cart2Lang:"Sprache Trolley №2", bookingsTitle:"📋 Einträge für diesen Tag:", goToSchedule:"📅 Zum Zeitplan", noBookings:"Keine Einträge für diesen Tag (frei)",
       save:"Speichern", cancel:"Abbrechen", confirmDeleteYes:"Ja, löschen", savedTitle:"Gespeichert", errorTitle:"Fehler", ok:"OK", daySaved:"Daten des Tages erfolgreich gespeichert!", saving:"Speichern…", saved:"Daten gespeichert", edit:"Bearbeiten", saveChanges:"Änderungen speichern", saveError:"Speicherfehler", saveVerifyFail:"Server hat die Änderungen nicht gespeichert. Erstellen Sie die Web App neu (Deploy → New version) mit dem neuen Code google_script.txt.",
       offline:"Keine Verbindung zum Server. Letzter gespeicherter Plan wird angezeigt.",
@@ -584,7 +587,8 @@ function buildApiUrl() {
       if (data && data.status === "error") throw new Error(data.message || "SERVER_ERROR");
       return {
         bookings: Array.isArray(data.bookings) ? data.bookings : (Array.isArray(data) ? data : []),
-        schedule: Array.isArray(data.schedule) ? data.schedule : []
+        schedule: Array.isArray(data.schedule) ? data.schedule : [],
+        yearScheduleMessages: data.yearScheduleMessages || {}
       };
     });
     });
@@ -617,7 +621,11 @@ function buildApiUrl() {
     var hasCachedData = (cb.length > 0 || (cs && cs.length > 0));
     if (hasCachedData) {
       var schedCached = (cs && cs.length) ? cs : generateYearSchedule();
-      updateAppState({ bookings: cb, schedule: schedCached });
+      var cachedMessages = {};
+      try {
+        cachedMessages = JSON.parse(localStorage.getItem("yearScheduleMessages")) || {};
+      } catch (e) {}
+      updateAppState({ bookings: cb, schedule: schedCached, yearScheduleMessages: cachedMessages });
       hideSplash();     // убираем splash немедленно — пользователь уже видит данные
       updateSyncBadge();
     }
@@ -629,7 +637,7 @@ function buildApiUrl() {
         fetchCombined().then(function (data) {
           var bookings = (data.bookings || []).map(normalizeBooking);
           var sched = mergeSchedules(data.schedule, loadCache());
-          updateAppState({ bookings: bookings, schedule: sched });
+          updateAppState({ bookings: bookings, schedule: sched, yearScheduleMessages: data.yearScheduleMessages });
           lastSyncOnline = true;
           lastSyncTime   = Date.now();
           if (typeof renderYearGrid === 'function') renderYearGrid();
@@ -656,7 +664,7 @@ function buildApiUrl() {
     return fetchCombined().then(function (data) {
       var bookings = (data.bookings || []).map(normalizeBooking);
       var sched = mergeSchedules(data.schedule, loadCache());
-      updateAppState({ bookings: bookings, schedule: sched });
+      updateAppState({ bookings: bookings, schedule: sched, yearScheduleMessages: data.yearScheduleMessages });
       lastSyncOnline = true;
       lastSyncTime   = Date.now();
       showToast(t("updated"), "success");
@@ -676,7 +684,7 @@ function buildApiUrl() {
     return fetchCombined().then(function (data) {
       var bookings = (data.bookings || []).map(normalizeBooking);
       var sched = mergeSchedules(data.schedule, loadCache());
-      updateAppState({ bookings: bookings, schedule: sched });
+      updateAppState({ bookings: bookings, schedule: sched, yearScheduleMessages: data.yearScheduleMessages });
       lastSyncOnline = true;
       lastSyncTime   = Date.now();
       updateSyncBadge();
@@ -1678,6 +1686,11 @@ function buildApiUrl() {
             }).join('') +
           '</div>' +
         '</div>' +
+        '<div class="editor-field" id="dayEditorYearMessageField" style="display: none;">' +
+          '<label id="dayEditorYearMessageLabel">' + (dict.yearMessageLabel || 'Объявление на вкладке График (YearSchedule)') + '</label>' +
+          '<textarea id="dayEditorYearMessage" maxlength="500" placeholder="' + (dict.yearMessagePlaceholder || 'Введите текст объявления...') + '"></textarea>' +
+          '<button type="button" id="btnSaveYearMessage" class="btn-editor-save" style="margin-top: 8px; width: 100%;">' + (dict.saveYearMessage || 'Отправить объявление') + '</button>' +
+        '</div>' +
         '<div class="editor-actions">' +
           '<button type="button" class="btn-editor-cancel" id="dayEditorCancel">' + dict.cancel + '</button>' +
           '<button type="button" class="btn-editor-edit" id="dayEditorEdit">✏️ ' + dict.edit + '</button>' +
@@ -1690,6 +1703,11 @@ function buildApiUrl() {
     document.getElementById("dayEditorCancel").addEventListener("click", function () { SyncCore._closeDayEditor(); });
     document.getElementById("dayEditorEdit").addEventListener("click", enterEditMode);
     document.getElementById("dayEditorSave").addEventListener("click", saveDayFromEditor);
+    
+    var btnSaveYearMsg = document.getElementById("btnSaveYearMessage");
+    if (btnSaveYearMsg) {
+      btnSaveYearMsg.addEventListener("click", saveYearMessage);
+    }
 
     // Подсказки (i в кружке) для полей редактора дня — помощь пожилым пользователям.
     var dayTips = I18N[getLang()].infoTips || {};
@@ -1883,6 +1901,17 @@ function buildApiUrl() {
       var presetBtns = dayEditorModalEl.querySelectorAll("#dayEditorPresets .quick-preset-btn");
       for (var pi = 0; pi < presetBtns.length; pi++) {
         presetBtns[pi].onclick = function () { applyQuickPreset(this.dataset.preset); };
+      }
+    }
+    var yearMsgField = document.getElementById("dayEditorYearMessageField");
+    if (yearMsgField) {
+      if (window.currentUserRole === 'admin') {
+        yearMsgField.style.display = "block";
+        var currentLang = getLang();
+        var messages = (AppState && AppState.yearScheduleMessages) || {};
+        document.getElementById("dayEditorYearMessage").value = messages[currentLang] || "";
+      } else {
+        yearMsgField.style.display = "none";
       }
     }
     document.getElementById("dayEditorModal").style.display = "flex";
@@ -2291,6 +2320,126 @@ function buildApiUrl() {
         console.warn('[SyncCore] saveDay: network issue, saved to offline queue.', err);
         return { status: "offline", message: "Сохранено локально в режиме офлайн." };
       });
+  }
+
+  function saveYearMessage() {
+    var textEl = document.getElementById("dayEditorYearMessage");
+    if (!textEl) return;
+    var msg = textEl.value.trim();
+    
+    if (typeof window.hapticFeedback === "function") {
+      window.hapticFeedback(50);
+    } else if (window.navigator && window.navigator.vibrate) {
+      window.navigator.vibrate(50);
+    }
+    
+    var saveBtn = document.getElementById("btnSaveYearMessage");
+    var origText = saveBtn ? saveBtn.textContent : "";
+    if (saveBtn) {
+      saveBtn.disabled = true;
+      saveBtn.textContent = getLang() === 'de' ? 'Wird gesendet...' : (getLang() === 'uk' || getLang() === 'ua' ? 'Надсилання...' : 'Отправка...');
+    }
+    
+    var email = (window.AppState && AppState.authUser && AppState.authUser.email) || "";
+    
+    var body = JSON.stringify({
+      action: "year_message_update",
+      key: API_KEY,
+      language: getLang(),
+      email: email,
+      message: msg
+    });
+    
+    fetchWithRetry(buildApiUrl, {
+      method: "POST",
+      mode: "cors",
+      body: body
+    }).then(function (res) {
+      if (!res.ok) throw new Error("HTTP_" + res.status);
+      return res.json();
+    }).then(function (data) {
+      if (data && data.status === "success") {
+        if (typeof window.hapticFeedback === "function") {
+          window.hapticFeedback([50, 50, 50]);
+        }
+        
+        if (saveBtn) {
+          saveBtn.textContent = "✅ " + (getLang() === 'de' ? 'Gesendet!' : (getLang() === 'uk' || getLang() === 'ua' ? 'Надіслано!' : 'Отправлено!'));
+          saveBtn.classList.add("btn-saved-success");
+        }
+        
+        if (!AppState.yearScheduleMessages) {
+          AppState.yearScheduleMessages = {};
+        }
+        AppState.yearScheduleMessages[getLang()] = msg;
+        localStorage.setItem("yearScheduleMessages", JSON.stringify(AppState.yearScheduleMessages));
+        
+        renderAllTabs();
+        
+        var successMsg = getLang() === 'de' ? 'Ankündigung erfolgreich gesendet!' 
+                           : (getLang() === 'uk' || getLang() === 'ua' ? 'Оголошення успішно надіслано!' 
+                           : 'Объявление успешно отправлено!');
+        if (typeof window.showToast === "function") {
+          window.showToast(successMsg, "success");
+        } else {
+          showToastBanner(successMsg);
+        }
+        
+        setTimeout(function() {
+          if (saveBtn) {
+            saveBtn.disabled = false;
+            saveBtn.classList.remove("btn-saved-success");
+            saveBtn.textContent = origText;
+          }
+        }, 2000);
+      } else {
+        throw new Error((data && data.message) || "Unknown error");
+      }
+    }).catch(function (err) {
+      if (typeof window.hapticFeedback === "function") {
+        window.hapticFeedback([30, 50, 30]);
+      }
+      if (saveBtn) {
+        saveBtn.disabled = false;
+        saveBtn.textContent = origText;
+      }
+      var errorMsg = (getLang() === 'de' ? 'Fehler beim Senden: ' : (getLang() === 'uk' || getLang() === 'ua' ? 'Помилка надсилання: ' : 'Ошибка отправки: ')) + err.message;
+      if (typeof window.showToast === "function") {
+        window.showToast(errorMsg, "error");
+      } else {
+        showToastBanner(errorMsg);
+      }
+    });
+  }
+
+  function renderYearScheduleMessage() {
+    var container = document.getElementById("yearScheduleMessageContainer");
+    if (!container) return;
+    
+    var messages = (AppState && AppState.yearScheduleMessages) || {};
+    var currentLang = getLang();
+    var message = messages[currentLang] || "";
+    
+    if (message.trim()) {
+      var titles = {
+        ru: "Важное объявление",
+        uk: "Важливе оголошення",
+        ua: "Важливе оголошення",
+        de: "Wichtige Ankündigung"
+      };
+      var title = titles[currentLang] || titles.ru;
+      
+      container.innerHTML = 
+        '<span class="banner-icon">📢</span>' +
+        '<div class="banner-content">' +
+          '<h4 class="banner-title">' + title + '</h4>' +
+          '<p class="banner-text">' + message + '</p>' +
+        '</div>';
+      container.style.display = "flex";
+    } else {
+      container.style.display = "none";
+      container.innerHTML = "";
+    }
   }
 
   // ----- Экспорт глобального API -----

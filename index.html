@@ -1495,28 +1495,68 @@
             height: 16px;
         }
 
-        .info-helper-box {
-            display: none;
-            background-color: var(--primary-container);
-            color: var(--primary);
-            border-left: 4px solid var(--primary);
-            border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
-            padding: 8px 12px;
-            font-size: 0.75rem;
-            font-weight: 500;
-            margin-top: 6px;
-            margin-bottom: 10px;
-            animation: helperBoxFade 0.2s ease-out forwards;
-            line-height: 1.4;
-            text-align: left;
-            transform: none !important;
-            width: 100% !important;
-            box-sizing: border-box !important;
+        /* Global Center Tooltip */
+        .global-tooltip-backdrop {
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.45);
+            z-index: 99999;
+            backdrop-filter: blur(3px);
+            -webkit-backdrop-filter: blur(3px);
+            animation: globalTooltipFadeIn 0.3s ease-out;
         }
-
-        @keyframes helperBoxFade {
-            from { opacity: 0; transform: translateY(-4px); }
-            to { opacity: 1; transform: translateY(0); }
+        .global-center-tooltip {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            z-index: 100000;
+            width: 80%;
+            max-width: 300px;
+            background: rgba(30, 30, 40, 0.85);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border-radius: 14px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            box-shadow: 0 12px 40px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(255, 255, 255, 0.05) inset;
+            padding: 18px 22px;
+            color: var(--text, #e0e0e0);
+            font-size: 0.82rem;
+            line-height: 1.55;
+            animation: globalTooltipIn 0.3s ease-out forwards;
+            text-align: center;
+            box-sizing: border-box;
+        }
+        .global-center-tooltip-close {
+            position: absolute;
+            top: 6px;
+            right: 10px;
+            background: none;
+            border: none;
+            color: var(--text-muted, #888);
+            font-size: 1.3rem;
+            cursor: pointer;
+            padding: 4px 8px;
+            border-radius: 6px;
+            line-height: 1;
+            transition: color 0.2s, background-color 0.2s;
+            opacity: 0.7;
+        }
+        .global-center-tooltip-close:hover {
+            color: var(--text, #e0e0e0);
+            background-color: rgba(255, 255, 255, 0.08);
+            opacity: 1;
+        }
+        .global-center-tooltip-content {
+            margin-top: 4px;
+        }
+        @keyframes globalTooltipIn {
+            from { top: 45%; opacity: 0; }
+            to { top: 50%; opacity: 1; }
+        }
+        @keyframes globalTooltipFadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
         }
         /* Auth Modal Styles */
         .auth-modal-overlay {
@@ -1796,15 +1836,12 @@
             <h2 class="section-title">
                 <span>
                     Выберите дату
-                    <button type="button" class="btn-info-toggle" onclick="toggleInfo('dateInfo')" title="Показать подсказку">
+                    <button type="button" class="btn-info-toggle" onclick="toggleInfo(this)" title="Показать подсказку" data-tooltip="Выберите неделю (Текущая, Следующая или Через одну) в переключателе, а затем нажмите на нужную дату в круглой ленте дней.">
                         <svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z" fill="currentColor"/></svg>
                     </button>
                 </span>
                 <button type="button" onclick="jumpToToday()" style="background:none; border:none; color:var(--primary); font-size:0.75rem; font-weight:700; cursor:pointer; padding: 4px 8px;">Сегодня</button>
             </h2>
-            <div id="dateInfo" class="info-helper-box">
-                Выберите неделю (Текущая, Следующая или Через одну) в переключателе, а затем нажмите на нужную дату в круглой ленте дней.
-            </div>
             <div class="week-switcher">
                 <button type="button" class="week-btn" id="btnPrevWeek" onclick="switchWeek('prev')">Прошлая неделя</button>
                 <button type="button" class="week-btn active" id="btnThisWeek" onclick="switchWeek('this')">Текущая неделя</button>
@@ -1830,6 +1867,7 @@
                 </button>
             </div>
             <div id="scheduleWeatherWidget" class="schedule-weather-widget"></div>
+            <div id="yearScheduleMessageContainer" class="year-schedule-message-banner" style="display: none;"></div>
             <div class="schedule-board" id="scheduleBoard">
                 <!-- Сюда вставляется живой график -->
             </div>
@@ -1970,21 +2008,19 @@
                     <div>
                         <div style="display: flex; align-items: center; gap: 4px; margin-bottom: 4px;">
                             <label class="compact-label" id="qbDateLabel" style="margin-bottom: 0;">Дата</label>
-                            <button type="button" class="btn-info-toggle" onclick="toggleInfo('qbDateInfo')" style="padding: 2px; height: 18px; display: inline-flex; align-items: center;">
+                            <button type="button" class="btn-info-toggle" onclick="toggleInfo(this)" style="padding: 2px; height: 18px; display: inline-flex; align-items: center;" data-tooltip="Дата проведения смены (только для чтения)">
                                 <svg viewBox="0 0 24 24" style="width: 14px; height: 14px;"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z" fill="currentColor"/></svg>
                             </button>
                         </div>
-                        <div id="qbDateInfo" class="info-helper-box" style="margin-top: 4px; margin-bottom: 6px;">Дата проведения смены (только для чтения)</div>
                         <input type="text" id="qbDate" class="input-field" disabled style="background-color: var(--primary-container); border-color: var(--border); opacity: 0.85; cursor: not-allowed;">
                     </div>
                     <div>
                         <div style="display: flex; align-items: center; gap: 4px; margin-bottom: 4px;">
                             <label class="compact-label" id="qbTimeLabel" style="margin-bottom: 0;">Время</label>
-                            <button type="button" class="btn-info-toggle" onclick="toggleInfo('qbTimeInfo')" style="padding: 2px; height: 18px; display: inline-flex; align-items: center;">
+                            <button type="button" class="btn-info-toggle" onclick="toggleInfo(this)" style="padding: 2px; height: 18px; display: inline-flex; align-items: center;" data-tooltip="Время дежурства. Можно указать нестандартный интервал, например, 10:30 - 12:30.">
                                 <svg viewBox="0 0 24 24" style="width: 14px; height: 14px;"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z" fill="currentColor"/></svg>
                             </button>
                         </div>
-                        <div id="qbTimeInfo" class="info-helper-box" style="margin-top: 4px; margin-bottom: 6px;">Время дежурства. Можно указать нестандартный интервал, например, 10:30 - 12:30.</div>
                         <input type="text" id="qbTime" class="input-field" disabled style="background-color: var(--primary-container); border-color: var(--border); opacity: 0.85; cursor: not-allowed;" placeholder="например, 10:00 - 12:00">
                     </div>
                 </div>
@@ -1992,21 +2028,19 @@
                     <div>
                         <div style="display: flex; align-items: center; gap: 4px; margin-bottom: 4px;">
                             <label class="compact-label" id="qbLocationLabel" style="margin-bottom: 0;">Место</label>
-                            <button type="button" class="btn-info-toggle" onclick="toggleInfo('qbLocationInfo')" style="padding: 2px; height: 18px; display: inline-flex; align-items: center;">
+                            <button type="button" class="btn-info-toggle" onclick="toggleInfo(this)" style="padding: 2px; height: 18px; display: inline-flex; align-items: center;" data-tooltip="Выбранная локация проведения служения (только для чтения)">
                                 <svg viewBox="0 0 24 24" style="width: 14px; height: 14px;"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z" fill="currentColor"/></svg>
                             </button>
                         </div>
-                        <div id="qbLocationInfo" class="info-helper-box" style="margin-top: 4px; margin-bottom: 6px;">Выбранная локация проведения служения (только для чтения)</div>
                         <input type="text" id="qbLocation" class="input-field" disabled style="background-color: var(--primary-container); border-color: var(--border); opacity: 0.85; cursor: not-allowed;">
                     </div>
                     <div>
                         <div style="display: flex; align-items: center; gap: 4px; margin-bottom: 4px;">
                             <label class="compact-label" id="qbCartLabel" style="margin-bottom: 0;">Тележка</label>
-                            <button type="button" class="btn-info-toggle" onclick="toggleInfo('qbCartInfo')" style="padding: 2px; height: 18px; display: inline-flex; align-items: center;">
+                            <button type="button" class="btn-info-toggle" onclick="toggleInfo(this)" style="padding: 2px; height: 18px; display: inline-flex; align-items: center;" data-tooltip="Номер стенда-тележки для этой смены (только для чтения)">
                                 <svg viewBox="0 0 24 24" style="width: 14px; height: 14px;"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z" fill="currentColor"/></svg>
                             </button>
                         </div>
-                        <div id="qbCartInfo" class="info-helper-box" style="margin-top: 4px; margin-bottom: 6px;">Номер стенда-тележки для этой смены (только для чтения)</div>
                         <input type="text" id="qbCart" class="input-field" disabled style="background-color: var(--primary-container); border-color: var(--border); opacity: 0.85; cursor: not-allowed;">
                     </div>
                 </div>
@@ -2014,11 +2048,10 @@
                 <div class="form-section-compact">
                     <div style="display: flex; align-items: center; gap: 4px; margin-bottom: 6px;">
                         <label class="compact-label" id="qbLangLabel" style="margin-bottom: 0;">Выберите язык тележки</label>
-                        <button type="button" class="btn-info-toggle" onclick="toggleInfo('qbLangInfo')" style="padding: 2px; height: 18px; display: inline-flex; align-items: center;">
+                        <button type="button" class="btn-info-toggle" onclick="toggleInfo(this)" style="padding: 2px; height: 18px; display: inline-flex; align-items: center;" data-tooltip="Выберите язык литературы, которая будет представлена на этом стенде.">
                             <svg viewBox="0 0 24 24" style="width: 14px; height: 14px;"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z" fill="currentColor"/></svg>
                         </button>
                     </div>
-                    <div id="qbLangInfo" class="info-helper-box" style="margin-top: 4px; margin-bottom: 6px;">Выберите язык литературы, которая будет представлена на этом стенде.</div>
                     <div id="qbLangPicker"></div>
                 </div>
 
@@ -2026,7 +2059,7 @@
                     <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px;">
                         <div style="display: flex; align-items: center; gap: 4px;">
                             <label class="compact-label" id="qbNamesLabel" style="margin-bottom: 0;">Участники смены</label>
-                            <button type="button" class="btn-info-toggle" onclick="toggleInfo('qbNamesInfo')" style="padding: 2px; height: 18px; display: inline-flex; align-items: center;">
+                            <button type="button" class="btn-info-toggle" onclick="toggleInfo(this)" style="padding: 2px; height: 18px; display: inline-flex; align-items: center;" data-tooltip="Укажите имена двух возвещателей для этого дежурства.">
                                 <svg viewBox="0 0 24 24" style="width: 14px; height: 14px;"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z" fill="currentColor"/></svg>
                             </button>
                         </div>
@@ -2042,7 +2075,6 @@
                             display: none;
                         ">⚡ Вставить мои имена</button>
                     </div>
-                    <div id="qbNamesInfo" class="info-helper-box" style="margin-top: 4px; margin-bottom: 6px;">Укажите имена двух возвещателей для этого дежурства.</div>
                     <input type="text" id="qbName1" class="input-field" placeholder="Возвещатель 1 (ФИО)" required autocomplete="off" style="margin-bottom: 8px;">
                     <input type="text" id="qbName2" class="input-field" placeholder="Возвещатель 2 (ФИО)" autocomplete="off" style="margin-bottom: 8px;">
                     
@@ -2096,14 +2128,6 @@
     </div>
 
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
-        <script>
-        function toggleInfo(infoId) {
-            const box = document.getElementById(infoId);
-            if (!box) return;
-            const isVisible = window.getComputedStyle(box).display === 'block';
-            box.style.display = isVisible ? 'none' : 'block';
-        }
-    </script>
     <!-- ── Congregation-switch confirmation modal (RU) ──────────── -->
     <div id="langConfirmOverlay" class="lang-confirm-overlay" style="display:none;" role="dialog" aria-modal="true" aria-labelledby="langConfirmTitle">
         <div class="lang-confirm-box">

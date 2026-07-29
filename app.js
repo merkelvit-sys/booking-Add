@@ -642,8 +642,10 @@ function getAuthUser() {
 function setAuthUser(user) {
   if (user) {
     localStorage.setItem(AUTH_KEY, JSON.stringify(user));
+    window.currentUserRole = user.role;
   } else {
     localStorage.removeItem(AUTH_KEY);
+    window.currentUserRole = null;
   }
   authUser = user;
   updateAuthUI();
@@ -947,6 +949,7 @@ window.addEventListener('DOMContentLoaded', () => {
 
   // Auth check: show modal if not authenticated
   authUser = getAuthUser();
+  window.currentUserRole = authUser ? authUser.role : null;
   updateAuthUI();
   if (!isAuthenticated()) {
     showAuthModal();
@@ -3642,70 +3645,75 @@ function showToast(msg, type) {
   }, 3000);
 }
 
-function toggleInfo(infoId) {
-  const box = document.getElementById(infoId);
-  if (!box) return;
-  if (box.closest('#quickBookingForm')) {
-    const isOpen = box.classList.contains('qb-tooltip-open');
-    if (isOpen) {
-      box.classList.remove('qb-tooltip-open');
-    } else {
-      closeAllQBTooltips();
-      box.classList.add('qb-tooltip-open');
+function showGlobalTooltip(text) {
+  const existing = document.getElementById('globalTooltipBackdrop');
+  if (existing) {
+    const tooltip = document.getElementById('globalCenterTooltip');
+    if (tooltip && tooltip.querySelector('.global-center-tooltip-content').textContent.trim() === text.trim()) {
+      removeGlobalTooltip();
+      return;
     }
-  } else {
-    const isVisible = window.getComputedStyle(box).display === 'block';
-    box.style.display = isVisible ? 'none' : 'block';
+    removeGlobalTooltip();
   }
+  const backdrop = document.createElement('div');
+  backdrop.id = 'globalTooltipBackdrop';
+  backdrop.className = 'global-tooltip-backdrop';
+  backdrop.addEventListener('click', removeGlobalTooltip);
+  const tooltip = document.createElement('div');
+  tooltip.id = 'globalCenterTooltip';
+  tooltip.className = 'global-center-tooltip';
+  tooltip.innerHTML = '<button type="button" class="global-center-tooltip-close" aria-label="Закрыть">&times;</button><div class="global-center-tooltip-content">' + text + '</div>';
+  tooltip.querySelector('.global-center-tooltip-close').addEventListener('click', removeGlobalTooltip);
+  document.body.appendChild(backdrop);
+  document.body.appendChild(tooltip);
+  tooltip.querySelector('.global-center-tooltip-close').addEventListener('click', function(e) {
+    e.stopPropagation();
+    removeGlobalTooltip();
+  });
+  backdrop.addEventListener('click', function(e) {
+    if (e.target === backdrop) {
+      removeGlobalTooltip();
+    }
+  });
 }
 
-function closeAllQBTooltips() {
-  const open = document.querySelectorAll('#quickBookingForm .info-helper-box.qb-tooltip-open');
-  for (let i = 0; i < open.length; i++) {
-    open[i].classList.remove('qb-tooltip-open');
+function removeGlobalTooltip() {
+  const backdrop = document.getElementById('globalTooltipBackdrop');
+  const tooltip = document.getElementById('globalCenterTooltip');
+  if (backdrop) backdrop.remove();
+  if (tooltip) tooltip.remove();
+}
+
+function toggleInfo(el) {
+  if (!el || !el.getAttribute) return;
+  const text = el.getAttribute('data-tooltip');
+  if (!text) return;
+  const existing = document.getElementById('globalTooltipBackdrop');
+  if (existing) {
+    const tooltip = document.getElementById('globalCenterTooltip');
+    if (tooltip && tooltip.querySelector('.global-center-tooltip-content').textContent.trim() === text.trim()) {
+      removeGlobalTooltip();
+      return;
+    }
+    removeGlobalTooltip();
   }
+  showGlobalTooltip(text);
 }
 
 document.addEventListener('click', function(e) {
-  if (e.target.closest && e.target.closest('#quickBookingForm')) return;
-  const open = document.querySelectorAll('#quickBookingForm .info-helper-box.qb-tooltip-open');
-  for (let i = 0; i < open.length; i++) {
-    open[i].classList.remove('qb-tooltip-open');
+  const backdrop = document.getElementById('globalTooltipBackdrop');
+  if (backdrop && e.target === backdrop) {
+    removeGlobalTooltip();
   }
 });
 
 document.addEventListener('keydown', function(e) {
   if (e.key === 'Escape') {
-    const open = document.querySelectorAll('#quickBookingForm .info-helper-box.qb-tooltip-open');
-    for (let i = 0; i < open.length; i++) {
-      open[i].classList.remove('qb-tooltip-open');
-    }
+    removeGlobalTooltip();
   }
 });
 
-document.addEventListener('mouseover', function(e) {
-  const btn = e.target.closest ? e.target.closest('#quickBookingForm .btn-info-toggle') : null;
-  if (!btn) return;
-  const onclick = btn.getAttribute('onclick') || '';
-  const match = onclick.match(/toggleInfo\(['"]([^'"]+)['"]\)/);
-  if (!match) return;
-  const box = document.getElementById(match[1]);
-  if (box && !box.classList.contains('qb-tooltip-open')) {
-    box.classList.add('qb-tooltip-hover');
-  }
-});
 
-document.addEventListener('mouseout', function(e) {
-  const btn = e.target.closest ? e.target.closest('#quickBookingForm .btn-info-toggle') : null;
-  if (!btn) return;
-  const onclick = btn.getAttribute('onclick') || '';
-  const match = onclick.match(/toggleInfo\(['"]([^'"]+)['"]\)/);
-  if (!match) return;
-  const box = document.getElementById(match[1]);
-  if (box) {
-    box.classList.remove('qb-tooltip-hover');
-  }
-});
 
 function jumpToToday() {
   currentWeekOffset = 0;
@@ -3950,7 +3958,7 @@ function closeQuickBookingModal() {
   const qbLangPicker = document.getElementById("qbLangPicker");
   if (qbLangPicker) qbLangPicker.innerHTML = "";
   selectedQBLang = "";
-  closeAllQBTooltips();
+   removeGlobalTooltip();
 
   document.body.style.overflow = '';
 

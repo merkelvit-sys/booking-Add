@@ -1799,3 +1799,67 @@ div[id*="vercel-toolbar"] {
 body, .month-block, .day-cell, .modal-content, .auth-modal-box, .board-card {
   transition: background-color 0.3s ease, color 0.3s ease, border-color 0.3s ease, box-shadow 0.3s ease;
 }
+
+/* ── Year Schedule Message Banner ── */
+.year-schedule-message-banner {
+    background: linear-gradient(135deg, rgba(26, 115, 232, 0.08), rgba(26, 115, 232, 0.02));
+    border: 1px solid rgba(26, 115, 232, 0.18);
+    border-radius: var(--radius-md, 12px);
+    padding: 16px 20px;
+    margin-bottom: 20px;
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
+    position: relative;
+    overflow: hidden;
+    animation: fadeInSlide 0.3s ease-out;
+}
+
+.year-schedule-message-banner::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 4px;
+    height: 100%;
+    background: var(--primary, #1a73e8);
+}
+
+.year-schedule-message-banner .banner-icon {
+    font-size: 1.5rem;
+    line-height: 1.2;
+}
+
+.year-schedule-message-banner .banner-content {
+    flex: 1;
+}
+
+.year-schedule-message-banner .banner-title {
+    margin: 0 0 4px 0;
+    font-size: 0.95rem;
+    font-weight: 700;
+    color: var(--primary, #1a73e8);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.year-schedule-message-banner .banner-text {
+    margin: 0;
+    font-size: 0.9rem;
+    color: var(--text-main, #333333);
+    line-height: 1.5;
+    word-break: break-word;
+    white-space: pre-wrap;
+}
+
+@keyframes fadeInSlide {
+    from {
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
