@@ -974,14 +974,17 @@ window.addEventListener('DOMContentLoaded', () => {
       }
     });
 
-    // Clean up old OneSignalSDKWorker registrations to prevent scope conflicts
+    // Clean up old OneSignalSDKWorker registrations on the root scope '/' to prevent conflicts
     if (typeof navigator.serviceWorker.getRegistrations === 'function') {
       navigator.serviceWorker.getRegistrations().then(registrations => {
         for (let r of registrations) {
-          if (r.active && r.active.scriptURL && r.active.scriptURL.indexOf('OneSignalSDKWorker.js') !== -1) {
-            console.log('[PWA] Unregistering old OneSignal service worker:', r.active.scriptURL);
-            r.unregister().catch(() => {});
-          }
+          try {
+            const scopePath = new URL(r.scope).pathname;
+            if (scopePath === '/' && r.active && r.active.scriptURL && r.active.scriptURL.indexOf('OneSignalSDKWorker.js') !== -1) {
+              console.log('[PWA] Unregistering old root-scope OneSignal service worker:', r.active.scriptURL);
+              r.unregister().catch(() => {});
+            }
+          } catch (err) {}
         }
       }).catch(() => {});
     }
@@ -1126,8 +1129,8 @@ window.addEventListener('DOMContentLoaded', () => {
         window.OneSignalDeferred.push(async function(OneSignal) {
           await OneSignal.init({
             appId: "817ea691-15bf-4e90-a20e-a710ed052184",
-            serviceWorkerPath: "sw.js",
-            serviceWorkerParam: { scope: "/" }
+            serviceWorkerPath: "onesignal/OneSignalSDKWorker.js",
+            serviceWorkerParam: { scope: "/onesignal/" }
           });
           window.oneSignalReady = true;
           if (typeof window.syncNotificationButtonState === 'function') {
