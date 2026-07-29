@@ -9,6 +9,10 @@
         await OneSignal.init({
           appId: "817ea691-15bf-4e90-a20e-a710ed052184",
         });
+        window.oneSignalReady = true;
+        if (typeof window.syncNotificationButtonState === 'function') {
+          window.syncNotificationButtonState();
+        }
       });
     </script>
     <script>

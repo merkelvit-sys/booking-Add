@@ -2586,12 +2586,25 @@ function buildApiUrl() {
     var t = titles[lang] || titles.ru;
 
     var isGranted = (typeof Notification !== 'undefined' && Notification.permission === 'granted');
-    var isOptedIn = true;
-    if (typeof window.OneSignal !== 'undefined' && window.OneSignal.User && window.OneSignal.User.pushSubscription) {
-      isOptedIn = window.OneSignal.User.pushSubscription.optedIn;
-    }
+    var isActive = false;
 
-    var isActive = isGranted && isOptedIn;
+    if (isGranted) {
+      if (window.oneSignalReady && typeof window.OneSignal !== 'undefined' && window.OneSignal.User && window.OneSignal.User.pushSubscription) {
+        var isOptedIn = window.OneSignal.User.pushSubscription.optedIn;
+        isActive = isOptedIn;
+        localStorage.setItem('pushNotificationsEnabled', isActive ? 'true' : 'false');
+      } else {
+        var savedState = localStorage.getItem('pushNotificationsEnabled');
+        if (savedState !== null) {
+          isActive = (savedState === 'true');
+        } else {
+          isActive = true; // Default fallback if permission is granted but no saved state/SDK yet
+        }
+      }
+    } else {
+      isActive = false;
+      localStorage.setItem('pushNotificationsEnabled', 'false');
+    }
 
     btn.innerHTML = '🔔';
 
@@ -2713,6 +2726,9 @@ function buildApiUrl() {
       });
     }
   });
+
+  // Periodically check/sync the notification button state to handle late SDK loading and browser setting changes
+  setInterval(syncNotificationButtonState, 1000);
 
   // Инициализация переключателя тележек (из localStorage) и заполнение SVG-иконок
   initTrolleyFilter();
