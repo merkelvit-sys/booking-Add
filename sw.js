@@ -1,4 +1,4 @@
-const CACHE_NAME = 'service-schedule-v39'; // <-- v39: обновлено для применения изменений чекбокса и автосинхронизации кнопок
+const CACHE_NAME = 'service-schedule-v40'; // <-- v40: обновлено для новой кнопки-колокольчика и ее переключения вкл/выкл
 const ASSETS = [
   './',
   './index.html',
