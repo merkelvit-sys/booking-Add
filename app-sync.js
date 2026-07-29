@@ -397,32 +397,33 @@ function buildApiUrl() {
 // автоматически повторяет запрос: 1 с → 3 с → 5 с (до maxAttempts попыток).
 // Каждая попытка строит URL заново через buildApiUrl(), чтобы никогда
 // не повторно использовать перенаправленный URL (script.googleusercontent.com).
-  function fetchWithRetry(urlBuilder, opts, maxAttempts, retryDelays) {
+  function fetchWithRetry(urlBuilder, opts, maxAttempts) {
     maxAttempts = maxAttempts || 3;
-    retryDelays = retryDelays || [1000, 3000, 5000];
     function attempt(n) {
       var url = (typeof urlBuilder === "function") ? urlBuilder() : urlBuilder;
       var fetchOpts = Object.assign({}, opts, { cache: "no-store" });
       return fetch(url, fetchOpts).then(function (res) {
-      // Повторяем при перегрузке сервера (Google Apps Script → 429/500)
-      if ((res.status === 429 || res.status === 500 || res.status === 503) && n < maxAttempts) {
-        return new Promise(function (resolve) {
-          setTimeout(function () { resolve(attempt(n + 1)); }, retryDelays[n - 1] || 5000);
-        });
-      }
-      return res;
-    }).catch(function (err) {
-      // Пробрасываем оригинальную ошибку (CORS-ошибки исчезнут после удаления Content-Type)
-      if (n < maxAttempts) {
-        return new Promise(function (resolve) {
-          setTimeout(function () { resolve(attempt(n + 1)); }, retryDelays[n - 1] || 5000);
-        });
-      }
-      throw err; // пробрасываем оригинальную ошибку без маскировки
-    });
+        if ((res.status === 429 || res.status === 500 || res.status === 503) && n < maxAttempts) {
+          var delay = Math.pow(2, n - 1) * 1000 + Math.floor(Math.random() * 1000);
+          console.log("[SyncCore] Server error " + res.status + ", retrying attempt " + (n + 1) + " in " + delay + "ms");
+          return new Promise(function (resolve) {
+            setTimeout(function () { resolve(attempt(n + 1)); }, delay);
+          });
+        }
+        return res;
+      }).catch(function (err) {
+        if (n < maxAttempts) {
+          var delay = Math.pow(2, n - 1) * 1000 + Math.floor(Math.random() * 1000);
+          console.warn("[SyncCore] Fetch network error, retrying attempt " + (n + 1) + " in " + delay + "ms", err);
+          return new Promise(function (resolve) {
+            setTimeout(function () { resolve(attempt(n + 1)); }, delay);
+          });
+        }
+        throw err;
+      });
+    }
+    return attempt(1);
   }
-  return attempt(1);
-}
 
   // Ограничивает время ожидания промиса: если сервер «висит» и не отвечает,
   // запрос не подвешивает интерфейс (модальное окно) навсегда — пробрасываем ошибку.
@@ -441,8 +442,141 @@ function buildApiUrl() {
     });
   }
 
+  // ----- Очередь офлайн-синхронизации (Offline Sync Queue) -----
+  var OFFLINE_QUEUE_KEY = "booking_offline_actions_v1";
+
+  function getOfflineQueue() {
+    try {
+      return JSON.parse(localStorage.getItem(OFFLINE_QUEUE_KEY)) || [];
+    } catch (e) {
+      return [];
+    }
+  }
+
+  function saveOfflineQueue(queue) {
+    try {
+      localStorage.setItem(OFFLINE_QUEUE_KEY, JSON.stringify(queue));
+    } catch (e) {}
+  }
+
+  function pushOfflineAction(type, data) {
+    var queue = getOfflineQueue();
+    queue.push({ id: Date.now() + "_" + Math.random(), type: type, data: data });
+    saveOfflineQueue(queue);
+    console.log("[SyncCore] Offline action queued:", type, data);
+  }
+
+  var isQueueProcessing = false;
+
+  function processOfflineQueue() {
+    if (isQueueProcessing) return Promise.resolve(true);
+    var queue = getOfflineQueue();
+    if (queue.length === 0) return Promise.resolve(true);
+
+    isQueueProcessing = true;
+    console.log("[SyncCore] Starting processing offline queue of size:", queue.length);
+
+    function executeAction(action) {
+      if (!isValidScriptUrl(GOOGLE_SCRIPT_URL)) return Promise.resolve(true);
+
+      var p;
+      if (action.type === "create") {
+        var body = JSON.stringify({
+          action: "create",
+          key: API_KEY,
+          language: getLang(),
+          bookings: [action.data.record]
+        });
+        p = fetch(buildApiUrl(), {
+          method: "POST",
+          mode: "cors",
+          body: body
+        }).then(function (res) { return res.json(); });
+      } else if (action.type === "delete") {
+        var params = new URLSearchParams({
+          action: "delete",
+          location: action.data.booking.location,
+          date: action.data.booking.date,
+          time: action.data.booking.time,
+          cartNumber: String(action.data.booking.cartNumber),
+          language: getLang(),
+          key: API_KEY
+        });
+        p = fetch(GOOGLE_SCRIPT_URL + '?' + params.toString(), {
+          method: 'POST',
+          mode: 'cors'
+        }).then(function (res) { return res.json(); });
+      } else if (action.type === "year_update") {
+        var day = action.data.day;
+        var posts = [];
+        var postCartFn = function(cn, lang) {
+          var body = JSON.stringify({
+            action: "year_update",
+            key: API_KEY,
+            language: getLang(),
+            date: day.date,
+            cartNumber: cn,
+            trolley: lang,
+            status: day.status,
+            description: day.description || "",
+            note: day.note || ""
+          });
+          return fetch(buildApiUrl(), {
+            method: "POST",
+            mode: "cors",
+            body: body
+          }).then(function (res) { return res.json(); });
+        };
+        if (day.cart1Lang) posts.push(postCartFn(1, day.cart1Lang));
+        if (day.cart2Lang) posts.push(postCartFn(2, day.cart2Lang));
+        if (!posts.length) posts.push(postCartFn(1, ""));
+        p = Promise.all(posts).then(function (results) {
+          for (var i = 0; i < results.length; i++) {
+            if (results[i] && results[i].status === "error") return results[i];
+          }
+          return { status: "success" };
+        });
+      } else {
+        return Promise.resolve(true);
+      }
+
+      return p.then(function (result) {
+        if (result && (result.status === "error" || result.status === "conflict")) {
+          console.error("[SyncCore] Offline action rejected by server:", action, result);
+          return true; 
+        }
+        return true;
+      }).catch(function (err) {
+        console.warn("[SyncCore] Offline action network fail, will retry later:", action, err);
+        throw err;
+      });
+    }
+
+    function processNext(index) {
+      if (index >= queue.length) {
+        saveOfflineQueue([]);
+        isQueueProcessing = false;
+        console.log("[SyncCore] Offline queue fully synchronized!");
+        return true;
+      }
+
+      return executeAction(queue[index]).then(function () {
+        var currentQueue = getOfflineQueue();
+        currentQueue = currentQueue.filter(function (x) { return x.id !== queue[index].id; });
+        saveOfflineQueue(currentQueue);
+        return processNext(index + 1);
+      }).catch(function (err) {
+        isQueueProcessing = false;
+        throw err;
+      });
+    }
+
+    return processNext(0);
+  }
+
   function fetchCombined() {
     if (!isValidScriptUrl(GOOGLE_SCRIPT_URL)) return Promise.reject(new Error("NO_URL"));
+    return processOfflineQueue().catch(function() {}).then(function() {
     return fetchWithRetry(buildApiUrl, { cache: "no-store" }).then(function (res) {
       if (!res.ok) throw new Error("HTTP_" + res.status);
       return res.json();
@@ -452,6 +586,7 @@ function buildApiUrl() {
         bookings: Array.isArray(data.bookings) ? data.bookings : (Array.isArray(data) ? data : []),
         schedule: Array.isArray(data.schedule) ? data.schedule : []
       };
+    });
     });
   }
 
@@ -553,25 +688,67 @@ function buildApiUrl() {
     return lastSyncTime > 0 ? (Date.now() - lastSyncTime) : Infinity;
   }
 
+  // ----- Адаптивный опрос (Adaptive Polling) -----
+  var isTabVisible = true;
+  var lastUserActivityTime = Date.now();
+  var IDLE_TIMEOUT_MS = 5 * 60 * 1000; // 5 минут
+  var IDLE_SYNC_INTERVAL_MS = 10 * 60 * 1000; // 10 минут
+  var currentIntervalMs = SYNC_INTERVAL_MS;
+
+  function updateActivity() {
+    var now = Date.now();
+    var wasIdle = (now - lastUserActivityTime > IDLE_TIMEOUT_MS);
+    lastUserActivityTime = now;
+    if (wasIdle) {
+      console.log("[SyncCore] User returned from idle, resuming active sync.");
+      adjustPollingInterval();
+    }
+  }
+
+  function adjustPollingInterval() {
+    var now = Date.now();
+    var isIdle = (now - lastUserActivityTime > IDLE_TIMEOUT_MS);
+    var targetInterval = isIdle ? IDLE_SYNC_INTERVAL_MS : SYNC_INTERVAL_MS;
+
+    if (!isTabVisible) {
+      if (autoTimer !== null) {
+        console.log("[SyncCore] Tab hidden, pausing auto sync.");
+        stopAutoSync();
+      }
+      return;
+    }
+
+    if (autoTimer === null || currentIntervalMs !== targetInterval) {
+      console.log("[SyncCore] Adjusting auto sync interval to:", targetInterval / 1000, "seconds.");
+      stopAutoSync();
+      currentIntervalMs = targetInterval;
+      autoTimer = setInterval(refreshSilently, currentIntervalMs);
+    }
+  }
+
+  // Activity listeners
+  document.addEventListener("mousemove", updateActivity);
+  document.addEventListener("keydown", updateActivity);
+  document.addEventListener("click", updateActivity);
+  document.addEventListener("touchstart", updateActivity, { passive: true });
+
+  // Tab visibility changes
+  document.addEventListener("visibilitychange", function () {
+    isTabVisible = (document.visibilityState === "visible");
+    if (isTabVisible) {
+      updateActivity();
+      if (timeSinceLastSync() > SYNC_INTERVAL_MS) {
+        refreshSilently();
+      }
+    }
+    adjustPollingInterval();
+  });
+
+  // Periodically check if idle status changed
+  setInterval(adjustPollingInterval, 30000);
+
   function startAutoSync() {
-    if (autoTimer === null) autoTimer = setInterval(function () {
-      if (isSyncLocked) return Promise.resolve(true);
-      var url = GOOGLE_SCRIPT_URL + "?key=" + encodeURIComponent(API_KEY) + "&_t=" + Date.now();
-      return fetchWithRetry(url, { cache: "no-store" }).then(function (res) {
-        if (!res.ok) throw new Error("HTTP_" + res.status);
-        return res.json();
-      }).then(function (data) {
-        if (data && data.status === "error") throw new Error(data.message || "SERVER_ERROR");
-        var bookings = Array.isArray(data.bookings) ? data.bookings : (Array.isArray(data) ? data : []);
-        var sched = Array.isArray(data.schedule) ? data.schedule : [];
-        var normalizedBookings = (bookings || []).map(normalizeBooking);
-        var mergedSched = mergeSchedules(sched, loadCache());
-        updateAppState({ bookings: normalizedBookings, schedule: mergedSched });
-        lastSyncOnline = true;
-        lastSyncTime = Date.now();
-        updateSyncBadge();
-      }).catch(function () { lastSyncOnline = false; updateSyncBadge(); });
-    }, SYNC_INTERVAL_MS);
+    adjustPollingInterval();
   }
   function stopAutoSync() {
     if (autoTimer !== null) { clearInterval(autoTimer); autoTimer = null; }
@@ -744,18 +921,22 @@ function buildApiUrl() {
 
     return p.then(function (result) {
       isSyncLocked = false;
-      // Сервер подтвердил удаление (или вернул ошибку поиска — трактуем как уже удалено)
       if (result && result.status === "error") throw new Error(result.message || "SERVER_ERROR");
       return true;
     }).catch(function (err) {
       isSyncLocked = false;
-      // Откат: возвращаем кэш в исходное состояние, перерисовываем.
-      AppState.bookings = snapshot;
-      try { databaseBookings = snapshot; } catch (e) {}
-      saveCachedBookings(snapshot);
-      unlinkBookingFromYear(b.date);
-      renderAllTabs();
-      throw err;
+      var msg = String(err && (err.message || err));
+      var isServerLogicError = msg === "SERVER_ERROR" || (msg.indexOf("SERVER_ERROR") !== -1);
+      if (isServerLogicError) {
+        AppState.bookings = snapshot;
+        try { databaseBookings = snapshot; } catch (e) {}
+        saveCachedBookings(snapshot);
+        unlinkBookingFromYear(b.date);
+        renderAllTabs();
+        throw err;
+      }
+      pushOfflineAction("delete", { booking: b });
+      return { status: "offline", message: "Удалено локально в режиме офлайн." };
     });
   }
 
@@ -813,27 +994,17 @@ function buildApiUrl() {
 
     return p.then(function (result) {
       isSyncLocked = false;
-      // Hard server logic errors — rollback and propagate so the caller can show
-      // a specific message (conflict, validation failure, etc.)
       if (result && (result.status === "error" || result.status === "conflict")) {
         throw new Error(result.message || "SERVER_ERROR");
       }
-      // ── Fix: re-render after server confirms so UI reflects canonical data ──
-      // The optimistic render (line above) ran while the modal was still visible.
-      // This second render fires after the server roundtrip and lets the caller's
-      // setTimeout(closeModal) reveal an already-updated Schedule/Year view.
       renderAllTabs();
       return result;
     }).catch(function (err) {
       isSyncLocked = false;
       var msg = String(err && (err.message || err));
-      var isServerLogicError = msg === "SERVER_ERROR" ||
-        /conflict/i.test(msg) ||
-        (msg.indexOf("SERVER_ERROR") !== -1);
+      var isServerLogicError = msg === "SERVER_ERROR" || /conflict/i.test(msg) || (msg.indexOf("SERVER_ERROR") !== -1);
 
       if (isServerLogicError) {
-        // Server explicitly rejected the booking (conflict / bad data): roll back
-        // so the UI doesn’t show an invalid record.
         AppState.bookings = snapshot;
         try { databaseBookings = snapshot; } catch (e) {}
         saveCachedBookings(snapshot);
@@ -847,11 +1018,8 @@ function buildApiUrl() {
         throw err;
       }
 
-      // Network / timeout error: keep the local booking as-is (offline-first).
-      // The background sync will push it to the server when connectivity returns.
-      console.warn('[SyncCore] addBookingRecordSafe: network error, booking kept locally.', err);
-      // Re-throw so that submitQuickBooking’s catch can show the soft toast.
-      throw err;
+      pushOfflineAction("create", { record: rec });
+      return { status: "offline", message: "Сохранено локально в режиме офлайн." };
     });
   }
 
@@ -941,9 +1109,136 @@ function buildApiUrl() {
     if (!root) return;
 
     var dict = I18N[getLang()];
-    
-    // Determine active year
     var year = selectedYear || currentScheduleYear();
+
+    var existingGrid = root.querySelector(".year-grid");
+    var existingYear = root.dataset.renderedYear;
+    var existingLang = root.dataset.renderedLang;
+    var currentLang = getLang();
+
+    if (existingGrid && existingYear === String(year) && existingLang === currentLang) {
+      // Incremental DOM Update: update status classes, trolley badges, and aria-labels of existing cells
+      var cells = existingGrid.querySelectorAll(".day-cell");
+      var tIso = todayIso();
+      for (var i = 0; i < cells.length; i++) {
+        var cell = cells[i];
+        if (cell.classList.contains("empty")) continue;
+
+        var iso = cell.dataset.date;
+        var rows = scheduleIndex[iso] || [];
+        
+        var status = "available";
+        var dayLangSet = {};
+        rows.forEach(function (r) {
+          if (r.status && r.status !== "available") status = r.status;
+          addLangToSet(dayLangSet, r.trolley);
+        });
+        
+        (AppState.bookings || []).forEach(function (b) {
+          if (b.date !== iso) return;
+          if (b.cart1Lang && (b.name1 || b.name2)) addLangToSet(dayLangSet, b.cart1Lang);
+          if (b.cart2Lang && (b.name3 || b.name4)) addLangToSet(dayLangSet, b.cart2Lang);
+        });
+
+        var dayLangs = Object.keys(dayLangSet);
+        var dayBookings = (AppState.bookings || []).filter(function (b) { return b.date === iso; });
+        var hasBookings = dayBookings.length > 0;
+        var isServingStatus = (status === "serving" || status === "Служение" || status === "event");
+        var isServingDay = hasBookings || isServingStatus || (dayLangs && dayLangs.length > 0);
+
+        // Reset classes
+        cell.className = "day-cell status-" + status + (isServingDay ? " has-serving" : " no-serving");
+        cell.dataset.status = status;
+
+        var yearNum = parseInt(iso.split("-")[0], 10);
+        var yearHolidays = getHolidaysForYear(yearNum);
+        var holidayInfo = yearHolidays[iso];
+        if (holidayInfo) {
+          cell.classList.add("is-hessen-holiday");
+        }
+
+        var anyNote = rows.some(function (r) { return r.description || r.note; });
+        if (anyNote) cell.classList.add("has-event");
+        if (iso === tIso) cell.classList.add("today");
+        if (iso < tIso) cell.classList.add("past");
+
+        dayLangs.forEach(function (lg) {
+          cell.classList.add("has-trolley", "has-booking-" + lg);
+        });
+        if (dayLangs.length) cell.dataset.groups = dayLangs.join(",");
+        else cell.removeAttribute("data-groups");
+
+        // Dimming/Highlighting Filters
+        if (selectedStatusFilter !== null) {
+          if (status !== selectedStatusFilter) {
+            cell.classList.add("day-status-dimmed");
+          }
+        }
+        if (yearTrolleyFilter !== "all") {
+          if (dayLangs.indexOf(yearTrolleyFilter) !== -1) {
+            cell.classList.add("day-trolley-highlight", "day-trolley-highlight-" + yearTrolleyFilter);
+          } else {
+            cell.classList.add("day-trolley-dimmed");
+          }
+        }
+
+        // Update innerHTML
+        var currentDay = iso.split("-")[2].replace(/^0/, "");
+        var inner = '<span class="day-number day-num">' + currentDay + '</span>';
+        if (dayLangs.length) {
+          inner += '<span class="day-lang-dots day-badge">';
+          dayLangs.forEach(function (lg) {
+            inner += '<span class="day-lang-dot dot-' + lg + ' cart-icon" data-group="' + lg + '" title="' + (dict.trolleys[lg] || "") + '">';
+            if (window.TrolleyUI) {
+              inner += '<span class="day-trolley-icon status-icon" data-group="' + lg + '" aria-hidden="true">' + TrolleyUI.getMiniSVG() + '</span>';
+            }
+            inner += '</span>';
+          });
+          inner += '</span>';
+        }
+        if (anyNote) inner += '<span class="attention-badge event-alert-badge">!</span>';
+        cell.innerHTML = inner;
+
+        // A11y description
+        var dObj = new Date(yearNum, parseInt(iso.split("-")[1], 10) - 1, parseInt(iso.split("-")[2], 10));
+        var weekdaysFull = {
+          ru: ["Воскресенье", "Понедельник", "Вторник", "Среда", "Четверг", "Пятница", "Суббота"],
+          uk: ["Неділя", "Понеділок", "Вівторок", "Середа", "Четверг", "П'ятниця", "Субота"],
+          de: ["Sonntag", "Montag", "Dienstag", "Mittwoch", "Donnerstag", "Freitag", "Samstag"]
+        };
+        var dayOfWeekLabel = (weekdaysFull[currentLang] || weekdaysFull.ru)[dObj.getDay()];
+        var formattedDate = parseInt(iso.split("-")[2], 10) + " " + dict.months[dObj.getMonth()] + ", " + dayOfWeekLabel;
+        var statusText = dict.statuses[status];
+        cell.setAttribute("aria-label", formattedDate + ". " + statusText + (anyNote ? ", Заметка: " + (rows.find(function (r) { return r.description || r.note; }).description || rows.find(function (r) { return r.description || r.note; }).note) : ""));
+      }
+
+      // Update active state of legend and year buttons
+      var legendBtns = root.querySelectorAll(".status-filter-btn");
+      legendBtns.forEach(function (btn, idx) {
+        var st = ALLOWED[idx];
+        if (selectedStatusFilter === st) {
+          btn.classList.add("active");
+        } else {
+          btn.classList.remove("active");
+        }
+      });
+
+      var yearBtns = root.querySelectorAll(".year-btn");
+      yearBtns.forEach(function (btn) {
+        var y = parseInt(btn.textContent, 10);
+        if (year === y) {
+          btn.classList.add("active");
+        } else {
+          btn.classList.remove("active");
+        }
+      });
+
+      updateSyncBadge();
+      return;
+    }
+
+    root.dataset.renderedYear = year;
+    root.dataset.renderedLang = currentLang;
     root.innerHTML = "";
 
     // Tooltip initialization
@@ -1163,61 +1458,6 @@ function buildApiUrl() {
           }
           cell.setAttribute("aria-label", fullAriaLabel);
 
-          // Pointer/Touch listeners for Rich Tooltip
-          cell.addEventListener("pointerenter", function (ev) {
-            showTooltipForCell(ev.currentTarget, iso, status, rows, dayLangSet);
-          });
-          cell.addEventListener("pointerleave", function () {
-            hideTooltip();
-          });
-
-          // Keyboard Arrow Navigation & Click editor
-          cell.addEventListener("keydown", function (ev) {
-            var currentD = new Date(year, m, currentDay);
-            var nextD = null;
-            
-            switch (ev.key) {
-              case "ArrowLeft":
-                nextD = new Date(currentD.getFullYear(), currentD.getMonth(), currentD.getDate() - 1);
-                break;
-              case "ArrowRight":
-                nextD = new Date(currentD.getFullYear(), currentD.getMonth(), currentD.getDate() + 1);
-                break;
-              case "ArrowUp":
-                nextD = new Date(currentD.getFullYear(), currentD.getMonth(), currentD.getDate() - 7);
-                break;
-              case "ArrowDown":
-                nextD = new Date(currentD.getFullYear(), currentD.getMonth(), currentD.getDate() + 7);
-                break;
-              case "Enter":
-              case " ":
-                ev.preventDefault();
-                goToDateFromYear(iso);
-                break;
-              default:
-                return;
-            }
-            
-            if (nextD) {
-              ev.preventDefault();
-              var nextIso = nextD.getFullYear() + "-" + pad(nextD.getMonth() + 1) + "-" + pad(nextD.getDate());
-              var targetCell = root.querySelector('.day-cell[data-date="' + nextIso + '"]');
-              if (targetCell) {
-                targetCell.focus();
-                // Show tooltip for focused cell
-                var focusedStatus = targetCell.dataset.status;
-                var focusedRows = scheduleIndex[nextIso] || [];
-                var focusedLangs = getDayLangSetForDate(nextIso);
-                showTooltipForCell(targetCell, nextIso, focusedStatus, focusedRows, focusedLangs);
-              }
-            }
-          });
-
-          // Touch-friendly direct click handler
-          cell.addEventListener("click", function (ev) {
-            openDayEditor(iso);
-          });
-
           days.appendChild(cell);
         })(d);
       }
@@ -1226,6 +1466,77 @@ function buildApiUrl() {
     }
     grid.appendChild(frag);
     root.appendChild(grid);
+
+    // Event delegation on grid container
+    grid.addEventListener("pointerover", function (ev) {
+      var cell = ev.target.closest(".day-cell");
+      if (!cell || cell.classList.contains("empty")) return;
+      var dateISO = cell.dataset.date;
+      var status = cell.dataset.status;
+      var rows = scheduleIndex[dateISO] || [];
+      var dayLangSet = getDayLangSetForDate(dateISO);
+      showTooltipForCell(cell, dateISO, status, rows, dayLangSet);
+    });
+
+    grid.addEventListener("pointerout", function (ev) {
+      var cell = ev.target.closest(".day-cell");
+      if (!cell) return;
+      var related = ev.relatedTarget;
+      if (related && cell.contains(related)) return;
+      hideTooltip();
+    });
+
+    grid.addEventListener("click", function (ev) {
+      var cell = ev.target.closest(".day-cell");
+      if (!cell || cell.classList.contains("empty")) return;
+      var dateISO = cell.dataset.date;
+      openDayEditor(dateISO);
+    });
+
+    grid.addEventListener("keydown", function (ev) {
+      var cell = ev.target.closest(".day-cell");
+      if (!cell || cell.classList.contains("empty")) return;
+      
+      var dateISO = cell.dataset.date;
+      var dateParts = dateISO.split("-");
+      var currentD = new Date(parseInt(dateParts[0], 10), parseInt(dateParts[1], 10) - 1, parseInt(dateParts[2], 10));
+      var nextD = null;
+      
+      switch (ev.key) {
+        case "ArrowLeft":
+          nextD = new Date(currentD.getFullYear(), currentD.getMonth(), currentD.getDate() - 1);
+          break;
+        case "ArrowRight":
+          nextD = new Date(currentD.getFullYear(), currentD.getMonth(), currentD.getDate() + 1);
+          break;
+        case "ArrowUp":
+          nextD = new Date(currentD.getFullYear(), currentD.getMonth(), currentD.getDate() - 7);
+          break;
+        case "ArrowDown":
+          nextD = new Date(currentD.getFullYear(), currentD.getMonth(), currentD.getDate() + 7);
+          break;
+        case "Enter":
+        case " ":
+          ev.preventDefault();
+          goToDateFromYear(dateISO);
+          break;
+        default:
+          return;
+      }
+      
+      if (nextD) {
+        ev.preventDefault();
+        var nextIso = nextD.getFullYear() + "-" + pad(nextD.getMonth() + 1) + "-" + pad(nextD.getDate());
+        var targetCell = grid.querySelector('.day-cell[data-date="' + nextIso + '"]');
+        if (targetCell) {
+          targetCell.focus();
+          var focusedStatus = targetCell.dataset.status;
+          var focusedRows = scheduleIndex[nextIso] || [];
+          var focusedLangs = getDayLangSetForDate(nextIso);
+          showTooltipForCell(targetCell, nextIso, focusedStatus, focusedRows, focusedLangs);
+        }
+      }
+    });
 
     // Вспомогательная функция для всплывающей подсказки
     function showTooltipForCell(cellEl, dateISO, status, rows, dayLangSet) {
@@ -1967,11 +2278,18 @@ function buildApiUrl() {
         return true;
       })
       .catch(function (err) {
-        console.warn('[SyncCore] saveDay: network or non-fatal issue, keeping local state.', err);
-        setSchedule(yearSchedule);
-        saveCache(yearSchedule);
-        renderAllTabs();
-        return true;
+        var msg = String(err && (err.message || err));
+        var isServerLogicError = msg === "SERVER_ERROR" || /conflict/i.test(msg) || (msg.indexOf("SERVER_ERROR") !== -1);
+        if (isServerLogicError) {
+          yearSchedule = snapshot;
+          setSchedule(yearSchedule);
+          saveCache(yearSchedule);
+          renderAllTabs();
+          throw err;
+        }
+        pushOfflineAction("year_update", { day: day });
+        console.warn('[SyncCore] saveDay: network issue, saved to offline queue.', err);
+        return { status: "offline", message: "Сохранено локально в режиме офлайн." };
       });
   }
 
