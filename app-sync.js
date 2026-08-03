@@ -829,6 +829,7 @@ function buildApiUrl() {
     if (typeof renderScheduleTab === "function") renderScheduleTab();
     else if (typeof renderScheduleBoard === "function") renderScheduleBoard();
     if (typeof renderYearGrid === "function") renderYearGrid();
+    if (typeof renderYearScheduleMessage === "function") renderYearScheduleMessage();
 
     if (typeof window.syncNotificationButtonState === "function") {
       window.syncNotificationButtonState();
@@ -1936,7 +1937,8 @@ function buildApiUrl() {
         yearMsgField.style.display = "block";
         var currentLang = getLang();
         var messages = (AppState && AppState.yearScheduleMessages) || {};
-        document.getElementById("dayEditorYearMessage").value = messages[currentLang] || "";
+        var val = (currentLang === "de") ? (messages["de"] || "") : (messages[currentLang] || messages["ru"] || messages["ua"] || messages["uk"] || "");
+        document.getElementById("dayEditorYearMessage").value = val;
       } else {
         yearMsgField.style.display = "none";
       }
@@ -2398,7 +2400,13 @@ function buildApiUrl() {
         if (!AppState.yearScheduleMessages) {
           AppState.yearScheduleMessages = {};
         }
-        AppState.yearScheduleMessages[getLang()] = msg;
+        var curLang = getLang();
+        AppState.yearScheduleMessages[curLang] = msg;
+        if (curLang === "ru" || curLang === "ua" || curLang === "uk") {
+          AppState.yearScheduleMessages["ru"] = msg;
+          AppState.yearScheduleMessages["ua"] = msg;
+          AppState.yearScheduleMessages["uk"] = msg;
+        }
         localStorage.setItem("yearScheduleMessages", JSON.stringify(AppState.yearScheduleMessages));
         
         renderAllTabs();
@@ -2439,15 +2447,23 @@ function buildApiUrl() {
     });
   }
 
-  function renderYearScheduleMessage() {
-    var container = document.getElementById("yearScheduleMessageContainer");
+  function renderYearScheduleMessage(messageOverride) {
+    var container = document.getElementById("yearScheduleMessageContainer") || document.querySelector(".year-message-container");
     if (!container) return;
     
     var messages = (AppState && AppState.yearScheduleMessages) || {};
     var currentLang = getLang();
-    var message = messages[currentLang] || "";
+    var rawMsg = "";
+    if (messageOverride !== undefined) {
+      rawMsg = messageOverride;
+    } else if (currentLang === "de") {
+      rawMsg = messages["de"] || "";
+    } else {
+      rawMsg = messages[currentLang] || messages["ru"] || messages["ua"] || messages["uk"] || "";
+    }
+    var message = (rawMsg || "").toString().trim();
     
-    if (message.trim()) {
+    if (message.length > 0) {
       var titles = {
         ru: "Важное объявление",
         uk: "Важливе оголошення",
@@ -2462,12 +2478,14 @@ function buildApiUrl() {
           '<h4 class="banner-title">' + title + '</h4>' +
           '<p class="banner-text">' + message + '</p>' +
         '</div>';
-      container.style.display = "flex";
+      container.style.cssText = "display: flex !important;";
     } else {
-      container.style.display = "none";
       container.innerHTML = "";
+      container.style.cssText = "display: none !important;";
     }
   }
+  window.updateYearScheduleMessageUI = renderYearScheduleMessage;
+  window.renderYearScheduleMessage = renderYearScheduleMessage;
 
   // ----- Экспорт глобального API -----
   window.SyncCore = {
