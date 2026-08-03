@@ -978,28 +978,15 @@ window.addEventListener('DOMContentLoaded', () => {
     headerRight.appendChild(statsBtn);
   }
   // Auth check: strict Auth Guard on init across all pages
-  checkAuthGuard();
-
-  // Регистрация Service Worker с автоматическим обновлением кэша.
-  // SW работает только на http(s):// (secure context). При открытии через file://
-  // (origin 'null') регистрация невозможна — пропускаем, чтобы не было ошибки.
+  checkAuthGuard();  // Регистрация Service Worker без зацикливаний
   if ('serviceWorker' in navigator && window.location.protocol.startsWith('http')) {
-    let refreshing = false;
-    navigator.serviceWorker.addEventListener('controllerchange', () => {
-      if (!refreshing) {
-        refreshing = true;
-        window.location.reload();
-      }
-    });
-
-
-
     navigator.serviceWorker.register('sw.js', { scope: '/' })
       .then(reg => {
         function showUpdateToast() {
           if (document.getElementById('pwa-update-banner')) return;
+          if (sessionStorage.getItem('pwa_update_dismissed')) return;
+
           const lang = (localStorage.getItem("preferredLanguage") || "ru").toLowerCase();
-          
           let msg = "Доступно обновление!";
           let btnText = "Обновить";
           if (lang === "de") {
@@ -1049,12 +1036,12 @@ window.addEventListener('DOMContentLoaded', () => {
             transition: opacity 0.2s;
           `;
           btn.addEventListener('click', () => {
+            sessionStorage.setItem('pwa_update_dismissed', '1');
+            if (banner.parentNode) banner.parentNode.removeChild(banner);
             if (reg && reg.waiting) {
               reg.waiting.postMessage('SKIP_WAITING');
               reg.waiting.postMessage({ type: 'SKIP_WAITING' });
             }
-            btn.disabled = true;
-            btn.style.opacity = '0.5';
             setTimeout(() => {
               window.location.reload();
             }, 300);
@@ -1077,48 +1064,9 @@ window.addEventListener('DOMContentLoaded', () => {
           }
         }
 
-        function setupUpdateBanner(registration) {
-          if (!navigator.serviceWorker.controller) {
-            return;
-          }
-
-          if (registration.waiting) {
-            showUpdateToast();
-          }
-
-          registration.addEventListener('updatefound', () => {
-            const installingWorker = registration.installing;
-            if (!installingWorker) return;
-
-            installingWorker.addEventListener('statechange', () => {
-              if (installingWorker.state === 'installed' && navigator.serviceWorker.controller) {
-                showUpdateToast();
-              }
-            });
-          });
+        if (reg.waiting && navigator.serviceWorker.controller && !sessionStorage.getItem('pwa_update_dismissed')) {
+          showUpdateToast();
         }
-
-        setupUpdateBanner(reg);
-
-        function manualCheck() {
-          reg.update().then(() => {
-            if (reg.waiting && navigator.serviceWorker.controller) {
-              showUpdateToast();
-            }
-          }).catch(() => {});
-        }
-
-        // Trigger an update check immediately on init
-        manualCheck();
-
-        // Keep polling for updates every 15 minutes
-        setInterval(manualCheck, 15 * 60 * 1000);
-
-        // Trigger update checks when returning to page or focusing window
-        document.addEventListener('visibilitychange', () => {
-          if (document.visibilityState === 'visible') manualCheck();
-        });
-        window.addEventListener('focus', manualCheck);
 
         // Initialize OneSignal ONLY after Service Worker is successfully active and ready
         navigator.serviceWorker.ready.then(() => {
