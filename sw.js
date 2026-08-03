@@ -7,7 +7,7 @@ self.addEventListener('message', (event) => {
   }
 });
 
-const CACHE_NAME = 'service-schedule-v46';
+const CACHE_NAME = 'service-schedule-v47';
 const ASSETS = [
   './',
   './index.html',
@@ -27,8 +27,8 @@ const ASSETS = [
   'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js'
 ];
 
-self.addEventListener('install', (e) => {
-  e.waitUntil(
+self.addEventListener('install', (event) => {
+  event.waitUntil(
     caches.open(CACHE_NAME).then((cache) => {
       return Promise.allSettled(
         ASSETS.map((url) => {
@@ -44,22 +44,23 @@ self.addEventListener('install', (e) => {
       );
     })
   );
+  // Автоматически пропускаем ожидание при установке
   self.skipWaiting();
 });
 
-self.addEventListener('activate', (e) => {
-  e.waitUntil(self.clients.claim());
-
-  // Clear old caches in the background (no need to block activation)
-  caches.keys().then((keys) => {
-    return Promise.all(
-      keys.map((key) => {
-        if (key !== CACHE_NAME) {
-          return caches.delete(key);
-        }
-      })
-    );
-  }).catch(() => {});
+self.addEventListener('activate', (event) => {
+  // Мгновенно забираем контроль над всеми клиентами/вкладками
+  event.waitUntil(
+    caches.keys().then((keys) => {
+      return Promise.all(
+        keys.map((key) => {
+          if (key !== CACHE_NAME) {
+            return caches.delete(key);
+          }
+        })
+      );
+    }).then(() => self.clients.claim())
+  );
 });
 
 self.addEventListener('fetch', (e) => {
@@ -74,13 +75,10 @@ self.addEventListener('fetch', (e) => {
   e.respondWith(
     caches.match(e.request).then((cachedResponse) => {
       if (cachedResponse) {
-        // Cache-First: отдаём кэш сразу. Ресурсы обновятся целиком при новой версии SW.
         return cachedResponse;
       }
 
-      // Ресурс не в кэше — пробуем сеть
       return fetch(e.request).catch(() => {
-        // Если запрашивается HTML-страница — вернуть index.html из кэша
         if (e.request.headers.get('accept') && e.request.headers.get('accept').includes('text/html')) {
           return caches.match('./index.html');
         }

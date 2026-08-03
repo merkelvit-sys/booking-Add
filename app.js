@@ -1,4 +1,4 @@
-// ============================================================================
+﻿// ============================================================================
 // app.js — Основная логика клиента (запись, карта, график, PWA).
 // Единый файл для всех языковых версий (RU / UA / DE).
 // Язык берётся из <html lang="...">; все пользовательские строки — в I18N.
@@ -1050,14 +1050,14 @@ window.addEventListener('DOMContentLoaded', () => {
           `;
           btn.addEventListener('click', () => {
             if (reg && reg.waiting) {
+              reg.waiting.postMessage('SKIP_WAITING');
               reg.waiting.postMessage({ type: 'SKIP_WAITING' });
-              // Если controllerchange по какой-то причине не сработал за 1000мс, просто перезагружаем страницу
-              setTimeout(() => {
-                window.location.reload();
-              }, 1000);
-            } else {
-              window.location.reload();
             }
+            btn.disabled = true;
+            btn.style.opacity = '0.5';
+            setTimeout(() => {
+              window.location.reload();
+            }, 300);
           });
           
           banner.appendChild(textSpan);
