@@ -829,6 +829,7 @@ function buildApiUrl() {
     if (typeof renderScheduleTab === "function") renderScheduleTab();
     else if (typeof renderScheduleBoard === "function") renderScheduleBoard();
     if (typeof renderYearGrid === "function") renderYearGrid();
+    if (typeof renderYearScheduleMessage === "function") renderYearScheduleMessage();
 
     if (typeof window.syncNotificationButtonState === "function") {
       window.syncNotificationButtonState();
@@ -2439,15 +2440,15 @@ function buildApiUrl() {
     });
   }
 
-  function renderYearScheduleMessage() {
-    var container = document.getElementById("yearScheduleMessageContainer");
+  function renderYearScheduleMessage(messageOverride) {
+    var container = document.getElementById("yearScheduleMessageContainer") || document.querySelector(".year-message-container");
     if (!container) return;
     
     var messages = (AppState && AppState.yearScheduleMessages) || {};
     var currentLang = getLang();
-    var message = messages[currentLang] || "";
+    var message = (messageOverride !== undefined ? messageOverride : (messages[currentLang] || "")).toString().trim();
     
-    if (message.trim()) {
+    if (message.length > 0) {
       var titles = {
         ru: "Важное объявление",
         uk: "Важливе оголошення",
@@ -2464,10 +2465,12 @@ function buildApiUrl() {
         '</div>';
       container.style.display = "flex";
     } else {
-      container.style.display = "none";
       container.innerHTML = "";
+      container.style.display = "none";
     }
   }
+  window.updateYearScheduleMessageUI = renderYearScheduleMessage;
+  window.renderYearScheduleMessage = renderYearScheduleMessage;
 
   // ----- Экспорт глобального API -----
   window.SyncCore = {

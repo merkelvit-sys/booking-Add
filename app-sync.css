@@ -1856,6 +1856,10 @@ body, .month-block, .day-cell, .modal-content, .auth-modal-box, .board-card {
 }
 
 /* ── Year Schedule Message Banner ── */
+.year-schedule-message-banner:empty {
+    display: none !important;
+}
+
 .year-schedule-message-banner {
     background: linear-gradient(135deg, rgba(26, 115, 232, 0.08), rgba(26, 115, 232, 0.02));
     border: 1px solid rgba(26, 115, 232, 0.18);
