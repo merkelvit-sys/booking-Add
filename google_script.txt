@@ -336,7 +336,9 @@ function handleYearMessageUpdate(data, lang) {
   var ss = getSS();
   var sheet = getScheduleSheet(ss, lang);
   
-  sheet.getRange("H1").setValue("YearScheduleMessage").setFontWeight("bold");
+  if (sheet.getRange("H1").getValue() !== "YearScheduleMessage") {
+    sheet.getRange("H1").setValue("YearScheduleMessage").setFontWeight("bold");
+  }
   sheet.getRange("H2").setValue(message);
   
   return json({ status: "success", message: "Сообщение сохранено", yearScheduleMessage: message });
