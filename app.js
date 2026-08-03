@@ -1,4 +1,4 @@
-﻿// ============================================================================
+// ============================================================================
 // app.js — Основная логика клиента (запись, карта, график, PWA).
 // Единый файл для всех языковых версий (RU / UA / DE).
 // Язык берётся из <html lang="...">; все пользовательские строки — в I18N.
@@ -1246,6 +1246,8 @@ function generateWeekStrip() {
     defaultSelectedDate = `${nextMonday.getFullYear()}-${String(nextMonday.getMonth() + 1).padStart(2, '0')}-${String(nextMonday.getDate()).padStart(2, '0')}`;
   }
 
+  const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+
   for (let i = 0; i < 7; i++) {
     const current = new Date(monday);
     current.setDate(monday.getDate() + i);
@@ -1265,10 +1267,11 @@ function generateWeekStrip() {
     const isPastAllowed = true;
     const isTooOld = false; // Разрешаем просмотр всей истории
 
+    const isToday = (isoString === todayStr);
     const card = document.createElement('div');
     const isActive = (isoString === defaultSelectedDate);
 
-    card.className = `date-card ${isActive ? 'active' : ''} ${isPast ? 'past-day' : ''} ${isTooOld ? 'past-disabled' : ''}`;
+    card.className = `date-card ${isActive ? 'active' : ''} ${isToday ? 'is-today' : ''} ${isPast ? 'past-day' : ''} ${isTooOld ? 'past-disabled' : ''}`;
     card.dataset.date = isoString;
 
     if (!isTooOld) {
