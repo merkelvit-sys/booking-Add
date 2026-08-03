@@ -1,4 +1,4 @@
-﻿// ============================================================================
+// ============================================================================
 // app-sync.js — Синхронизация, годовой график и автообновление при запуске.
 // Подключается ко всем языковым версиям (RU/UA/DE).
 // Использует глобальные переменные/функции из inline-скрипта страницы:
@@ -1762,6 +1762,10 @@ function buildApiUrl() {
   function setEditorLock(locked) {
     var modal = document.getElementById("dayEditorModal");
     if (!modal) return;
+    var isAdmin = (window.currentUserRole === 'admin');
+    if (!isAdmin) {
+      locked = true; // Обычные пользователи не могут разблокировать редактирование
+    }
     var fields = modal.querySelectorAll("[data-lockable]");
     for (var i = 0; i < fields.length; i++) {
       var el = fields[i];
@@ -1774,14 +1778,18 @@ function buildApiUrl() {
       if (locked) el.classList.add("is-locked"); else el.classList.remove("is-locked");
     }
     var presets = modal.querySelectorAll("#dayEditorPresets .quick-preset-btn");
-    for (var p = 0; p < presets.length; p++) presets[p].disabled = locked;
+    for (var p = 0; p < presets.length; p++) {
+      presets[p].disabled = locked || !isAdmin;
+      if (!isAdmin) presets[p].style.display = "none";
+    }
     var editBtn = document.getElementById("dayEditorEdit");
     var saveBtn = document.getElementById("dayEditorSave");
-    if (editBtn) editBtn.style.display = locked ? "" : "none";
-    if (saveBtn) saveBtn.style.display = locked ? "none" : "";
+    if (editBtn) editBtn.style.display = (locked && isAdmin) ? "" : "none";
+    if (saveBtn) saveBtn.style.display = (!locked && isAdmin) ? "" : "none";
   }
 
   function enterEditMode() {
+    if (window.currentUserRole !== 'admin') return;
     setEditorLock(false);
   }
 
