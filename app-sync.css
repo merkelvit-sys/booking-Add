@@ -1856,8 +1856,15 @@ body, .month-block, .day-cell, .modal-content, .auth-modal-box, .board-card {
 }
 
 /* ── Year Schedule Message Banner ── */
-.year-schedule-message-banner:empty {
+.year-schedule-message-banner:empty,
+.year-schedule-message-banner[style*="display: none"] {
     display: none !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    border: none !important;
+    min-height: 0 !important;
+    height: 0 !important;
+    overflow: hidden !important;
 }
 
 .year-schedule-message-banner {

@@ -2463,10 +2463,10 @@ function buildApiUrl() {
           '<h4 class="banner-title">' + title + '</h4>' +
           '<p class="banner-text">' + message + '</p>' +
         '</div>';
-      container.style.display = "flex";
+      container.style.cssText = "display: flex !important;";
     } else {
       container.innerHTML = "";
-      container.style.display = "none";
+      container.style.cssText = "display: none !important;";
     }
   }
   window.updateYearScheduleMessageUI = renderYearScheduleMessage;
