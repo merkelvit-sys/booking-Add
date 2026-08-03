@@ -1,4 +1,4 @@
-// ============================================================================
+﻿// ============================================================================
 // app.js — Основная логика клиента (запись, карта, график, PWA).
 // Единый файл для всех языковых версий (RU / UA / DE).
 // Язык берётся из <html lang="...">; все пользовательские строки — в I18N.
@@ -651,14 +651,14 @@ function setAuthUser(user) {
     window.currentUserRole = null;
   }
   authUser = user;
-  updateAuthUI();
+  checkAuthGuard();
 }
 
 function updateAuthUI() {
-  const logoutBtn = document.getElementById("btnLogout");
-  if (logoutBtn) {
-    logoutBtn.style.display = authUser ? "inline-flex" : "none";
-  }
+  const logoutBtns = document.querySelectorAll("#btnLogout, #logoutBtn, .logout-btn");
+  logoutBtns.forEach(function(btn) {
+    btn.style.display = authUser ? "inline-flex" : "none";
+  });
 
   if (typeof window.syncNotificationButtonState === 'function') {
     window.syncNotificationButtonState();
@@ -669,9 +669,33 @@ function isAuthenticated() {
   return authUser !== null && authUser.email !== undefined;
 }
 
+function checkAuthGuard() {
+  authUser = getAuthUser();
+  window.currentUserRole = authUser ? authUser.role : null;
+  updateAuthUI();
+
+  const isAuth = isAuthenticated();
+  const protectedElements = document.querySelectorAll(
+    ".protected-content, #mainSchedule, .app-container, .tabs, .form-section, #yearGridRoot, #scheduleBoard, .board-container, #yearScheduleMessageContainer"
+  );
+
+  if (!isAuth) {
+    protectedElements.forEach(function(el) {
+      el.style.display = "none";
+    });
+    showAuthModal();
+  } else {
+    protectedElements.forEach(function(el) {
+      el.style.display = "";
+    });
+  }
+
+  return isAuth;
+}
+window.checkAuthGuard = checkAuthGuard;
+
 function handleLogout() {
   setAuthUser(null);
-  showAuthModal();
   showToast("Вы вышли из системы", "success");
 }
 
@@ -953,14 +977,8 @@ window.addEventListener('DOMContentLoaded', () => {
     };
     headerRight.appendChild(statsBtn);
   }
-
-  // Auth check: show modal if not authenticated
-  authUser = getAuthUser();
-  window.currentUserRole = authUser ? authUser.role : null;
-  updateAuthUI();
-  if (!isAuthenticated()) {
-    showAuthModal();
-  }
+  // Auth check: strict Auth Guard on init across all pages
+  checkAuthGuard();
 
   // Регистрация Service Worker с автоматическим обновлением кэша.
   // SW работает только на http(s):// (secure context). При открытии через file://
@@ -1597,6 +1615,7 @@ function generateWeekStripFor(weekOffset, preselectDate) {
 }
 
 function switchTab(tabId) {
+  if (!checkAuthGuard()) return;
   hapticFeedback(20); // Tab switch feedback
   if (tabId !== 'year') tabId = 'schedule';
   const tabs = ['schedule', 'year'];
