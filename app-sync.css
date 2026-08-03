@@ -1,4 +1,4 @@
-/* ==========================================================================
+﻿/* ==========================================================================
    app-sync.css — стили для годового графика, splash-экрана и редактора дня
    Подключается ко всем языковым версиям (RU/UA/DE).
    ========================================================================== */
@@ -989,7 +989,7 @@
     font-weight: 700 !important;
     font-size: 0.85rem !important;
     color: var(--text, #ffffff) !important;
-    text-shadow: 0 1px 3px rgba(0, 0, 0, 0.85) !important;
+    text-shadow: none !important;
     pointer-events: none !important;
 }
 
@@ -1099,8 +1099,7 @@
 /* Фильтры и подсветка дней */
 .day-cell.day-status-dimmed,
 .day-cell.day-trolley-dimmed {
-    opacity: 0.25;
-    filter: saturate(0.4);
+    opacity: 0.45;
 }
 .day-cell.day-trolley-highlight {
     box-shadow: 0 0 0 2px var(--border) inset;
@@ -1864,7 +1863,7 @@ body, .month-block, .day-cell, .modal-content, .auth-modal-box, .board-card {
     }
 }
 
-/* Fix: tooltip contrast in light theme � force white text on dark background */
+/* Fix: tooltip contrast in light theme � force white text on dark background */
 .global-center-tooltip {
     color: #ffffff;
 }
