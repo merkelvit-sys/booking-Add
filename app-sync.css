@@ -982,13 +982,21 @@
     overflow: hidden !important;
 }
 
+.year-day,
+.calendar-day,
+.day-number,
+.day-num,
 .day-cell .day-number,
 .day-cell .day-num {
     position: relative !important;
     z-index: 3 !important;
     font-weight: 700 !important;
     font-size: 0.85rem !important;
-    color: var(--text, #ffffff) !important;
+    color: inherit !important;
+    filter: none !important;
+    -webkit-filter: none !important;
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
     text-shadow: none !important;
     pointer-events: none !important;
 }
