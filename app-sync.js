@@ -1937,7 +1937,8 @@ function buildApiUrl() {
         yearMsgField.style.display = "block";
         var currentLang = getLang();
         var messages = (AppState && AppState.yearScheduleMessages) || {};
-        document.getElementById("dayEditorYearMessage").value = messages[currentLang] || "";
+        var val = (currentLang === "de") ? (messages["de"] || "") : (messages[currentLang] || messages["ru"] || messages["ua"] || messages["uk"] || "");
+        document.getElementById("dayEditorYearMessage").value = val;
       } else {
         yearMsgField.style.display = "none";
       }
@@ -2399,7 +2400,13 @@ function buildApiUrl() {
         if (!AppState.yearScheduleMessages) {
           AppState.yearScheduleMessages = {};
         }
-        AppState.yearScheduleMessages[getLang()] = msg;
+        var curLang = getLang();
+        AppState.yearScheduleMessages[curLang] = msg;
+        if (curLang === "ru" || curLang === "ua" || curLang === "uk") {
+          AppState.yearScheduleMessages["ru"] = msg;
+          AppState.yearScheduleMessages["ua"] = msg;
+          AppState.yearScheduleMessages["uk"] = msg;
+        }
         localStorage.setItem("yearScheduleMessages", JSON.stringify(AppState.yearScheduleMessages));
         
         renderAllTabs();
@@ -2446,7 +2453,15 @@ function buildApiUrl() {
     
     var messages = (AppState && AppState.yearScheduleMessages) || {};
     var currentLang = getLang();
-    var message = (messageOverride !== undefined ? messageOverride : (messages[currentLang] || "")).toString().trim();
+    var rawMsg = "";
+    if (messageOverride !== undefined) {
+      rawMsg = messageOverride;
+    } else if (currentLang === "de") {
+      rawMsg = messages["de"] || "";
+    } else {
+      rawMsg = messages[currentLang] || messages["ru"] || messages["ua"] || messages["uk"] || "";
+    }
+    var message = (rawMsg || "").toString().trim();
     
     if (message.length > 0) {
       var titles = {
