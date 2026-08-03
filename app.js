@@ -1,4 +1,4 @@
-// ============================================================================
+﻿// ============================================================================
 // app.js — Основная логика клиента (запись, карта, график, PWA).
 // Единый файл для всех языковых версий (RU / UA / DE).
 // Язык берётся из <html lang="...">; все пользовательские строки — в I18N.
@@ -655,10 +655,10 @@ function setAuthUser(user) {
 }
 
 function updateAuthUI() {
-  const logoutBtn = document.getElementById("btnLogout");
-  if (logoutBtn) {
-    logoutBtn.style.display = authUser ? "inline-flex" : "none";
-  }
+  const logoutBtns = document.querySelectorAll("#btnLogout, #logoutBtn, .logout-btn");
+  logoutBtns.forEach(function(btn) {
+    btn.style.display = authUser ? "inline-flex" : "none";
+  });
 
   if (typeof window.syncNotificationButtonState === 'function') {
     window.syncNotificationButtonState();
