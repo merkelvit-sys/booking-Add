@@ -714,7 +714,11 @@ function showAuthModal() {
     const spinner = document.getElementById("authSpinner");
     const btnText = document.getElementById("authBtnText");
     if (spinner) spinner.style.display = "none";
-    if (btnText) btnText.textContent = S("authSubmit");
+    if (btnText) {
+      const currentLang = (document.documentElement.lang || (window.location.pathname.includes("_de") ? "de" : window.location.pathname.includes("_ua") ? "ua" : "ru")).toLowerCase();
+      const defaultTexts = { ru: "Войти", de: "Anmelden", ua: "Увійти", uk: "Увійти" };
+      btnText.textContent = defaultTexts[currentLang] || S("authSubmit") || "Войти";
+    }
     if (emailInput) emailInput.focus();
   }
 }
@@ -725,6 +729,9 @@ function hideAuthModal() {
 }
 
 async function handleAuthSubmit(event) {
+  const currentLang = (document.documentElement.lang || (window.location.pathname.includes("_de") ? "de" : window.location.pathname.includes("_ua") ? "ua" : "ru")).toLowerCase();
+  const loadingTexts = { ru: "Проверка...", de: "Wird geprüft...", ua: "Перевірка...", uk: "Перевірка..." };
+  const submitTexts = { ru: "Войти", de: "Anmelden", ua: "Увійти", uk: "Увійти" };
   event.preventDefault();
   const emailInput = document.getElementById("authEmail");
   const passwordInput = document.getElementById("authPassword");
@@ -743,7 +750,7 @@ async function handleAuthSubmit(event) {
 
   if (submitBtn) submitBtn.disabled = true;
   if (spinner) spinner.style.display = "inline-block";
-  if (btnText) btnText.textContent = S("authLoading");
+  if (btnText) btnText.textContent = loadingTexts[currentLang] || S("authLoading") || "Проверка...";
   if (errorEl) errorEl.textContent = "";
 
   const url = GOOGLE_SCRIPT_URL + "?action=checkAuth&email=" + encodeURIComponent(email) + "&password=" + encodeURIComponent(password) + "&key=jw_144000";
@@ -771,7 +778,11 @@ async function handleAuthSubmit(event) {
       hapticFeedback([30, 50, 30]); // Error/failure feedback
       if (submitBtn) submitBtn.disabled = false;
       if (spinner) spinner.style.display = "none";
-      if (btnText) btnText.textContent = S("authSubmit");
+      if (btnText) {
+      const currentLang = (document.documentElement.lang || (window.location.pathname.includes("_de") ? "de" : window.location.pathname.includes("_ua") ? "ua" : "ru")).toLowerCase();
+      const defaultTexts = { ru: "Войти", de: "Anmelden", ua: "Увійти", uk: "Увійти" };
+      btnText.textContent = defaultTexts[currentLang] || S("authSubmit") || "Войти";
+    }
     }
   } catch (err) {
     if (passwordInput) passwordInput.value = "";
@@ -779,7 +790,11 @@ async function handleAuthSubmit(event) {
     hapticFeedback([30, 50, 30]); // Network error feedback
     if (submitBtn) submitBtn.disabled = false;
     if (spinner) spinner.style.display = "none";
-    if (btnText) btnText.textContent = S("authSubmit");
+    if (btnText) {
+      const currentLang = (document.documentElement.lang || (window.location.pathname.includes("_de") ? "de" : window.location.pathname.includes("_ua") ? "ua" : "ru")).toLowerCase();
+      const defaultTexts = { ru: "Войти", de: "Anmelden", ua: "Увійти", uk: "Увійти" };
+      btnText.textContent = defaultTexts[currentLang] || S("authSubmit") || "Войти";
+    }
   }
 }
 
