@@ -1,4 +1,4 @@
-/* ==========================================================================
+﻿/* ==========================================================================
    app-sync.css — стили для годового графика, splash-экрана и редактора дня
    Подключается ко всем языковым версиям (RU/UA/DE).
    ========================================================================== */
@@ -982,14 +982,24 @@
     overflow: hidden !important;
 }
 
+.year-day, .cal-day, .y-day, .calendar-day-number, .calendar-day, .day-number, .day-num {
+    text-shadow: none !important;
+    box-shadow: none !important;
+    filter: none !important;
+    -webkit-filter: none !important;
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+}
+
 .day-cell .day-number,
 .day-cell .day-num {
-    position: relative !important;
+    position: absolute !important;
+    top: 2px !important;
+    left: 4px !important;
     z-index: 3 !important;
     font-weight: 700 !important;
     font-size: 0.85rem !important;
-    color: var(--text, #ffffff) !important;
-    text-shadow: 0 1px 3px rgba(0, 0, 0, 0.85) !important;
+    color: var(--text, #1e293b) !important;
     pointer-events: none !important;
 }
 
@@ -997,8 +1007,10 @@
 .day-cell .day-badge,
 .day-cell .day-lang-dots {
     position: absolute !important;
-    top: 2px !important;
+    bottom: 2px !important;
     right: 2px !important;
+    top: auto !important;
+    left: auto !important;
     display: flex !important;
     flex-direction: row !important;
     gap: 2px !important;
@@ -1038,17 +1050,21 @@
 .day-cell .attention-badge,
 .day-cell .has-note-badge {
     position: absolute !important;
-    bottom: 2px !important;
+    top: 2px !important;
     right: 2px !important;
-    top: auto !important;
+    bottom: auto !important;
     left: auto !important;
     font-size: 0.6rem !important;
     font-weight: 900 !important;
     width: 12px !important;
     height: 12px !important;
-    line-height: 12px !important;
     border-radius: 50% !important;
-    z-index: 2 !important;
+    background: #ef4444 !important;
+    color: #fff !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    z-index: 3 !important;
     box-shadow: 0 1px 3px rgba(0,0,0,0.5) !important;
 }
 
@@ -1099,8 +1115,7 @@
 /* Фильтры и подсветка дней */
 .day-cell.day-status-dimmed,
 .day-cell.day-trolley-dimmed {
-    opacity: 0.25;
-    filter: saturate(0.4);
+    opacity: 0.45;
 }
 .day-cell.day-trolley-highlight {
     box-shadow: 0 0 0 2px var(--border) inset;
@@ -1864,7 +1879,7 @@ body, .month-block, .day-cell, .modal-content, .auth-modal-box, .board-card {
     }
 }
 
-/* Fix: tooltip contrast in light theme � force white text on dark background */
+/* Fix: tooltip contrast in light theme � force white text on dark background */
 .global-center-tooltip {
     color: #ffffff;
 }
