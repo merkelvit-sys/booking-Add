@@ -155,9 +155,33 @@
 .day-cell.empty:hover {
     transform: none;
 }
-.day-cell.today {
-    border-color: var(--primary, #2563eb);
-    box-shadow: 0 0 0 2px var(--primary-container, rgba(37,99,235,0.15));
+.date-card.is-today {
+    border: 2px solid var(--primary, #2563eb) !important;
+    position: relative;
+}
+.date-card.is-today .today-dot {
+    position: absolute;
+    top: 3px;
+    right: 4px;
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background-color: var(--primary, #2563eb);
+}
+.date-card.is-today.active .today-dot {
+    background-color: #ffffff;
+}
+
+.day-cell.today, .year-day.today {
+    outline: 2px solid var(--primary, #2563eb) !important;
+    outline-offset: -2px !important;
+    background-color: rgba(37, 99, 235, 0.12) !important;
+    position: relative !important;
+}
+.day-cell.today .day-number, .day-cell.today .day-num, .year-day.today .day-num {
+    color: #1e40af !important;
+    font-weight: 800 !important;
+    font-size: 0.82rem !important;
 }
 .day-cell.past {
     opacity: 0.55;

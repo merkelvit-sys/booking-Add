@@ -1278,6 +1278,7 @@ function generateWeekStrip() {
     card.innerHTML = `
       <span class="day-name">${dayOfWeek}</span>
       <span class="day-num">${dayOfMonth}</span>
+      ${isToday ? '<span class="today-dot"></span>' : ''}
     `;
 
     scroller.appendChild(card);
@@ -1557,10 +1558,12 @@ function generateWeekStripFor(weekOffset, preselectDate) {
     const isPastAllowed = true;
     const isTooOld = false; // Разрешаем просмотр всей истории
 
+    const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+    const isToday = (isoString === todayStr);
     const card = document.createElement('div');
     const isActive = (isoString === preselectDate);
 
-    card.className = `date-card ${isActive ? 'active' : ''} ${isPast ? 'past-day' : ''} ${isTooOld ? 'past-disabled' : ''}`;
+    card.className = `date-card ${isActive ? 'active' : ''} ${isToday ? 'is-today' : ''} ${isPast ? 'past-day' : ''}`;
     card.dataset.date = isoString;
 
     if (!isTooOld) {
@@ -1570,6 +1573,7 @@ function generateWeekStripFor(weekOffset, preselectDate) {
     card.innerHTML = `
       <span class="day-name">${dayOfWeek}</span>
       <span class="day-num">${dayOfMonth}</span>
+      ${isToday ? '<span class="today-dot"></span>' : ''}
     `;
 
     scroller.appendChild(card);

@@ -513,8 +513,10 @@ function buildApiUrl() {
         var day = action.data.day;
         var posts = [];
         var postCartFn = function(cn, lang) {
+          var userEmail = (window.AppState && AppState.authUser && AppState.authUser.email) || "";
           var body = JSON.stringify({
             action: "year_update",
+            email: userEmail,
             key: API_KEY,
             language: getLang(),
             date: day.date,
@@ -2280,8 +2282,10 @@ function buildApiUrl() {
 
     // Отправка POST на сервер c надежным разбором ответа (HTTP 200/res.ok/JSON/text)
     function postCart(cn, lang) {
+      var userEmail = (window.AppState && AppState.authUser && AppState.authUser.email) || "";
       var body = JSON.stringify({
         action: "year_update",
+        email: userEmail,
         key: API_KEY,
         language: getLang(),
         date: day.date,
@@ -2354,6 +2358,11 @@ function buildApiUrl() {
           throw err;
         }
         pushOfflineAction("year_update", { day: day });
+        if (err && (err.message || "").indexOf("Access denied") !== -1) {
+          var accessMsg = (getLang() === "de") ? "Sie haben keine Berechtigung für diese Aktion" : ((getLang() === "uk" || getLang() === "ua") ? "У вас немає прав для виконання цієї дії" : "У вас нет прав для выполнения этого действия");
+          if (typeof window.showToast === "function") window.showToast(accessMsg, "error");
+          if (typeof window.checkAuthGuard === "function") window.checkAuthGuard();
+        }
         console.warn('[SyncCore] saveDay: network issue, saved to offline queue.', err);
         return { status: "offline", message: "Сохранено локально в режиме офлайн." };
       });
