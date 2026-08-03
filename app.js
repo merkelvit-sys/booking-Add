@@ -1,4 +1,4 @@
-﻿// ============================================================================
+// ============================================================================
 // app.js — Основная логика клиента (запись, карта, график, PWA).
 // Единый файл для всех языковых версий (RU / UA / DE).
 // Язык берётся из <html lang="...">; все пользовательские строки — в I18N.
@@ -696,7 +696,7 @@ window.checkAuthGuard = checkAuthGuard;
 
 function handleLogout() {
   setAuthUser(null);
-  showToast("Вы вышли из системы", "success");
+  showToast(S("authLogoutSuccess"), "success");
 }
 
 function showAuthModal() {

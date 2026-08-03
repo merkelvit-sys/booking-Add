@@ -1519,7 +1519,7 @@
             to { opacity: 1; transform: translateY(0); }
         }
     </style>
-    <link rel="stylesheet" href="app-sync.css?v=45">
+    <link rel="stylesheet" href="app-sync.css?v=46">
 </head>
 <body>
 
@@ -1737,6 +1737,23 @@
                 <button type="button" class="pwa-btn-close" onclick="dismissPWAInstall()">Schließen</button>
                 <button type="button" class="pwa-btn-install" id="pwaInstallBtn" onclick="triggerPWAInstall()" style="display: none;">Installieren</button>
             </div>
+        </div>
+    </div>
+
+    <!-- AUTH MODAL -->
+    <div id="authModal" class="auth-modal-overlay" style="display: none;" role="dialog" aria-modal="true" aria-labelledby="authModalTitle">
+        <div class="auth-modal-box">
+            <div class="auth-modal-title" id="authModalTitle">Zugriff auf den Dienstplan</div>
+            <div class="auth-modal-desc">Geben Sie Ihre E-Mail und Ihr Passwort ein. Zugang nur für aktive Benutzer.</div>
+            <form id="authForm" onsubmit="handleAuthSubmit(event)">
+                <input type="email" id="authEmail" class="auth-modal-input" placeholder="ihre@email.com" required autocomplete="email" aria-label="E-Mail">
+                <input type="password" id="authPassword" class="auth-modal-input" placeholder="Passwort" required autocomplete="current-password" aria-label="Passwort">
+                <div class="auth-modal-error" id="authError"></div>
+                <button type="submit" class="auth-modal-btn" id="authSubmitBtn">
+                    <span class="auth-modal-spinner" id="authSpinner"></span>
+                    <span id="authBtnText">Anmelden</span>
+                </button>
+            </form>
         </div>
     </div>
 
@@ -1982,7 +1999,7 @@
         </svg>
     </button>
     <script src="trolley.js"></script>
-    <script src="app.js?v=45"></script>
-    <script src="app-sync.js?v=45"></script>
+    <script src="app.js?v=46"></script>
+    <script src="app-sync.js?v=46"></script>
 </body>
 </html>

@@ -1,4 +1,4 @@
-// ============================================================================
+﻿// ============================================================================
 // app-sync.js — Синхронизация, годовой график и автообновление при запуске.
 // Подключается ко всем языковым версиям (RU/UA/DE).
 // Использует глобальные переменные/функции из inline-скрипта страницы:
@@ -1139,6 +1139,7 @@ function buildApiUrl() {
   }
 
   function renderYearGrid() {
+    if (typeof window.checkAuthGuard === "function" && !window.checkAuthGuard()) return;
     var root = document.getElementById("yearGridRoot");
     if (!root) return;
 
