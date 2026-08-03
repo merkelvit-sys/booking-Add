@@ -1,4 +1,4 @@
-importScripts('https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.sw.js');
+﻿importScripts('https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.sw.js');
 
 // Handle PWA SKIP_WAITING updates
 self.addEventListener('message', (event) => {
@@ -7,7 +7,7 @@ self.addEventListener('message', (event) => {
   }
 });
 
-const CACHE_NAME = 'service-schedule-v42';
+const CACHE_NAME = 'service-schedule-v43';
 const ASSETS = [
   './',
   './index.html',

@@ -982,6 +982,11 @@
     overflow: hidden !important;
 }
 
+/* Глобальный сброс для всех чисел в сетках календаря */
+[class*="year"] [class*="day"],
+[class*="month"] [class*="day"],
+.year-grid *,
+.calendar-grid *,
 .year-day, .cal-day, .y-day, .calendar-day-number, .calendar-day, .day-number, .day-num {
     text-shadow: none !important;
     box-shadow: none !important;
