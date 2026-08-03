@@ -973,12 +973,16 @@
     background-color: rgba(0, 0, 0, 0.05);
 }
 
-/* Изоляция и высокий z-index для цифры дня во вкладке «Год» */
-.day-cell {
+/* Изоляция и позиционирование ячеек дня во вкладке «Год» */
+.day-cell,
+.year-day,
+.cal-day {
     position: relative !important;
     display: flex !important;
+    flex-direction: column !important;
     align-items: center !important;
-    justify-content: center !important;
+    justify-content: space-between !important;
+    min-height: 32px !important;
     overflow: hidden !important;
 }
 
@@ -996,15 +1000,46 @@
     -webkit-backdrop-filter: none !important;
 }
 
+/* Жесткое верхнее позиционирование даты по центру вверху ячейки */
 .day-cell .day-number,
-.day-cell .day-num {
+.day-cell .day-num,
+.year-day-num {
     position: absolute !important;
     top: 2px !important;
-    left: 4px !important;
-    z-index: 3 !important;
+    left: 50% !important;
+    transform: translateX(-50%) !important;
+    z-index: 10 !important; /* Дата ВСЕГДА поверх любых подложек */
     font-weight: 700 !important;
-    font-size: 0.85rem !important;
-    color: var(--text, #1e293b) !important;
+    font-size: 0.75rem !important;
+    color: #0f172a !important; /* Тёмный чёткий цвет */
+    text-shadow: none !important;
+    filter: none !important;
+    line-height: 1 !important;
+    pointer-events: none !important;
+}
+
+/* Принудительное смещение всех иконок и бейджей в нижнюю часть ячейки */
+.day-cell .day-badge,
+.day-cell .day-lang-dots,
+.day-cell .trolley-icons,
+.day-cell .status-indicators,
+.day-cell .event-alert-badge,
+.day-cell .attention-badge,
+.day-cell .has-note-badge,
+.day-cell .badge {
+    position: absolute !important;
+    bottom: 2px !important;
+    left: 50% !important;
+    transform: translateX(-50%) !important;
+    top: auto !important;
+    right: auto !important;
+    z-index: 5 !important;
+    max-height: 14px !important;
+    display: flex !important;
+    flex-direction: row !important;
+    gap: 2px !important;
+    align-items: center !important;
+    justify-content: center !important;
     pointer-events: none !important;
 }
 
