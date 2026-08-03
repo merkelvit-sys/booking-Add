@@ -236,6 +236,10 @@ function doPost(e) {
 // ----------------------------------------------------------------------------
 
 function handleYearUpdate(data, lang) {
+  var email = (data.email || "").toString().trim().toLowerCase();
+  if (!email || !checkAdminRole(email)) {
+    return json({ status: "error", message: "Access denied: Admin only" });
+  }
   var date = (data.date || "").toString().trim();
   var cartNumber = parseInt(data.cartNumber, 10);
   if (!(cartNumber === 1 || cartNumber === 2)) cartNumber = 1;

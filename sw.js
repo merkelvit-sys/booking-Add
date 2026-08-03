@@ -7,7 +7,7 @@ self.addEventListener('message', (event) => {
   }
 });
 
-const CACHE_NAME = 'service-schedule-v54';
+const CACHE_NAME = 'service-schedule-v55';
 const ASSETS = [
   './',
   './index.html',
