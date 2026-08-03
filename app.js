@@ -696,7 +696,7 @@ window.checkAuthGuard = checkAuthGuard;
 
 function handleLogout() {
   setAuthUser(null);
-  showToast("Вы вышли из системы", "success");
+  showToast(S("authLogoutSuccess"), "success");
 }
 
 function showAuthModal() {
@@ -1050,14 +1050,14 @@ window.addEventListener('DOMContentLoaded', () => {
           `;
           btn.addEventListener('click', () => {
             if (reg && reg.waiting) {
+              reg.waiting.postMessage('SKIP_WAITING');
               reg.waiting.postMessage({ type: 'SKIP_WAITING' });
-              // Если controllerchange по какой-то причине не сработал за 1000мс, просто перезагружаем страницу
-              setTimeout(() => {
-                window.location.reload();
-              }, 1000);
-            } else {
-              window.location.reload();
             }
+            btn.disabled = true;
+            btn.style.opacity = '0.5';
+            setTimeout(() => {
+              window.location.reload();
+            }, 300);
           });
           
           banner.appendChild(textSpan);
