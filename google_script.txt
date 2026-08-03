@@ -1,4 +1,4 @@
-// ============================================================================
+﻿// ============================================================================
 // Google Apps Script — Единый источник правды (Single Source of Truth)
 // Привязан к Google Таблице. Обслуживает:
 //   1) Записи на служение (bookings) — одна вкладка "Bookings" на весь год.
@@ -1028,7 +1028,7 @@ function sendOneSignalNotification() {
       "de": "Ein Verkündiger sucht einen Partner. Klicken zum Anmelden!",
       "uk": "Новий одиночний запис. Натисніть, щоб приєднатися!"
     },
-    "url": "https://cw-vitali2.vercel.app"
+    "url": "https://booking-add.vercel.app"
   };
   var options = {
     "method": "post",
