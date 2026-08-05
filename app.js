@@ -3452,26 +3452,44 @@ function sortTimes(timeArray) {
 }
 
 function getDayScheduleInfo(dateISO) {
-  if (!window.AppState || !Array.isArray(window.AppState.schedule)) {
-    return null;
-  }
-  const rows = window.AppState.schedule.filter(r => r.date === dateISO);
-  if (rows.length === 0) return null;
-  
   let status = "available";
   let description = "";
   let note = "";
-  
-  for (const r of rows) {
-    if (r.status === "closed") {
-      status = "closed";
-    } else if (status !== "closed" && r.status && r.status !== "available") {
-      status = r.status;
+
+  if (dateISO) {
+    const yearNum = parseInt(dateISO.split("-")[0], 10);
+    if (!isNaN(yearNum) && typeof getHolidaysForYear === 'function') {
+      const yearHolidays = getHolidaysForYear(yearNum);
+      if (yearHolidays && yearHolidays[dateISO]) {
+        const isHolidayObj = yearHolidays[dateISO];
+        const lang = getLang();
+        const holidayName = isHolidayObj[lang] || isHolidayObj.ua || isHolidayObj.uk || isHolidayObj.de || isHolidayObj.ru;
+        description = (lang === 'uk' ? '🎉 Свято (Гессен / Марбург): ' : (lang === 'de' ? '🎉 Feiertag (Hessen / Marburg): ' : '🎉 Праздник (Гессен / Марбург): ')) + holidayName;
+        status = "holiday";
+      }
     }
-    if (r.description && !description) description = r.description.trim();
-    if (r.note && !note) note = r.note.trim();
   }
-  
+
+  if (window.AppState && Array.isArray(window.AppState.schedule)) {
+    const rows = window.AppState.schedule.filter(r => r.date === dateISO);
+    for (const r of rows) {
+      if (r.status === "closed") {
+        status = "closed";
+      } else if (status !== "closed" && r.status && r.status !== "available") {
+        status = r.status;
+      }
+      if (r.description && r.description.trim()) {
+        description = r.description.trim();
+      }
+      if (r.note && r.note.trim()) {
+        note = r.note.trim();
+      }
+    }
+  }
+
+  if (status === "available" && !description && !note) {
+    return null;
+  }
   return { status, description, note };
 }
 
@@ -3494,71 +3512,44 @@ function renderScheduleBoard() {
   if (info) {
     if (info.status === "closed") {
       const bannerHTML = `
-        <div class="day-status-banner closed-banner" style="
-          background-color: var(--error-bg, #ffebee);
-          color: var(--error, #c62828);
-          border: 1px solid rgba(198, 40, 40, 0.2);
-          border-radius: var(--radius-md, 8px);
-          padding: 24px;
-          text-align: center;
-          margin-bottom: 20px;
-          box-shadow: 0 2px 8px rgba(0,0,0,0.05);
-        ">
-          <span style="font-size: 3rem; display: block; margin-bottom: 12px;">🚫</span>
-          <h3 style="margin: 0 0 8px 0; font-size: 1.3rem; font-weight: bold;">${getLocalizedStatusName('closed')}</h3>
-          ${info.description ? `<p style="margin: 0 0 8px 0; font-size: 0.95rem;">${info.description}</p>` : ''}
-          ${info.note ? `<p style="margin: 0; font-size: 0.85rem; opacity: 0.85; font-style: italic;">${info.note}</p>` : ''}
+        <div class="day-status-banner banner-closed">
+          <span style="font-size: 2rem; line-height: 1;">🚫</span>
+          <div style="flex: 1;">
+            <h4 style="margin: 0 0 4px 0; font-size: 1.1rem; font-weight: 700;">📢 ${getLocalizedStatusName('closed')} (Служение отменено)</h4>
+            ${info.description ? `<p style="margin: 0 0 4px 0; font-size: 0.9rem;">${info.description}</p>` : ''}
+            ${info.note ? `<p style="margin: 0; font-size: 0.85rem; opacity: 0.9; font-style: italic;">${info.note}</p>` : ''}
+          </div>
         </div>
       `;
       board.innerHTML = bannerHTML;
-      // Скрываем кнопку добавления места в шапке при закрытом дне
       const btnTopAddLocation = document.getElementById('btnTopAddLocation');
       if (btnTopAddLocation) btnTopAddLocation.style.display = 'none';
       return;
     }
     
     if (info.status !== "available" || info.description || info.note) {
-      let icon = "ℹ️";
-      let bg = "var(--primary-container, #e8f0fe)";
-      let fg = "var(--primary, #1a73e8)";
-      let border = "rgba(26, 115, 232, 0.2)";
+      let icon = "📢";
+      let bannerClass = "banner-event";
       
       if (info.status === "event") {
         icon = "📅";
-        bg = "rgba(255, 152, 0, 0.1)";
-        fg = "#e65100";
-        border = "rgba(230, 81, 0, 0.2)";
+        bannerClass = "banner-event";
       } else if (info.status === "holiday") {
         icon = "🎉";
-        bg = "rgba(76, 175, 80, 0.1)";
-        fg = "#2e7d32";
-        border = "rgba(46, 125, 50, 0.2)";
+        bannerClass = "banner-holiday";
       } else if (info.status === "special") {
         icon = "⭐";
-        bg = "rgba(156, 39, 176, 0.1)";
-        fg = "#6a1b9a";
-        border = "rgba(106, 27, 154, 0.2)";
+        bannerClass = "banner-special";
       }
       
       const bannerHTML = `
-        <div class="day-status-banner event-banner" style="
-          background-color: ${bg};
-          color: ${fg};
-          border: 1px solid ${border};
-          border-radius: var(--radius-md, 8px);
-          padding: 16px;
-          margin-bottom: 20px;
-          display: flex;
-          align-items: flex-start;
-          gap: 12px;
-          box-shadow: 0 1px 4px rgba(0,0,0,0.03);
-        ">
-          <span style="font-size: 1.5rem; line-height: 1;">${icon}</span>
+        <div class="day-status-banner ${bannerClass}">
+          <span style="font-size: 1.6rem; line-height: 1;">${icon}</span>
           <div style="flex: 1;">
-            <h4 style="margin: 0 0 4px 0; font-size: 1rem; font-weight: bold;">
-              ${info.status !== "available" ? getLocalizedStatusName(info.status) : S('infoTitle', 'Информация')}
+            <h4 style="margin: 0 0 4px 0; font-size: 1rem; font-weight: 700;">
+              📢 Объявление: ${info.status !== "available" ? getLocalizedStatusName(info.status) : S('infoTitle', 'Информация')}
             </h4>
-            ${info.description ? `<p style="margin: 0 0 4px 0; font-size: 0.9rem; color: var(--text-main);">${info.description}</p>` : ''}
+            ${info.description ? `<p style="margin: 0 0 4px 0; font-size: 0.9rem;">${info.description}</p>` : ''}
             ${info.note ? `<p style="margin: 0; font-size: 0.8rem; opacity: 0.85; font-style: italic;">${info.note}</p>` : ''}
           </div>
         </div>
@@ -4046,6 +4037,29 @@ function openQuickBookingModal(locName, dateISO, timeSlot, cartNum) {
   if (dateISO < todayStr) {
     showToast(getLang() === 'uk' ? 'Не можна створювати записи на минулі дні' : (getLang() === 'de' ? 'Buchungen für vergangene Tage sind nicht möglich' : 'Нельзя создавать записи на прошедшие дни'), "error");
     return;
+  }
+
+  // ── Проверка статуса дня — показываем предупреждение при закрытом/праздничном дне ──
+  const dayInfo = getDayScheduleInfo(dateISO);
+  if (dayInfo && (dayInfo.status === 'closed' || dayInfo.status === 'holiday')) {
+    const lang = getLang();
+    const statusLabel = getLocalizedStatusName(dayInfo.status);
+    const extraText = dayInfo.description || dayInfo.note || '';
+    let warnMsg;
+    if (lang === 'de') {
+      warnMsg = `⚠️ ${statusLabel}: Dienst am ${formatDateReadable ? formatDateReadable(dateISO) : dateISO} ist abgesagt.${extraText ? '\n\n' + extraText : ''}`;
+    } else if (lang === 'uk') {
+      warnMsg = `⚠️ ${statusLabel}: Служіння ${formatDateReadable ? formatDateReadable(dateISO) : dateISO} скасовано.${extraText ? '\n\n' + extraText : ''}`;
+    } else {
+      warnMsg = `⚠️ ${statusLabel}: Служение ${formatDateReadable ? formatDateReadable(dateISO) : dateISO} отменено.${extraText ? '\n\n' + extraText : ''}`;
+    }
+    // Используем showDayAnnouncementDialog если доступен, иначе showToast
+    if (typeof showDayAnnouncementWarning === 'function') {
+      showDayAnnouncementWarning(dateISO, dayInfo);
+    } else {
+      showToast(warnMsg, 'warning', 5000);
+    }
+    return; // Блокируем открытие формы бронирования
   }
 
   const modal = document.getElementById('quickBookingModal');

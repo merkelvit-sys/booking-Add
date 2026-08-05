@@ -140,6 +140,64 @@ body.dark-theme .user-badge .user-role.role-user {
     transform: translateY(-1px) !important;
 }
 
+/* ---------- Modern Announcement Banners for Schedule Tab ---------- */
+.day-status-banner {
+    border-radius: var(--radius-md, 10px);
+    padding: 14px 16px;
+    margin-bottom: 16px;
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+    transition: all 0.2s ease;
+}
+
+/* 🟡 Праздник (Yellow/Amber accent) */
+.day-status-banner.banner-holiday {
+    background-color: rgba(245, 158, 11, 0.12);
+    color: #b45309;
+    border: 1px solid rgba(245, 158, 11, 0.35);
+}
+[data-theme="dark"] .day-status-banner.banner-holiday,
+body.dark-mode .day-status-banner.banner-holiday,
+body.dark-theme .day-status-banner.banner-holiday {
+    background-color: rgba(245, 158, 11, 0.18) !important;
+    color: #fcd34d !important;
+    border-color: rgba(245, 158, 11, 0.4) !important;
+}
+
+/* 🔵 Событие / Особое (Blue/Purple accent) */
+.day-status-banner.banner-event,
+.day-status-banner.banner-special {
+    background-color: rgba(37, 99, 235, 0.12);
+    color: #1d4ed8;
+    border: 1px solid rgba(37, 99, 235, 0.35);
+}
+[data-theme="dark"] .day-status-banner.banner-event,
+[data-theme="dark"] .day-status-banner.banner-special,
+body.dark-mode .day-status-banner.banner-event,
+body.dark-mode .day-status-banner.banner-special,
+body.dark-theme .day-status-banner.banner-event,
+body.dark-theme .day-status-banner.banner-special {
+    background-color: rgba(37, 99, 235, 0.18) !important;
+    color: #93c5fd !important;
+    border-color: rgba(37, 99, 235, 0.4) !important;
+}
+
+/* 🔴 Выходной / Отмена служения (Red accent) */
+.day-status-banner.banner-closed {
+    background-color: rgba(239, 68, 68, 0.12);
+    color: #dc2626;
+    border: 1px solid rgba(239, 68, 68, 0.35);
+}
+[data-theme="dark"] .day-status-banner.banner-closed,
+body.dark-mode .day-status-banner.banner-closed,
+body.dark-theme .day-status-banner.banner-closed {
+    background-color: rgba(239, 68, 68, 0.18) !important;
+    color: #fca5a5 !important;
+    border-color: rgba(239, 68, 68, 0.4) !important;
+}
+
 /* ---------- Splash Screen (экран загрузки при запуске) ---------- */
 .splash-screen {
     position: fixed;
