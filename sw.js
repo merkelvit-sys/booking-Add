@@ -11,7 +11,7 @@ try {
   console.warn('[SW] OneSignal import skipped/failed:', e);
 }
 
-const CACHE_NAME = 'service-schedule-v60';
+const CACHE_NAME = 'service-schedule-v61';
 const ASSETS = [
   './',
   './index.html',

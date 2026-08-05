@@ -664,7 +664,14 @@ function buildApiUrl() {
   }
 
   // ----- Splash screen -----
-  function showSplash() { var s = document.getElementById("splashScreen"); if (s) s.classList.remove("hidden"); }
+  function showSplash() {
+    if (!isUserAuthenticated()) {
+      hideSplash();
+      return;
+    }
+    var s = document.getElementById("splashScreen");
+    if (s) s.classList.remove("hidden");
+  }
   function hideSplash() { var s = document.getElementById("splashScreen"); if (s) s.classList.add("hidden"); }
 
   function isUserAuthenticated() {
@@ -2675,6 +2682,8 @@ function buildApiUrl() {
   // ----- Экспорт глобального API -----
   window.SyncCore = {
     runAppLaunch: runAppLaunch,
+    showSplash: showSplash,
+    hideSplash: hideSplash,
     refreshAll: refreshAll,
     refreshSilently: refreshSilently,
     startAutoSync: startAutoSync,

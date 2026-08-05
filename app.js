@@ -730,6 +730,9 @@ function checkAuthGuard() {
     protectedElements.forEach(function(el) {
       el.style.display = "none";
     });
+    const splash = document.getElementById("splashScreen");
+    if (splash) splash.classList.add("hidden");
+    if (window.SyncCore && typeof SyncCore.hideSplash === 'function') SyncCore.hideSplash();
     showAuthModal();
   } else {
     protectedElements.forEach(function(el) {
@@ -747,6 +750,10 @@ function handleLogout() {
 }
 
 function showAuthModal() {
+  const splash = document.getElementById("splashScreen");
+  if (splash) splash.classList.add("hidden");
+  if (window.SyncCore && typeof SyncCore.hideSplash === 'function') SyncCore.hideSplash();
+
   const modal = document.getElementById("authModal");
   if (!modal) return;
   // Предотвращаем повторное перезаполнение и мигание, если окно уже открыто
@@ -1210,6 +1217,9 @@ window.addEventListener('DOMContentLoaded', () => {
     const user = typeof getAuthUser === 'function' ? getAuthUser() : null;
     if (!user || !user.email) {
       console.log('[SyncCore] User not authenticated. Auto-sync disabled.');
+      const splash = document.getElementById("splashScreen");
+      if (splash) splash.classList.add("hidden");
+      if (window.SyncCore && typeof SyncCore.hideSplash === 'function') SyncCore.hideSplash();
       return true; // Не запускаем синхронизацию до успешной авторизации
     }
     if (window.SyncCore) {
