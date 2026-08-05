@@ -1628,7 +1628,14 @@
             <div class="logo-container" id="logoHome" onclick="switchTab('schedule')" style="cursor: pointer;" title="На головну (Розклад)">
                 <svg class="logo-icon" viewBox="0 0 24 24">
                     <rect x="7" y="3" width="10" height="14" rx="1.5" />
-                         <div class="header-top-bar">
+                    <line x1="12" y1="3" x2="12" y2="17" />
+                    <circle cx="6" cy="18" r="2" />
+                    <circle cx="18" cy="18" r="2" />
+                    <path d="M4 18h2M18 18h2" />
+                    <path d="M12 17v3h-3" />
+                </svg>
+            </div>
+            <div class="header-top-bar">
                 <div class="lang-segmented-control" role="group" aria-label="Мова додатка">
                     <a href="index.html" class="lang-segment" onclick="langSwitchConfirm(event,'ru','index.html','Російського');">RU</a>
                     <a href="index_ua.html" class="lang-segment active" aria-current="page" onclick="return false;">UA</a>
@@ -2219,7 +2226,7 @@
         </svg>
     </button>
     <script src="trolley.js"></script>
-    <script src="app.js?v=59"></script>
-    <script src="app-sync.js?v=59"></script>
+    <script src="app.js?v=60"></script>
+    <script src="app-sync.js?v=60"></script>
 </body>
 </html>
