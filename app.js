@@ -4229,6 +4229,9 @@ function closeQuickBookingModal() {
   previousActiveElement = null;
 }
 
+window.openQuickBookingModal = openQuickBookingModal;
+window.closeQuickBookingModal = closeQuickBookingModal;
+
 function onQuickBookingBackdropClick(e) {
   if (e.target.id === 'quickBookingModal') {
     closeQuickBookingModal();

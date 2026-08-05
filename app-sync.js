@@ -2055,16 +2055,22 @@ function buildApiUrl() {
         var time = b.time || "";
         if (b.cart1Lang && (b.name1 || b.name2)) {
           var names1 = [b.name1, b.name2].filter(Boolean).join(" • ");
-          bookingsHTML += '<div style="background: var(--card-bg); padding: 8px; border-radius: var(--radius-sm); border: 1px solid var(--border);">' +
-            '<div style="font-weight: 700; color: var(--primary);">🕒 ' + time + ' | 📍 ' + loc + ' (📦 ' + (dict.cart1Name || 'Тележка №1 (Стенд 1)') + ' | ' + b.cart1Lang.toUpperCase() + ')</div>' +
-            '<div style="color: var(--text); margin-top: 2px;">👥 ' + names1 + '</div>' +
+          bookingsHTML += '<div style="background: var(--card-bg); padding: 8px 10px; border-radius: var(--radius-sm); border: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; gap: 8px;">' +
+            '<div>' +
+              '<div style="font-weight: 700; color: var(--primary);">🕒 ' + time + ' | 📍 ' + loc + ' (📦 ' + (dict.cart1Name || 'Тележка №1') + ' | ' + b.cart1Lang.toUpperCase() + ')</div>' +
+              '<div style="color: var(--text); margin-top: 2px;">👥 ' + escapeHtml(names1) + '</div>' +
+            '</div>' +
+            '<button type="button" onclick="SyncCore._closeDayEditor(); if(typeof openQuickBookingModal===\'function\') openQuickBookingModal(\'' + loc.replace(/'/g, "\\'") + '\', \'' + date + '\', \'' + time + '\', 1); else if(typeof goToDate===\'function\') goToDate(\'' + date + '\');" style="background: var(--primary); color: #fff; border: none; border-radius: 6px; padding: 5px 10px; font-size: 0.75rem; font-weight: 700; cursor: pointer; flex-shrink: 0;">✏️ Изменить</button>' +
             '</div>';
         }
         if (b.cart2Lang && (b.name3 || b.name4)) {
           var names2 = [b.name3, b.name4].filter(Boolean).join(" • ");
-          bookingsHTML += '<div style="background: var(--card-bg); padding: 8px; border-radius: var(--radius-sm); border: 1px solid var(--border);">' +
-            '<div style="font-weight: 700; color: var(--primary);">🕒 ' + time + ' | 📍 ' + loc + ' (📦 ' + (dict.cart2Name || 'Тележка №2 (Стенд 2)') + ' | ' + b.cart2Lang.toUpperCase() + ')</div>' +
-            '<div style="color: var(--text); margin-top: 2px;">👥 ' + names2 + '</div>' +
+          bookingsHTML += '<div style="background: var(--card-bg); padding: 8px 10px; border-radius: var(--radius-sm); border: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; gap: 8px;">' +
+            '<div>' +
+              '<div style="font-weight: 700; color: var(--primary);">🕒 ' + time + ' | 📍 ' + loc + ' (📦 ' + (dict.cart2Name || 'Тележка №2') + ' | ' + b.cart2Lang.toUpperCase() + ')</div>' +
+              '<div style="color: var(--text); margin-top: 2px;">👥 ' + escapeHtml(names2) + '</div>' +
+            '</div>' +
+            '<button type="button" onclick="SyncCore._closeDayEditor(); if(typeof openQuickBookingModal===\'function\') openQuickBookingModal(\'' + loc.replace(/'/g, "\\'") + '\', \'' + date + '\', \'' + time + '\', 2); else if(typeof goToDate===\'function\') goToDate(\'' + date + '\');" style="background: var(--primary); color: #fff; border: none; border-radius: 6px; padding: 5px 10px; font-size: 0.75rem; font-weight: 700; cursor: pointer; flex-shrink: 0;">✏️ Изменить</button>' +
             '</div>';
         }
       });
@@ -2072,11 +2078,11 @@ function buildApiUrl() {
     if (!bookingsHTML) {
       bookingsHTML = '<div style="color: var(--text-muted); font-style: italic; padding: 6px 0; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px;">' +
         '<span>' + (dict.noBookings || 'Записей на этот день нет (свободно)') + '</span>' +
-        '<button type="button" onclick="SyncCore._closeDayEditor(); if(typeof goToDate===\'function\') goToDate(\'' + date + '\');" style="background: var(--primary); color: #ffffff; border: none; border-radius: 6px; padding: 4px 10px; font-size: 0.75rem; font-weight: 700; cursor: pointer;">➕ Записаться на этот день</button>' +
+        '<button type="button" onclick="SyncCore._closeDayEditor(); if(typeof openQuickBookingModal===\'function\') openQuickBookingModal(\'Марбург\', \'' + date + '\', \'09:00 - 11:00\', 1); else if(typeof goToDate===\'function\') goToDate(\'' + date + '\');" style="background: var(--primary); color: #ffffff; border: none; border-radius: 6px; padding: 6px 12px; font-size: 0.78rem; font-weight: 700; cursor: pointer;">➕ Записаться на этот день</button>' +
         '</div>';
     } else {
       bookingsHTML += '<div style="margin-top: 6px; text-align: right;">' +
-        '<button type="button" onclick="SyncCore._closeDayEditor(); if(typeof goToDate===\'function\') goToDate(\'' + date + '\');" style="background: rgba(37,99,235,0.1); color: var(--primary); border: 1px solid rgba(37,99,235,0.2); border-radius: 6px; padding: 4px 10px; font-size: 0.75rem; font-weight: 700; cursor: pointer;">✏️ Редактировать запись в графике</button>' +
+        '<button type="button" onclick="SyncCore._closeDayEditor(); if(typeof goToDate===\'function\') goToDate(\'' + date + '\');" style="background: rgba(37,99,235,0.1); color: var(--primary); border: 1px solid rgba(37,99,235,0.2); border-radius: 6px; padding: 4px 10px; font-size: 0.75rem; font-weight: 700; cursor: pointer;">📅 В график недели</button>' +
         '</div>';
     }
     var listEl = document.getElementById("dayEditorBookingsList");
@@ -2093,7 +2099,11 @@ function buildApiUrl() {
     if (bookBtn) {
       bookBtn.onclick = function () {
         closeDayEditor();
-        if (typeof goToDate === "function") goToDate(date);
+        if (typeof openQuickBookingModal === "function") {
+          openQuickBookingModal('Марбург', date, '09:00 - 11:00', 1);
+        } else if (typeof goToDate === "function") {
+          goToDate(date);
+        }
       };
     }
 
