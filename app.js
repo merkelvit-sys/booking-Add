@@ -201,6 +201,16 @@ const I18N = {
     errCritical: "Критична помилка JS:\nПовідомлення: {msg}\nФайл: {file}\nРядок: {line}",
     errUnhandled: "Необроблена помилка (Promise):\nОпис: {reason}",
 
+    authTitle: "Доступ до розкладу",
+    authDesc: "Введіть ваш email для авторизації.",
+    authPlaceholder: "your@email.com",
+    authSubmit: "Увійти",
+    authError: "Email не знайдено або не активний.",
+    authNetworkError: "Помилка мережі. Спробуйте ще раз.",
+    authLoading: "Перевірка...",
+    authLogout: "Вийти",
+    authWelcome: "Ласкаво просимо, {name}!",
+
     pwaIos: `<div class="pwa-steps">
         <div class="pwa-step"><span class="pwa-step-num">1</span><span>Натисніть кнопку <strong>«Поділитися»</strong> (квадрат зі стрілкою вгору) в меню Safari.</span></div>
         <div class="pwa-step"><span class="pwa-step-num">2</span><span>Прокрутіть меню вниз та виберіть <strong>«На екран «Додому»»</strong>.</span></div>
@@ -376,6 +386,16 @@ const I18N = {
   de: {
     errCritical: "Kritischer JS-Fehler:\nNachricht: {msg}\nDatei: {file}\nZeile: {line}",
     errUnhandled: "Unbehandelter Fehler (Promise):\nBeschreibung: {reason}",
+
+    authTitle: "Zugang zum Dienstplan",
+    authDesc: "Geben Sie Ihre E-Mail-Adresse ein.",
+    authPlaceholder: "your@email.com",
+    authSubmit: "Anmelden",
+    authError: "E-Mail nicht gefunden oder nicht aktiv.",
+    authNetworkError: "Netzwerkfehler. Bitte versuchen Sie es erneut.",
+    authLoading: "Wird geprüft...",
+    authLogout: "Abmelden",
+    authWelcome: "Willkommen, {name}!",
 
     pwaIos: `<div class="pwa-steps">
         <div class="pwa-step"><span class="pwa-step-num">1</span><span>Tippen Sie im Safari-Menü auf die Schaltfläche <strong>„Teilen“</strong> (Quadrat mit Pfeil nach oben).</span></div>
@@ -645,12 +665,25 @@ function setAuthUser(user) {
   if (user) {
     localStorage.setItem(AUTH_KEY, JSON.stringify(user));
     window.currentUserRole = user.role;
+    hideAuthModal();
+    if (window.SyncCore) {
+      window.__appLaunchStarted = true;
+      SyncCore.runAppLaunch();
+      SyncCore.startAutoSync();
+    }
   } else {
     localStorage.removeItem(AUTH_KEY);
     window.currentUserRole = null;
+    if (window.SyncCore && typeof SyncCore.stopAutoSync === 'function') {
+      SyncCore.stopAutoSync();
+    }
   }
   authUser = user;
   checkAuthGuard();
+}
+
+function escapeHtml(str) {
+  return String(str || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 }
 
 function updateAuthUI() {
@@ -658,6 +691,21 @@ function updateAuthUI() {
   logoutBtns.forEach(function(btn) {
     btn.style.display = authUser ? "inline-flex" : "none";
   });
+
+  const userBadge = document.getElementById("userBadge");
+  if (userBadge) {
+    if (authUser && authUser.email) {
+      const displayName = (authUser.name && String(authUser.name).trim()) 
+        ? String(authUser.name).trim() 
+        : authUser.email.split("@")[0];
+      const displayRole = authUser.role || "user";
+      userBadge.innerHTML = `<span class="user-name">${escapeHtml(displayName)}</span> <span class="user-role role-${escapeHtml(displayRole)}">(${escapeHtml(displayRole)})</span>`;
+      userBadge.style.display = "inline-flex";
+    } else {
+      userBadge.style.display = "none";
+      userBadge.innerHTML = "";
+    }
+  }
 
   if (typeof window.syncNotificationButtonState === 'function') {
     window.syncNotificationButtonState();
@@ -700,26 +748,28 @@ function handleLogout() {
 
 function showAuthModal() {
   const modal = document.getElementById("authModal");
-  if (modal) {
-    modal.style.display = "flex";
-    const emailInput = document.getElementById("authEmail");
-    const errorEl = document.getElementById("authError");
-    const submitBtn = document.getElementById("authSubmitBtn");
-    if (emailInput) emailInput.value = "";
-    const passwordInput = document.getElementById("authPassword");
-    if (passwordInput) passwordInput.value = "";
-    if (errorEl) errorEl.textContent = "";
-    if (submitBtn) submitBtn.disabled = false;
-    const spinner = document.getElementById("authSpinner");
-    const btnText = document.getElementById("authBtnText");
-    if (spinner) spinner.style.display = "none";
-    if (btnText) {
-      const currentLang = (document.documentElement.lang || (window.location.pathname.includes("_de") ? "de" : window.location.pathname.includes("_ua") ? "ua" : "ru")).toLowerCase();
-      const defaultTexts = { ru: "Войти", de: "Anmelden", ua: "Увійти", uk: "Увійти" };
-      btnText.textContent = defaultTexts[currentLang] || S("authSubmit") || "Войти";
-    }
-    if (emailInput) emailInput.focus();
+  if (!modal) return;
+  // Предотвращаем повторное перезаполнение и мигание, если окно уже открыто
+  if (modal.style.display === "flex") return;
+
+  modal.style.display = "flex";
+  const emailInput = document.getElementById("authEmail");
+  const errorEl = document.getElementById("authError");
+  const submitBtn = document.getElementById("authSubmitBtn");
+  if (emailInput) emailInput.value = "";
+  const passwordInput = document.getElementById("authPassword");
+  if (passwordInput) passwordInput.value = "";
+  if (errorEl) errorEl.textContent = "";
+  if (submitBtn) submitBtn.disabled = false;
+  const spinner = document.getElementById("authSpinner");
+  const btnText = document.getElementById("authBtnText");
+  if (spinner) spinner.style.display = "none";
+  if (btnText) {
+    const currentLang = (document.documentElement.lang || (window.location.pathname.includes("_de") ? "de" : window.location.pathname.includes("_ua") ? "ua" : "ru")).toLowerCase();
+    const defaultTexts = { ru: "Войти", de: "Anmelden", ua: "Увійти", uk: "Увійти" };
+    btnText.textContent = defaultTexts[currentLang] || S("authSubmit") || "Войти";
   }
+  if (emailInput) setTimeout(() => emailInput.focus(), 100);
 }
 
 function hideAuthModal() {
@@ -768,7 +818,10 @@ async function handleAuthSubmit(event) {
       setAuthUser(data.user);
       if (passwordInput) passwordInput.value = "";
       hideAuthModal();
-      showToast(S("authWelcome", { name: data.user.name || data.user.email }), "success");
+      const userName = (data.user.name && String(data.user.name).trim()) 
+        ? String(data.user.name).trim() 
+        : (data.user.email ? data.user.email.split("@")[0] : "");
+      showToast(S("authWelcome", { name: userName }), "success");
       hapticFeedback([50, 50, 50]); // Success login feedback
       if (typeof renderAllTabs === "function") renderAllTabs();
     } else {
@@ -1154,6 +1207,11 @@ window.addEventListener('DOMContentLoaded', () => {
 // ----------------------------------------------------------------------------
 (function ensureAutoSyncStarts() {
   function tryStart() {
+    const user = typeof getAuthUser === 'function' ? getAuthUser() : null;
+    if (!user || !user.email) {
+      console.log('[SyncCore] User not authenticated. Auto-sync disabled.');
+      return true; // Не запускаем синхронизацию до успешной авторизации
+    }
     if (window.SyncCore) {
       if (!window.__appLaunchStarted) {
         window.__appLaunchStarted = true;
@@ -1290,6 +1348,109 @@ function selectDate(dateISO) {
 
   if (typeof window.syncNotificationButtonState === 'function') {
     window.syncNotificationButtonState();
+  }
+}
+
+function goToNextDay() {
+  if (!selectedDateISO) return;
+  const current = new Date(selectedDateISO + "T00:00:00");
+  current.setDate(current.getDate() + 1);
+  const year = current.getFullYear();
+  const month = String(current.getMonth() + 1).padStart(2, '0');
+  const day = String(current.getDate()).padStart(2, '0');
+  const nextISO = `${year}-${month}-${day}`;
+
+  const card = document.querySelector(`.date-scroller .date-card[data-date="${nextISO}"]`);
+  if (card) {
+    selectDate(nextISO);
+  } else {
+    if (currentWeekOffset < 2) {
+      const nextOffset = currentWeekOffset + 1;
+      if (nextOffset === 0) switchWeek('this');
+      else if (nextOffset === 1) switchWeek('next');
+      else if (nextOffset === 2) switchWeek('afterNext');
+
+      setTimeout(() => {
+        const firstCard = document.querySelector('.date-scroller .date-card');
+        if (firstCard && firstCard.dataset.date) {
+          selectDate(firstCard.dataset.date);
+        }
+      }, 50);
+    }
+  }
+}
+
+function goToPrevDay() {
+  if (!selectedDateISO) return;
+  const current = new Date(selectedDateISO + "T00:00:00");
+  current.setDate(current.getDate() - 1);
+  const year = current.getFullYear();
+  const month = String(current.getMonth() + 1).padStart(2, '0');
+  const day = String(current.getDate()).padStart(2, '0');
+  const prevISO = `${year}-${month}-${day}`;
+
+  const card = document.querySelector(`.date-scroller .date-card[data-date="${prevISO}"]`);
+  if (card) {
+    selectDate(prevISO);
+  } else {
+    if (currentWeekOffset > -1) {
+      const prevOffset = currentWeekOffset - 1;
+      if (prevOffset === -1) switchWeek('prev');
+      else if (prevOffset === 0) switchWeek('this');
+      else if (prevOffset === 1) switchWeek('next');
+
+      setTimeout(() => {
+        const cards = document.querySelectorAll('.date-scroller .date-card');
+        const lastCard = cards[cards.length - 1];
+        if (lastCard && lastCard.dataset.date) {
+          selectDate(lastCard.dataset.date);
+        }
+      }, 50);
+    }
+  }
+}
+
+window.goToNextDay = goToNextDay;
+window.goToPrevDay = goToPrevDay;
+
+// ----------------------------------------------------------------------------
+// Глобальный обработчик свайпов для переключения дней на мобильных устройствах
+// ----------------------------------------------------------------------------
+let touchStartX = 0;
+let touchStartY = 0;
+let touchEndX = 0;
+let touchEndY = 0;
+const minSwipeDistance = 50; // Минимальная дистанция свайпа в px
+
+document.addEventListener('touchstart', (e) => {
+  if (e.target.closest('.modal, .auth-modal-overlay, #authModal, #dayEditorModal, input, textarea, select, button, .lang-segmented-control')) return;
+  if (!e.changedTouches || e.changedTouches.length === 0) return;
+  touchStartX = e.changedTouches[0].screenX;
+  touchStartY = e.changedTouches[0].screenY;
+}, { passive: true });
+
+document.addEventListener('touchend', (e) => {
+  if (e.target.closest('.modal, .auth-modal-overlay, #authModal, #dayEditorModal, input, textarea, select, button, .lang-segmented-control')) return;
+  if (!e.changedTouches || e.changedTouches.length === 0) return;
+  touchEndX = e.changedTouches[0].screenX;
+  touchEndY = e.changedTouches[0].screenY;
+  handleSwipeGesture();
+}, { passive: true });
+
+function handleSwipeGesture() {
+  const deltaX = touchEndX - touchStartX;
+  const deltaY = touchEndY - touchStartY;
+
+  // Проверяем, что это именно ГОРИЗОНТАЛЬНЫЙ свайп (смещение по X больше, чем по Y), 
+  // чтобы не переключать дни при обыкновенном вертикальном скролле страницы
+  if (Math.abs(deltaX) > Math.abs(deltaY) && Math.abs(deltaX) > minSwipeDistance) {
+    if (deltaX < 0) {
+      // Свайп влево -> Следующий день / Следующая неделя
+      if (typeof goToNextDay === 'function') goToNextDay();
+    } else {
+      // Свайп вправо -> Предыдущий день / Предыдущая неделя
+      if (typeof goToPrevDay === 'function') goToPrevDay();
+    }
   }
 }
 
