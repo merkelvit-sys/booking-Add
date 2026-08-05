@@ -1110,15 +1110,19 @@ window.addEventListener('DOMContentLoaded', () => {
         navigator.serviceWorker.ready.then(() => {
           window.OneSignalDeferred = window.OneSignalDeferred || [];
           window.OneSignalDeferred.push(async function(OneSignal) {
-            await OneSignal.init({
-              appId: "817ea691-15bf-4e90-a20e-a710ed052184",
-              serviceWorkerPath: "sw.js",
-              serviceWorkerParam: { scope: "/" },
-              serviceWorkerOverrideForCustomPage: true
-            });
-            window.oneSignalReady = true;
-            if (typeof window.syncNotificationButtonState === 'function') {
-              window.syncNotificationButtonState();
+            try {
+              await OneSignal.init({
+                appId: "817ea691-15bf-4e90-a20e-a710ed052184",
+                serviceWorkerPath: "sw.js",
+                serviceWorkerParam: { scope: "/" },
+                serviceWorkerOverrideForCustomPage: true
+              });
+              window.oneSignalReady = true;
+              if (typeof window.syncNotificationButtonState === 'function') {
+                window.syncNotificationButtonState();
+              }
+            } catch (err) {
+              console.warn('[OneSignal] Push init error (non-critical):', err);
             }
           });
         });
