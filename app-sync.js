@@ -664,8 +664,13 @@ function buildApiUrl() {
   }
 
   // ----- Splash screen -----
+  function isAuthModalVisible() {
+    var modal = document.getElementById("authModal");
+    return modal && modal.style.display === "flex";
+  }
+
   function showSplash() {
-    if (!isUserAuthenticated()) {
+    if (!isUserAuthenticated() || isAuthModalVisible()) {
       hideSplash();
       return;
     }
@@ -686,8 +691,8 @@ function buildApiUrl() {
 
   // ----- Запуск приложения: оптимизированный старт под 200+ пользователей -----
   function runAppLaunch() {
-    if (!isUserAuthenticated()) {
-      console.log("[SyncCore] User not authenticated. Auto-sync disabled.");
+    if (!isUserAuthenticated() || isAuthModalVisible()) {
+      console.log("[SyncCore] User not authenticated or auth modal open. Auto-sync disabled.");
       hideSplash();
       return Promise.resolve();
     }
