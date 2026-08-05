@@ -739,7 +739,7 @@ function buildApiUrl() {
       if (!data) return false;
       var bookings = (data.bookings || []).map(normalizeBooking);
       var sched = mergeSchedules(data.schedule, loadCache());
-      updateAppState({ bookings: bookings, schedule: sched, yearScheduleMessages: data.yearScheduleMessages });
+      updateAppState({ bookings: bookings, schedule: sched, yearScheduleMessages: data.yearScheduleMessages }, true);
       lastSyncOnline = true;
       lastSyncTime   = Date.now();
       showToast(t("updated"), "success");
@@ -872,42 +872,56 @@ function buildApiUrl() {
     badge.innerHTML = '<span class="dot"></span>' + (lastSyncOnline ? t("online") : t("offlineShort"));
   }
 
+  var lastAppDataHash = null;
+
+  function calculateDataHash(data) {
+    try {
+      var bStr = Array.isArray(data.bookings) ? JSON.stringify(data.bookings) : "";
+      var sStr = Array.isArray(data.schedule) ? JSON.stringify(data.schedule) : "";
+      var mStr = data.yearScheduleMessages ? JSON.stringify(data.yearScheduleMessages) : "";
+      return bStr + "||" + sStr + "||" + mStr;
+    } catch (e) {
+      return null;
+    }
+  }
+
   // ----- Глобальный менеджер состояния (единственный источник данных) -----
-  // Обновляет AppState, сохраняет локальный кэш и перерисовывает все три вкладки.
-  function updateAppState(newData) {
+  // Обновляет AppState, сохраняет локальный кэш и бесшовно обновляет вкладки.
+  function updateAppState(newData, isForce) {
     if (!newData) newData = {};
+
+    var newHash = calculateDataHash(newData);
+    if (!isForce && newHash !== null && newHash === lastAppDataHash) {
+      console.log("[SyncCore] Background data unchanged. Skipping DOM re-render.");
+      return;
+    }
+    if (newHash !== null) {
+      lastAppDataHash = newHash;
+    }
+    window.currentAppData = newData;
+
     if (Array.isArray(newData.bookings)) {
       AppState.bookings = newData.bookings;
       try { databaseBookings = AppState.bookings; } catch (e) {}
       saveCachedBookings(AppState.bookings);
-      // Диагностика формата дат: логируем уникальные «сырые» форматы дат,
-      // приходящие с сервера, чтобы отловить рассинхрон с клиентским YYYY-MM-DD.
-      try {
-        var fmtSeen = {};
-        newData.bookings.slice(0, 50).forEach(function (b) {
-          var d = b.date;
-          var kind = (d instanceof Date) ? "Date:" + d.toISOString()
-            : (typeof d === "string" && /^\d{4}-\d{2}-\d{2}$/.test(d)) ? "ok:" + d
-            : "raw:" + JSON.stringify(d);
-          fmtSeen[kind] = (fmtSeen[kind] || 0) + 1;
-        });
-        console.log("[SyncCore] booking date formats from server:", fmtSeen,
-          "| total:", newData.bookings.length);
-      } catch (logErr) {}
     }
     if (Array.isArray(newData.schedule)) {
       AppState.schedule = newData.schedule;
       setSchedule(AppState.schedule);
       saveCache(AppState.schedule);
     }
-    renderAllTabs();
+
+    renderAllTabs(isForce);
   }
 
-  // Перерисовка всех активных вкладок из единого состояния:
-  // renderBookingTab() — доступность слотов (Запись)
-  // renderScheduleTab() — списки дежурных (График)
-  // renderYearGrid()   — цвета/иконки тележек (Год)
-  function renderAllTabs() {
+  // Перерисовка всех активных вкладок без мерцания и сброса состояния
+  function renderAllTabs(isExplicitUpdate) {
+    // Сохраняем положение скролла и фокус пользователя
+    var currentScrollY = window.scrollY;
+    var activeEl = document.activeElement;
+    var activeElId = (activeEl && activeEl.id) ? activeEl.id : null;
+    var isInputFocused = activeEl && (activeEl.tagName === 'INPUT' || activeEl.tagName === 'TEXTAREA' || activeEl.tagName === 'SELECT');
+
     if (typeof window.updateLocationsFromBookings === "function") {
       window.updateLocationsFromBookings();
     }
@@ -922,17 +936,32 @@ function buildApiUrl() {
       window.syncNotificationButtonState();
     }
 
-    try {
-      var activeTab = document.querySelector('.tab-content.active');
-      if (activeTab) {
-        activeTab.classList.remove('tab-updated-flash');
-        void activeTab.offsetWidth;
-        activeTab.classList.add('tab-updated-flash');
-        setTimeout(function () {
-          activeTab.classList.remove('tab-updated-flash');
-        }, 500);
+    // Восстанавливаем скролл
+    if (window.scrollY !== currentScrollY) {
+      window.scrollTo({ top: currentScrollY, behavior: 'instant' });
+    }
+
+    // Восстанавливаем фокус на поле ввода при необходимости
+    if (isInputFocused && activeElId) {
+      var elToFocus = document.getElementById(activeElId);
+      if (elToFocus && typeof elToFocus.focus === 'function') {
+        try { elToFocus.focus(); } catch (e) {}
       }
-    } catch (e) {}
+    }
+
+    if (isExplicitUpdate) {
+      try {
+        var activeTab = document.querySelector('.tab-content.active');
+        if (activeTab) {
+          activeTab.classList.remove('tab-updated-flash');
+          void activeTab.offsetWidth;
+          activeTab.classList.add('tab-updated-flash');
+          setTimeout(function () {
+            activeTab.classList.remove('tab-updated-flash');
+          }, 500);
+        }
+      } catch (e) {}
+    }
   }
 
   // Связь «Запись» → «Год»: тележки дня окрашиваются в цвета языков записи.
