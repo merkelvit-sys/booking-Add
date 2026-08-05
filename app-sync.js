@@ -1,4 +1,4 @@
-﻿// ============================================================================
+// ============================================================================
 // app-sync.js — Синхронизация, годовой график и автообновление при запуске.
 // Подключается ко всем языковым версиям (RU/UA/DE).
 // Использует глобальные переменные/функции из inline-скрипта страницы:
@@ -586,20 +586,48 @@ function buildApiUrl() {
     return processNext(0);
   }
 
+  // Автоматическая отправка офлайн-очереди при восстановлении подключения
+  window.addEventListener('online', function () {
+    console.log("[SyncCore] Connection restored. Flushing offline queue...");
+    var queue = getOfflineQueue();
+    var count = queue.length;
+    if (count > 0) {
+      processOfflineQueue().then(function () {
+        var lang = (localStorage.getItem("preferredLanguage") || document.documentElement.lang || "ru").toLowerCase();
+        var msg = "Офлайн-записи успешно отправлены на сервер!";
+        if (lang === "de") msg = "Offline-Buchungen erfolgreich an den Server gesendet!";
+        else if (lang === "ua" || lang === "uk") msg = "Офлайн-записи успішно надіслано на сервер!";
+        if (typeof showToast === 'function') showToast(msg, "success");
+        if (typeof refreshAll === 'function') refreshAll();
+      }).catch(function (err) {
+        console.warn("[SyncCore] Error flushing offline queue:", err);
+      });
+    }
+  });
+
+  var activeSyncAbortController = null;
+
   function fetchCombined() {
     if (!isValidScriptUrl(GOOGLE_SCRIPT_URL)) return Promise.reject(new Error("NO_URL"));
+
+    if (activeSyncAbortController) {
+      try { activeSyncAbortController.abort(); } catch (e) {}
+    }
+    activeSyncAbortController = (typeof AbortController !== 'undefined') ? new AbortController() : null;
+    var signal = activeSyncAbortController ? activeSyncAbortController.signal : null;
+
     return processOfflineQueue().catch(function() {}).then(function() {
-    return fetchWithRetry(buildApiUrl, { cache: "no-store" }).then(function (res) {
-      if (!res.ok) throw new Error("HTTP_" + res.status);
-      return res.json();
-    }).then(function (data) {
-      if (data && data.status === "error") throw new Error(data.message || "SERVER_ERROR");
-      return {
-        bookings: Array.isArray(data.bookings) ? data.bookings : (Array.isArray(data) ? data : []),
-        schedule: Array.isArray(data.schedule) ? data.schedule : [],
-        yearScheduleMessages: data.yearScheduleMessages || {}
-      };
-    });
+      return fetchWithRetry(buildApiUrl, { cache: "no-store", signal: signal }).then(function (res) {
+        if (!res.ok) throw new Error("HTTP_" + res.status);
+        return res.json();
+      }).then(function (data) {
+        if (data && data.status === "error") throw new Error(data.message || "SERVER_ERROR");
+        return {
+          bookings: Array.isArray(data.bookings) ? data.bookings : (Array.isArray(data) ? data : []),
+          schedule: Array.isArray(data.schedule) ? data.schedule : [],
+          yearScheduleMessages: data.yearScheduleMessages || {}
+        };
+      });
     });
   }
 
@@ -1762,6 +1790,10 @@ function buildApiUrl() {
   function setEditorLock(locked) {
     var modal = document.getElementById("dayEditorModal");
     if (!modal) return;
+    var isAdmin = (window.currentUserRole === 'admin');
+    if (!isAdmin) {
+      locked = true; // Обычные пользователи не могут разблокировать редактирование
+    }
     var fields = modal.querySelectorAll("[data-lockable]");
     for (var i = 0; i < fields.length; i++) {
       var el = fields[i];
@@ -1774,14 +1806,18 @@ function buildApiUrl() {
       if (locked) el.classList.add("is-locked"); else el.classList.remove("is-locked");
     }
     var presets = modal.querySelectorAll("#dayEditorPresets .quick-preset-btn");
-    for (var p = 0; p < presets.length; p++) presets[p].disabled = locked;
+    for (var p = 0; p < presets.length; p++) {
+      presets[p].disabled = locked || !isAdmin;
+      if (!isAdmin) presets[p].style.display = "none";
+    }
     var editBtn = document.getElementById("dayEditorEdit");
     var saveBtn = document.getElementById("dayEditorSave");
-    if (editBtn) editBtn.style.display = locked ? "" : "none";
-    if (saveBtn) saveBtn.style.display = locked ? "none" : "";
+    if (editBtn) editBtn.style.display = (locked && isAdmin) ? "" : "none";
+    if (saveBtn) saveBtn.style.display = (!locked && isAdmin) ? "" : "none";
   }
 
   function enterEditMode() {
+    if (window.currentUserRole !== 'admin') return;
     setEditorLock(false);
   }
 

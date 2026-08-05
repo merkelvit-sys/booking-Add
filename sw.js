@@ -1,4 +1,4 @@
-﻿importScripts('https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.sw.js');
+importScripts('https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.sw.js');
 
 // Handle PWA SKIP_WAITING updates
 self.addEventListener('message', (event) => {
@@ -7,7 +7,7 @@ self.addEventListener('message', (event) => {
   }
 });
 
-const CACHE_NAME = 'service-schedule-v56';
+const CACHE_NAME = 'service-schedule-v59';
 const ASSETS = [
   './',
   './index.html',
@@ -44,8 +44,6 @@ self.addEventListener('install', (event) => {
       );
     })
   );
-  // Автоматически пропускаем ожидание при установке
-  self.skipWaiting();
 });
 
 self.addEventListener('activate', (event) => {
@@ -64,25 +62,52 @@ self.addEventListener('activate', (event) => {
 });
 
 self.addEventListener('fetch', (e) => {
-  // Только GET-запросы; API Google/Nominatim — всегда по сети
+  // Только GET-запросы; сторонние API — всегда по сети
   if (e.request.method !== 'GET') return;
 
   const url = e.request.url;
-  if (url.includes('script.google.com') || url.includes('nominatim.openstreetmap.org')) {
+  if (url.includes('script.google.com') || url.includes('nominatim.openstreetmap.org') || url.includes('onesignal.com') || url.includes('cdn.onesignal.com')) {
     return; // Network-only для API
   }
 
-  e.respondWith(
-    caches.match(e.request).then((cachedResponse) => {
-      if (cachedResponse) {
-        return cachedResponse;
-      }
+  const isHtmlNavigation = e.request.mode === 'navigate' || 
+    (e.request.headers.get('accept') && e.request.headers.get('accept').includes('text/html'));
 
-      return fetch(e.request).catch(() => {
-        if (e.request.headers.get('accept') && e.request.headers.get('accept').includes('text/html')) {
-          return caches.match('./index.html');
-        }
-      });
-    })
-  );
+  if (isHtmlNavigation) {
+    // Strategy: Network-First с откатом на кэш для HTML-страниц
+    e.respondWith(
+      fetch(e.request)
+        .then((networkResponse) => {
+          if (networkResponse && networkResponse.ok) {
+            const responseClone = networkResponse.clone();
+            caches.open(CACHE_NAME).then((cache) => cache.put(e.request, responseClone));
+          }
+          return networkResponse;
+        })
+        .catch(() => {
+          return caches.match(e.request).then((cachedRes) => {
+            if (cachedRes) return cachedRes;
+            return caches.match('./index.html');
+          });
+        })
+    );
+  } else {
+    // Strategy: Stale-While-Revalidate для JS, CSS, картинок
+    e.respondWith(
+      caches.match(e.request).then((cachedResponse) => {
+        const fetchPromise = fetch(e.request)
+          .then((networkResponse) => {
+            if (networkResponse && networkResponse.ok) {
+              const responseClone = networkResponse.clone();
+              caches.open(CACHE_NAME).then((cache) => cache.put(e.request, responseClone));
+            }
+            return networkResponse;
+          })
+          .catch(() => cachedResponse);
+
+        return cachedResponse || fetchPromise;
+      })
+    );
+  }
 });
+

@@ -1,4 +1,4 @@
-﻿// ============================================================================
+// ============================================================================
 // app.js — Основная логика клиента (запись, карта, график, PWA).
 // Единый файл для всех языковых версий (RU / UA / DE).
 // Язык берётся из <html lang="...">; все пользовательские строки — в I18N.
@@ -607,7 +607,6 @@ const LANG_LABELS = {
 function getTrolleyLabels() {
   return LANG_LABELS[getLang()] || LANG_LABELS.ru;
 }
-
 // Группа брони совпадает с текущей (для RU показываем и записи без группы — легаси)
 function bookingMatchesGroup(b, g) {
   return b.group === g || (!b.group && g === "RU");
@@ -993,95 +992,132 @@ window.addEventListener('DOMContentLoaded', () => {
     headerRight.appendChild(statsBtn);
   }
   // Auth check: strict Auth Guard on init across all pages
-  checkAuthGuard();  // Регистрация Service Worker без зацикливаний
+  checkAuthGuard();
+
+  // ----- PWA Update Modal (Многоязычное окно обновления) -----
+  function showPwaUpdateModal(reg) {
+    if (document.getElementById('pwaUpdateModal')) return;
+    if (sessionStorage.getItem('pwa_update_dismissed')) return;
+
+    const lang = (localStorage.getItem("preferredLanguage") || document.documentElement.lang || "ru").toLowerCase();
+    
+    let title = "🚀 Доступно обновление!";
+    let desc = "Вышла новая версия приложения. Обновите сейчас, чтобы использовать актуальную версию и новые функции.";
+    let btnText = "Обновить сейчас";
+    let updatingText = "Обновление...";
+    let dismissText = "Позже";
+
+    if (lang === "de") {
+      title = "🚀 Neues Update verfügbar!";
+      desc = "Eine neue Version der App ist verfügbar. Aktualisieren Sie jetzt, um die neuesten Funktionen und Fehlerbehebungen zu nutzen.";
+      btnText = "Jetzt aktualisieren";
+      updatingText = "Wird aktualisiert...";
+      dismissText = "Später";
+    } else if (lang === "ua" || lang === "uk") {
+      title = "🚀 Доступне оновлення!";
+      desc = "Вийшла нова версія додатка. Оновіть зараз, щоб використовувати актуальну версію та нові функції.";
+      btnText = "Оновити зараз";
+      updatingText = "Оновлення...";
+      dismissText = "Пізніше";
+    }
+
+    const backdrop = document.createElement('div');
+    backdrop.id = 'pwaUpdateModal';
+    backdrop.className = 'pwa-update-backdrop';
+    backdrop.setAttribute('role', 'dialog');
+    backdrop.setAttribute('aria-modal', 'true');
+
+    backdrop.innerHTML = `
+      <div class="pwa-update-card">
+        <div class="pwa-update-icon-wrap">✨</div>
+        <div class="pwa-update-title">${title}</div>
+        <div class="pwa-update-desc">${desc}</div>
+        <div class="pwa-update-actions">
+          <button type="button" class="pwa-update-btn-dismiss" id="pwaUpdateDismissBtn">${dismissText}</button>
+          <button type="button" class="pwa-update-btn-primary" id="pwaUpdateConfirmBtn">${btnText}</button>
+        </div>
+      </div>
+    `;
+
+    document.body.appendChild(backdrop);
+
+    const confirmBtn = document.getElementById('pwaUpdateConfirmBtn');
+    const dismissBtn = document.getElementById('pwaUpdateDismissBtn');
+
+    dismissBtn.addEventListener('click', () => {
+      sessionStorage.setItem('pwa_update_dismissed', '1');
+      if (backdrop.parentNode) backdrop.parentNode.removeChild(backdrop);
+    });
+
+    confirmBtn.addEventListener('click', () => {
+      confirmBtn.disabled = true;
+      confirmBtn.innerHTML = `
+        <span class="auth-modal-spinner" style="display:inline-block;"></span>
+        <span>${updatingText}</span>
+      `;
+
+      const targetWorker = reg && (reg.waiting || (reg.installing && reg.installing.state === 'installed' ? reg.installing : null));
+
+      if (targetWorker) {
+        targetWorker.postMessage('SKIP_WAITING');
+        targetWorker.postMessage({ type: 'SKIP_WAITING' });
+      } else if (navigator.serviceWorker.controller) {
+        navigator.serviceWorker.controller.postMessage('SKIP_WAITING');
+        navigator.serviceWorker.controller.postMessage({ type: 'SKIP_WAITING' });
+      }
+
+      setTimeout(() => {
+        window.location.reload();
+      }, 1000);
+    });
+  }
+  window.showPwaUpdateModal = showPwaUpdateModal;
+
+  // Регистрация Service Worker с автопроверкой обновлений
   if ('serviceWorker' in navigator && window.location.protocol.startsWith('http')) {
+    let refreshing = false;
+
+    // Перезагрузить страницу при смене контроллера (после SKIP_WAITING)
+    navigator.serviceWorker.addEventListener('controllerchange', () => {
+      if (!refreshing) {
+        refreshing = true;
+        window.location.reload();
+      }
+    });
+
     navigator.serviceWorker.register('sw.js', { scope: '/' })
       .then(reg => {
-        function showUpdateToast() {
-          if (document.getElementById('pwa-update-banner')) return;
-          if (sessionStorage.getItem('pwa_update_dismissed')) return;
+        // 1. Если новый воркер уже ожидает активации
+        if (reg.waiting && navigator.serviceWorker.controller) {
+          showPwaUpdateModal(reg);
+        }
 
-          const lang = (localStorage.getItem("preferredLanguage") || "ru").toLowerCase();
-          let msg = "Доступно обновление!";
-          let btnText = "Обновить";
-          if (lang === "de") {
-            msg = "Update verfügbar!";
-            btnText = "Aktualisieren";
-          } else if (lang === "ua" || lang === "uk") {
-            msg = "Доступне оновлення!";
-            btnText = "Оновити";
-          }
-          
-          const banner = document.createElement('div');
-          banner.id = 'pwa-update-banner';
-          banner.style.cssText = `
-            position: fixed;
-            bottom: 24px;
-            left: 50%;
-            transform: translateX(-50%);
-            background: #2563eb;
-            color: #fff;
-            padding: 12px 18px;
-            border-radius: 12px;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.25);
-            z-index: 100000;
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            font-family: system-ui, sans-serif;
-            font-size: 0.9rem;
-            font-weight: 600;
-            animation: slideUpUpdate 0.3s ease-out forwards;
-          `;
-          
-          const textSpan = document.createElement('span');
-          textSpan.textContent = msg;
-          
-          const btn = document.createElement('button');
-          btn.textContent = btnText;
-          btn.style.cssText = `
-            background: #fff;
-            color: #2563eb;
-            border: none;
-            padding: 6px 12px;
-            border-radius: 8px;
-            font-weight: bold;
-            cursor: pointer;
-            font-size: 0.8rem;
-            transition: opacity 0.2s;
-          `;
-          btn.addEventListener('click', () => {
-            sessionStorage.setItem('pwa_update_dismissed', '1');
-            if (banner.parentNode) banner.parentNode.removeChild(banner);
-            if (reg && reg.waiting) {
-              reg.waiting.postMessage('SKIP_WAITING');
-              reg.waiting.postMessage({ type: 'SKIP_WAITING' });
+        // 2. Отслеживать скачивание нового обновления во время работы приложения
+        reg.onupdatefound = () => {
+          const installingWorker = reg.installing;
+          if (!installingWorker) return;
+          installingWorker.onstatechange = () => {
+            if (installingWorker.state === 'installed' && navigator.serviceWorker.controller) {
+              showPwaUpdateModal(reg);
             }
-            setTimeout(() => {
-              window.location.reload();
-            }, 300);
-          });
-          
-          banner.appendChild(textSpan);
-          banner.appendChild(btn);
-          document.body.appendChild(banner);
-          
-          if (!document.getElementById('pwa-update-style')) {
-            const style = document.createElement('style');
-            style.id = 'pwa-update-style';
-            style.textContent = `
-              @keyframes slideUpUpdate {
-                from { transform: translate(-50%, 20px); opacity: 0; }
-                to { transform: translate(-50%, 0); opacity: 1; }
-              }
-            `;
-            document.head.appendChild(style);
-          }
-        }
+          };
+        };
 
-        if (reg.waiting && navigator.serviceWorker.controller && !sessionStorage.getItem('pwa_update_dismissed')) {
-          showUpdateToast();
-        }
+        // 3. Функция проверки обновлений
+        const checkSWUpdates = () => {
+          reg.update().catch(err => console.log('SW update check failed:', err));
+        };
+
+        window.checkForAppUpdates = checkSWUpdates;
+
+        // Проверять при фокусе вкладки и каждые 30 минут
+        window.addEventListener('focus', checkSWUpdates);
+        document.addEventListener('visibilitychange', () => {
+          if (document.visibilityState === 'visible') {
+            checkSWUpdates();
+          }
+        });
+        setInterval(checkSWUpdates, 30 * 60 * 1000);
 
         // Initialize OneSignal ONLY after Service Worker is successfully active and ready
         navigator.serviceWorker.ready.then(() => {
@@ -1246,6 +1282,8 @@ function generateWeekStrip() {
     defaultSelectedDate = `${nextMonday.getFullYear()}-${String(nextMonday.getMonth() + 1).padStart(2, '0')}-${String(nextMonday.getDate()).padStart(2, '0')}`;
   }
 
+  const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+
   for (let i = 0; i < 7; i++) {
     const current = new Date(monday);
     current.setDate(monday.getDate() + i);
@@ -1265,10 +1303,11 @@ function generateWeekStrip() {
     const isPastAllowed = true;
     const isTooOld = false; // Разрешаем просмотр всей истории
 
+    const isToday = (isoString === todayStr);
     const card = document.createElement('div');
     const isActive = (isoString === defaultSelectedDate);
 
-    card.className = `date-card ${isActive ? 'active' : ''} ${isPast ? 'past-day' : ''} ${isTooOld ? 'past-disabled' : ''}`;
+    card.className = `date-card ${isActive ? 'active' : ''} ${isToday ? 'is-today' : ''} ${isPast ? 'past-day' : ''} ${isTooOld ? 'past-disabled' : ''}`;
     card.dataset.date = isoString;
 
     if (!isTooOld) {
@@ -4334,15 +4373,27 @@ async function submitQuickBooking(e) {
 
 
 // ----------------------------------------------------------------------------
-// Глобальная обработка ошибок (silent logging — без alert в продакшне)
+// Глобальная обработка ошибок (Global Error Boundary)
 // ----------------------------------------------------------------------------
 window.onerror = function (message, source, lineno, colno, error) {
   console.error('[App Error]', message, 'at', source, 'line', lineno, error);
-  return false; // позволяем браузеру тоже залогировать
+  // Игнорируем ошибки сторонних браузерных расширений
+  if (source && (source.includes('extension') || source.includes('chrome-extension'))) return false;
+  
+  if (typeof showToast === 'function') {
+    const lang = (localStorage.getItem("preferredLanguage") || document.documentElement.lang || "ru").toLowerCase();
+    let msg = "Произошла временная ошибка интерфейса. Запустите перезагрузку или попробуйте ещё раз.";
+    if (lang === "de") msg = "Ein vorübergehender Fehler ist aufgetreten. Bitte laden Sie die Seite neu.";
+    else if (lang === "ua" || lang === "uk") msg = "Сталася тимчасова помилка інтерфейсу. Спробуйте оновити сторінку.";
+    showToast(msg, "error");
+  }
+  return false;
 };
 
 window.addEventListener('unhandledrejection', function (event) {
   console.error('[Unhandled Promise Rejection]', event.reason);
+  const reasonStr = String((event && event.reason) || '');
+  if (reasonStr.includes('NO_URL') || reasonStr.includes('OneSignal') || reasonStr.includes('quota') || reasonStr.includes('AbortError')) return;
 });
 
 

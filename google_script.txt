@@ -1,4 +1,4 @@
-﻿// ============================================================================
+// ============================================================================
 // Google Apps Script — Единый источник правды (Single Source of Truth)
 // Привязан к Google Таблице. Обслуживает:
 //   1) Записи на служение (bookings) — одна вкладка "Bookings" на весь год.
@@ -344,6 +344,16 @@ function handleYearMessageUpdate(data, lang) {
     sheet.getRange("H1").setValue("YearScheduleMessage").setFontWeight("bold");
   }
   sheet.getRange("H2").setValue(message);
+  
+  // Синхронизация между RU и UA (так как русскоязычное и украиноязычное собрания объединены по объявлениям)
+  if (lang === "ru" || lang === "ua" || lang === "uk") {
+    var otherLang = (lang === "ru") ? "ua" : "ru";
+    var otherSheet = getScheduleSheet(ss, otherLang);
+    if (otherSheet.getRange("H1").getValue() !== "YearScheduleMessage") {
+      otherSheet.getRange("H1").setValue("YearScheduleMessage").setFontWeight("bold");
+    }
+    otherSheet.getRange("H2").setValue(message);
+  }
   
   return json({ status: "success", message: "Сообщение сохранено", yearScheduleMessage: message });
 }
@@ -970,25 +980,42 @@ function checkUserAuth(email, password) {
   var lastRow = sheet.getLastRow();
   if (lastRow <= 1) return null;
   
-  var data = sheet.getRange(2, 1, lastRow - 1, sheet.getLastColumn()).getValues();
-  for (var i = 0; i < data.length; i++) {
-    var rowEmail = String(data[i][0] || "").trim().toLowerCase();
+  var data = sheet.getRange(1, 1, lastRow, sheet.getLastColumn()).getValues();
+  var headers = data[0].map(function(h) { return String(h || "").replace(/[`'"]/g, "").trim().toLowerCase(); });
+  var colEmail = headers.indexOf("email");
+  var colName = headers.indexOf("name");
+  var colStatus = headers.indexOf("status");
+  var colRole = headers.indexOf("role");
+  var colPassword = headers.indexOf("password");
+  
+  if (colEmail === -1) colEmail = 0;
+  if (colName === -1) colName = 1;
+  if (colStatus === -1) colStatus = 2;
+  if (colRole === -1) colRole = 3;
+  if (colPassword === -1) colPassword = 4;
+  
+  var cleanEmail = (email || "").toString().trim().toLowerCase();
+
+  for (var i = 1; i < data.length; i++) {
+    var rowEmail = String(data[i][colEmail] || "").trim().toLowerCase();
     
-    if (rowEmail === email) {
-      var rowStatus = String(data[i][2] || "").trim().toLowerCase();
-      if (rowStatus !== "active" && rowStatus !== "активен") {
+    if (rowEmail === cleanEmail) {
+      var rowStatus = String(data[i][colStatus] || "").trim().toLowerCase();
+      if (rowStatus !== "active" && rowStatus !== "aktiv" && rowStatus !== "активен") {
         return { error: "user_inactive" };
       }
-      var rowPassword = String(data[i][3] || "").trim();
+      var rowPassword = String(data[i][colPassword] || "").trim();
       if (rowPassword !== password) {
         return { error: "wrong_password" };
       }
+      var rawRole = String(data[i][colRole] || "user").trim().toLowerCase();
+      var normalizedRole = (rawRole === "admin" || rawRole === "administrator" || rawRole === "администратор") ? "admin" : "user";
       return {
         user: {
-          email: data[i][0],
-          name: data[i][1] || "",
-          status: data[i][2] || "",
-          role: String(data[i][4] || "user")
+          email: data[i][colEmail],
+          name: data[i][colName] || "",
+          status: data[i][colStatus] || "",
+          role: normalizedRole
         }
       };
     }
@@ -1003,15 +1030,21 @@ function checkAdminRole(email) {
   var lastRow = sheet.getLastRow();
   if (lastRow <= 1) return false;
   
-  var data = sheet.getRange(2, 1, lastRow - 1, sheet.getLastColumn()).getValues();
-  for (var i = 0; i < data.length; i++) {
-    var rowEmail = String(data[i][0] || "").trim().toLowerCase();
-    if (rowEmail === email.toLowerCase()) {
-      var colDVal = data[i].length > 3 ? String(data[i][3] || "").trim().toLowerCase() : "";
-      var colEVal = data[i].length > 4 ? String(data[i][4] || "").trim().toLowerCase() : "";
-      
-      if (colDVal === "admin" || colDVal === "администратор" ||
-          colEVal === "admin" || colEVal === "администратор") {
+  var data = sheet.getRange(1, 1, lastRow, sheet.getLastColumn()).getValues();
+  var headers = data[0].map(function(h) { return String(h || "").replace(/[`'"]/g, "").trim().toLowerCase(); });
+  var colEmail = headers.indexOf("email");
+  var colRole = headers.indexOf("role");
+  
+  if (colEmail === -1) colEmail = 0;
+  if (colRole === -1) colRole = 3;
+  
+  var cleanEmail = (email || "").toString().trim().toLowerCase();
+
+  for (var i = 1; i < data.length; i++) {
+    var rowEmail = String(data[i][colEmail] || "").trim().toLowerCase();
+    if (rowEmail === cleanEmail) {
+      var roleVal = String(data[i][colRole] || "").trim().toLowerCase();
+      if (roleVal === "admin" || roleVal === "administrator" || roleVal === "администратор") {
         return true;
       }
     }

@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="de">
 <head>
     <meta charset="UTF-8">
@@ -1519,7 +1519,7 @@
             to { opacity: 1; transform: translateY(0); }
         }
     </style>
-    <link rel="stylesheet" href="app-sync.css?v=56">
+    <link rel="stylesheet" href="app-sync.css?v=58">
 </head>
 <body>
 
@@ -1995,12 +1995,207 @@
     </script>
     <!-- ── Smart Floating Scroll Button ──────────────────────────── -->
     <button id="quickScrollBtn" class="quick-scroll-btn hidden" aria-label="Scroll navigation" onclick="handleQuickScroll()">
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Quick Booking Modal -->
+    <div id="quickBookingModal" class="modal-backdrop" style="display: none;" onclick="onQuickBookingBackdropClick(event)">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 class="modal-title" id="qbModalTitle">Schnelle Schichtbuchung</h3>
+                <button type="button" class="btn-close-modal" onclick="closeQuickBookingModal()" aria-label="Schließen">✖</button>
+            </div>
+            <form id="quickBookingForm">
+                <div class="form-section-compact" style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px;">
+                    <div>
+                        <div style="display: flex; align-items: center; gap: 4px; margin-bottom: 4px;">
+                            <label class="compact-label" id="qbDateLabel" style="margin-bottom: 0;">Datum</label>
+                            <button type="button" class="btn-info-toggle" onclick="toggleInfo('qbDateInfo')" style="padding: 2px; height: 18px; display: inline-flex; align-items: center;">
+                                <svg viewBox="0 0 24 24" style="width: 14px; height: 14px;"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z" fill="currentColor"/></svg>
+                            </button>
+                        </div>
+                        <div id="qbDateInfo" class="info-helper-box" style="margin-top: 4px; margin-bottom: 6px;">Datum der Schicht (schreibgeschützt)</div>
+                        <input type="text" id="qbDate" class="input-field" disabled style="background-color: var(--primary-container); border-color: var(--border); opacity: 0.85; cursor: not-allowed;">
+                    </div>
+                    <div>
+                        <div style="display: flex; align-items: center; gap: 4px; margin-bottom: 4px;">
+                            <label class="compact-label" id="qbTimeLabel" style="margin-bottom: 0;">Uhrzeit</label>
+                            <button type="button" class="btn-info-toggle" onclick="toggleInfo('qbTimeInfo')" style="padding: 2px; height: 18px; display: inline-flex; align-items: center;">
+                                <svg viewBox="0 0 24 24" style="width: 14px; height: 14px;"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z" fill="currentColor"/></svg>
+                            </button>
+                        </div>
+                        <div id="qbTimeInfo" class="info-helper-box" style="margin-top: 4px; margin-bottom: 6px;">Schichtzeit. Sie können ein benutzerdefiniertes Intervall eingeben, z.B. 10:30 - 12:30.</div>
+                        <input type="text" id="qbTime" class="input-field" disabled style="background-color: var(--primary-container); border-color: var(--border); opacity: 0.85; cursor: not-allowed;" placeholder="z.B. 10:00 - 12:00">
+                    </div>
+                </div>
+                <div class="form-section-compact" style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px;">
+                    <div>
+                        <div style="display: flex; align-items: center; gap: 4px; margin-bottom: 4px;">
+                            <label class="compact-label" id="qbLocationLabel" style="margin-bottom: 0;">Standort</label>
+                            <button type="button" class="btn-info-toggle" onclick="toggleInfo('qbLocationInfo')" style="padding: 2px; height: 18px; display: inline-flex; align-items: center;">
+                                <svg viewBox="0 0 24 24" style="width: 14px; height: 14px;"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z" fill="currentColor"/></svg>
+                            </button>
+                        </div>
+                        <div id="qbLocationInfo" class="info-helper-box" style="margin-top: 4px; margin-bottom: 6px;">Ausgewählter Standort für den Dienst (schreibgeschützt)</div>
+                        <input type="text" id="qbLocation" class="input-field" disabled style="background-color: var(--primary-container); border-color: var(--border); opacity: 0.85; cursor: not-allowed;">
+                    </div>
+                    <div>
+                        <div style="display: flex; align-items: center; gap: 4px; margin-bottom: 4px;">
+                            <label class="compact-label" id="qbCartLabel" style="margin-bottom: 0;">Trolley</label>
+                            <button type="button" class="btn-info-toggle" onclick="toggleInfo('qbCartInfo')" style="padding: 2px; height: 18px; display: inline-flex; align-items: center;">
+                                <svg viewBox="0 0 24 24" style="width: 14px; height: 14px;"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z" fill="currentColor"/></svg>
+                            </button>
+                        </div>
+                        <div id="qbCartInfo" class="info-helper-box" style="margin-top: 4px; margin-bottom: 6px;">Trolley-Nummer für diese Schicht (schreibgeschützt)</div>
+                        <input type="text" id="qbCart" class="input-field" disabled style="background-color: var(--primary-container); border-color: var(--border); opacity: 0.85; cursor: not-allowed;">
+                    </div>
+                </div>
+                
+                <div class="form-section-compact">
+                    <div style="display: flex; align-items: center; gap: 4px; margin-bottom: 6px;">
+                        <label class="compact-label" id="qbLangLabel" style="margin-bottom: 0;">Sprache des Trolleys wählen</label>
+                        <button type="button" class="btn-info-toggle" onclick="toggleInfo('qbLangInfo')" style="padding: 2px; height: 18px; display: inline-flex; align-items: center;">
+                            <svg viewBox="0 0 24 24" style="width: 14px; height: 14px;"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z" fill="currentColor"/></svg>
+                        </button>
+                    </div>
+                    <div id="qbLangInfo" class="info-helper-box" style="margin-top: 4px; margin-bottom: 6px;">Wählen Sie die Sprache der Literatur, die an diesem Trolley präsentiert wird.</div>
+                    <div id="qbLangPicker"></div>
+                </div>
+
+                <div class="form-section-compact">
+                    <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px;">
+                        <div style="display: flex; align-items: center; gap: 4px;">
+                            <label class="compact-label" id="qbNamesLabel" style="margin-bottom: 0;">Verkündiger der Schicht</label>
+                            <button type="button" class="btn-info-toggle" onclick="toggleInfo('qbNamesInfo')" style="padding: 2px; height: 18px; display: inline-flex; align-items: center;">
+                                <svg viewBox="0 0 24 24" style="width: 14px; height: 14px;"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z" fill="currentColor"/></svg>
+                            </button>
+                        </div>
+                        <button type="button" id="qbAutofillBtn" onclick="autofillMyNames()" style="
+                            background-color: var(--primary-container);
+                            color: var(--primary);
+                            border: none;
+                            border-radius: 4px;
+                            padding: 2px 8px;
+                            font-size: 0.7rem;
+                            font-weight: bold;
+                            cursor: pointer;
+                            display: none;
+                        ">⚡ Meine Namen einfügen</button>
+                    </div>
+                    <div id="qbNamesInfo" class="info-helper-box" style="margin-top: 4px; margin-bottom: 6px;">Geben Sie die Namen von zwei Verkündigern für diesen Dienst an.</div>
+                    <input type="text" id="qbName1" class="input-field" placeholder="Verkündiger 1 (Name)" required autocomplete="off" style="margin-bottom: 8px;">
+                    <input type="text" id="qbName2" class="input-field" placeholder="Verkündiger 2 (Name)" autocomplete="off" style="margin-bottom: 8px;">
+                    
+                    <div style="display: flex; align-items: center; gap: 6px; margin-top: 6px; margin-bottom: 8px;">
+                        <input type="checkbox" id="qbRememberMyNames" style="width: 14px; height: 14px; cursor: pointer;">
+                        <label for="qbRememberMyNames" id="qbRememberMyNamesLabel" style="font-size: 0.75rem; color: var(--text-muted); cursor: pointer; user-select: none;">Diese Namen als meine speichern</label>
+                    </div>
+                    <div style="display: flex; align-items: center; gap: 6px; margin-top: 6px; margin-bottom: 8px;">
+                        <input type="checkbox" id="chkSendPush" checked style="width: 14px; height: 14px; cursor: pointer;">
+                        <label for="chkSendPush" id="chkSendPushLabel" style="font-size: 0.75rem; color: var(--text-muted); cursor: pointer; user-select: none;">🔔 Benachrichtigung für Partnersuche senden</label>
+                    </div>
+                </div>
+
+                <button type="submit" id="qbSubmitBtn" class="btn-submit">
+                    <span class="spinner" id="qbBtnSpinner" style="display: none; margin-right: 6px;"></span>
+                    <span id="qbBtnText">Schicht eintragen</span>
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Add Time Slot Modal -->
+    <div class="modal-backdrop" id="addTimeSlotModal" style="display: none;" onclick="onAddTimeSlotBackdropClick(event)">
+        <div class="modal-content" style="max-width: 380px; width: 90%;">
+            <div class="modal-header">
+                <h3 class="modal-title" id="atsModalTitle">Zeitintervall hinzufügen</h3>
+                <button type="button" class="btn-close-modal" onclick="closeAddTimeSlotModal()" aria-label="Schließen">✖</button>
+            </div>
+            <form id="addTimeSlotForm" onsubmit="submitCustomTimeSlot(event)">
+                <!-- Выбор "С" и "До" -->
+                <div class="form-section-compact" style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 16px;">
+                    <div>
+                        <label class="compact-label" id="atsFromLabel">Von (Anfang)</label>
+                        <select id="atsFromTime" class="input-field" style="cursor: pointer;"></select>
+                    </div>
+                    <div>
+                        <label class="compact-label" id="atsToLabel">Bis (Ende)</label>
+                        <select id="atsToTime" class="input-field" style="cursor: pointer;"></select>
+                    </div>
+                </div>
+                
+                <!-- Быстрый выбор (пресеты) -->
+                <div class="form-section-compact" style="margin-top: 16px;">
+                    <label class="compact-label" id="atsPresetsLabel">Schnellauswahl</label>
+                    <div id="atsPresetsList" style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 6px;">
+                        <!-- Пресеты будут сгенерированы динамически -->
+                    </div>
+                </div>
+                
+                <button type="submit" class="btn-primary" style="width: 100%; margin-top: 20px; border: none; border-radius: 12px; padding: 12px; font-weight: bold; background: var(--primary); color: #fff; cursor: pointer;" id="atsSubmitBtn">
+                    <span id="atsBtnText">Hinzufügen</span>
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+        <script>
+        function toggleInfo(infoId) {
+            const box = document.getElementById(infoId);
+            if (!box) return;
+            const isVisible = window.getComputedStyle(box).display === 'block';
+            box.style.display = isVisible ? 'none' : 'block';
+        }
+    </script>
+    <!-- ── Versammlungs-Wechsel Bestätigungsdialog (DE) ──────── -->
+    <div id="langConfirmOverlay" class="lang-confirm-overlay" style="display:none;" role="dialog" aria-modal="true" aria-labelledby="langConfirmTitle">
+        <div class="lang-confirm-box">
+            <div class="lang-confirm-icon">
+                <svg width="24" height="24" fill="none" stroke-width="2" viewBox="0 0 24 24"><path d="M8 7h12m0 0l-4-4m4 4l-4 4M4 17h12m0 0l-4-4m4 4l-4 4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            </div>
+            <div class="lang-confirm-title" id="langConfirmTitle">Versammlung wechseln</div>
+            <div class="lang-confirm-msg" id="langConfirmMsg"></div>
+            <div class="lang-confirm-btns">
+                <button class="btn-cancel" onclick="closeLangConfirm()">Abbrechen</button>
+                <button class="btn-proceed" id="langConfirmProceed">Wechseln</button>
+            </div>
+        </div>
+    </div>
+    <script>
+    (function() {
+        window.langSwitchConfirm = function(e, langCode, url, langName) {
+            e.preventDefault();
+            var msg = 'Möchten Sie wirklich zum Dienstplan der ' + langName + ' Versammlung wechseln?';
+            document.getElementById('langConfirmMsg').textContent = msg;
+            document.getElementById('langConfirmProceed').onclick = function() {
+                localStorage.setItem('preferredLanguage', langCode);
+                window.location.href = url;
+            };
+            var overlay = document.getElementById('langConfirmOverlay');
+            overlay.style.display = 'flex';
+            overlay.addEventListener('click', function onOvClick(ev) {
+                if (ev.target === overlay) { closeLangConfirm(); overlay.removeEventListener('click', onOvClick); }
+            });
+        };
+        window.closeLangConfirm = function() {
+            document.getElementById('langConfirmOverlay').style.display = 'none';
+        };
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape') closeLangConfirm();
+        });
+    })();
+    </script>
+    <!-- ── Smart Floating Scroll Button ──────────────────────────── -->
+    <button id="quickScrollBtn" class="quick-scroll-btn hidden" aria-label="Scroll navigation" onclick="handleQuickScroll()">
         <svg id="quickScrollIcon" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
             <path d="M19 14l-7 7m0 0l-7-7m7 7V3" stroke-linecap="round" stroke-linejoin="round"/>
         </svg>
     </button>
     <script src="trolley.js"></script>
-    <script src="app.js?v=56"></script>
-    <script src="app-sync.js?v=56"></script>
+    <script src="app.js?v=59"></script>
+    <script src="app-sync.js?v=59"></script>
 </body>
 </html>
