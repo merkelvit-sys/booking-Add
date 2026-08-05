@@ -1786,30 +1786,76 @@ function buildApiUrl() {
     addDayTip("dayEditorNoteLabel", "note");
   }
 
+  function checkIsAdmin() {
+    if (window.currentUserRole === 'admin') return true;
+    if (window.AppState && AppState.authUser && AppState.authUser.role === 'admin') return true;
+    try {
+      var stored = JSON.parse(localStorage.getItem("authUser"));
+      if (stored && stored.role === 'admin') return true;
+    } catch (e) {}
+    return false;
+  }
+
   // Блокирует/разблокирует все поля редактирования дня (режим просмотра/редактирования)
   function setEditorLock(locked) {
     var modal = document.getElementById("dayEditorModal");
     if (!modal) return;
-    var isAdmin = (window.currentUserRole === 'admin');
+    var isAdmin = checkIsAdmin();
     if (!isAdmin) {
-      locked = true; // Обычные пользователи не могут разблокировать редактирование
+      locked = true; // Обычные пользователи не могут редактировать поля дня
     }
+
+    var descEl = document.getElementById("dayEditorDesc");
+    var noteEl = document.getElementById("dayEditorNote");
+    if (descEl) {
+      descEl.disabled = locked || !isAdmin;
+      descEl.readOnly = locked || !isAdmin;
+    }
+    if (noteEl) {
+      noteEl.disabled = locked || !isAdmin;
+      noteEl.readOnly = locked || !isAdmin;
+    }
+
     var fields = modal.querySelectorAll("[data-lockable]");
     for (var i = 0; i < fields.length; i++) {
       var el = fields[i];
-      if (el.tagName === "TEXTAREA" || el.tagName === "INPUT") el.disabled = locked;
+      if (el.tagName === "TEXTAREA" || el.tagName === "INPUT") {
+        el.disabled = locked || !isAdmin;
+        el.readOnly = locked || !isAdmin;
+      }
       var inner = el.querySelectorAll("button, .trolley-picker, .status-option");
       for (var j = 0; j < inner.length; j++) {
-        if (locked) { inner[j].setAttribute("disabled", "disabled"); inner[j].style.pointerEvents = "none"; }
-        else { inner[j].removeAttribute("disabled"); inner[j].style.pointerEvents = ""; }
+        if (locked || !isAdmin) {
+          inner[j].setAttribute("disabled", "disabled");
+          inner[j].style.pointerEvents = "none";
+        } else {
+          inner[j].removeAttribute("disabled");
+          inner[j].style.pointerEvents = "";
+        }
       }
-      if (locked) el.classList.add("is-locked"); else el.classList.remove("is-locked");
+      if (locked || !isAdmin) el.classList.add("is-locked"); else el.classList.remove("is-locked");
     }
+
+    var statusBox = document.getElementById("dayEditorStatus");
+    if (statusBox) {
+      var statusBtns = statusBox.querySelectorAll(".status-option");
+      for (var sb = 0; sb < statusBtns.length; sb++) {
+        if (locked || !isAdmin) {
+          statusBtns[sb].setAttribute("disabled", "disabled");
+          statusBtns[sb].style.pointerEvents = "none";
+        } else {
+          statusBtns[sb].removeAttribute("disabled");
+          statusBtns[sb].style.pointerEvents = "";
+        }
+      }
+    }
+
     var presets = modal.querySelectorAll("#dayEditorPresets .quick-preset-btn");
     for (var p = 0; p < presets.length; p++) {
       presets[p].disabled = locked || !isAdmin;
       if (!isAdmin) presets[p].style.display = "none";
     }
+
     var editBtn = document.getElementById("dayEditorEdit");
     var saveBtn = document.getElementById("dayEditorSave");
     if (editBtn) editBtn.style.display = (locked && isAdmin) ? "" : "none";
@@ -1817,7 +1863,7 @@ function buildApiUrl() {
   }
 
   function enterEditMode() {
-    if (window.currentUserRole !== 'admin') return;
+    if (!checkIsAdmin()) return;
     setEditorLock(false);
   }
 

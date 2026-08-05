@@ -1,13 +1,17 @@
-importScripts('https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.sw.js');
-
-// Handle PWA SKIP_WAITING updates
+// Synchronously register top-level message listener for SW lifecycle
 self.addEventListener('message', (event) => {
   if (event.data && (event.data === 'SKIP_WAITING' || event.data.type === 'SKIP_WAITING')) {
     self.skipWaiting();
   }
 });
 
-const CACHE_NAME = 'service-schedule-v59';
+try {
+  importScripts('https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.sw.js');
+} catch (e) {
+  console.warn('[SW] OneSignal import skipped/failed:', e);
+}
+
+const CACHE_NAME = 'service-schedule-v53';
 const ASSETS = [
   './',
   './index.html',
@@ -28,6 +32,7 @@ const ASSETS = [
 ];
 
 self.addEventListener('install', (event) => {
+  self.skipWaiting();
   event.waitUntil(
     caches.open(CACHE_NAME).then((cache) => {
       return Promise.allSettled(
@@ -66,6 +71,9 @@ self.addEventListener('fetch', (e) => {
   if (e.request.method !== 'GET') return;
 
   const url = e.request.url;
+  // Игнорируем ненужные схемы (chrome-extension://, moz-extension://, file://)
+  if (!url.startsWith('http://') && !url.startsWith('https://')) return;
+
   if (url.includes('script.google.com') || url.includes('nominatim.openstreetmap.org') || url.includes('onesignal.com') || url.includes('cdn.onesignal.com')) {
     return; // Network-only для API
   }
@@ -78,9 +86,9 @@ self.addEventListener('fetch', (e) => {
     e.respondWith(
       fetch(e.request)
         .then((networkResponse) => {
-          if (networkResponse && networkResponse.ok) {
+          if (networkResponse && networkResponse.ok && e.request.url.startsWith('http')) {
             const responseClone = networkResponse.clone();
-            caches.open(CACHE_NAME).then((cache) => cache.put(e.request, responseClone));
+            caches.open(CACHE_NAME).then((cache) => cache.put(e.request, responseClone)).catch(() => {});
           }
           return networkResponse;
         })
@@ -97,9 +105,9 @@ self.addEventListener('fetch', (e) => {
       caches.match(e.request).then((cachedResponse) => {
         const fetchPromise = fetch(e.request)
           .then((networkResponse) => {
-            if (networkResponse && networkResponse.ok) {
+            if (networkResponse && networkResponse.ok && e.request.url.startsWith('http')) {
               const responseClone = networkResponse.clone();
-              caches.open(CACHE_NAME).then((cache) => cache.put(e.request, responseClone));
+              caches.open(CACHE_NAME).then((cache) => cache.put(e.request, responseClone)).catch(() => {});
             }
             return networkResponse;
           })

@@ -994,144 +994,95 @@ window.addEventListener('DOMContentLoaded', () => {
   // Auth check: strict Auth Guard on init across all pages
   checkAuthGuard();
 
-  // ----- PWA Update Modal (Многоязычное окно обновления) -----
-  function showPwaUpdateModal(reg) {
-    if (document.getElementById('pwaUpdateModal')) return;
-    if (sessionStorage.getItem('pwa_update_dismissed')) return;
+  // ----- PWA Service Worker & Auto-Update Handler -----
+  let isRefreshing = false;
 
-    const lang = (localStorage.getItem("preferredLanguage") || document.documentElement.lang || "ru").toLowerCase();
-    
-    let title = "🚀 Доступно обновление!";
-    let desc = "Вышла новая версия приложения. Обновите сейчас, чтобы использовать актуальную версию и новые функции.";
-    let btnText = "Обновить сейчас";
-    let updatingText = "Обновление...";
-    let dismissText = "Позже";
-
-    if (lang === "de") {
-      title = "🚀 Neues Update verfügbar!";
-      desc = "Eine neue Version der App ist verfügbar. Aktualisieren Sie jetzt, um die neuesten Funktionen und Fehlerbehebungen zu nutzen.";
-      btnText = "Jetzt aktualisieren";
-      updatingText = "Wird aktualisiert...";
-      dismissText = "Später";
-    } else if (lang === "ua" || lang === "uk") {
-      title = "🚀 Доступне оновлення!";
-      desc = "Вийшла нова версія додатка. Оновіть зараз, щоб використовувати актуальну версію та нові функції.";
-      btnText = "Оновити зараз";
-      updatingText = "Оновлення...";
-      dismissText = "Пізніше";
-    }
-
-    const backdrop = document.createElement('div');
-    backdrop.id = 'pwaUpdateModal';
-    backdrop.className = 'pwa-update-backdrop';
-    backdrop.setAttribute('role', 'dialog');
-    backdrop.setAttribute('aria-modal', 'true');
-
-    backdrop.innerHTML = `
-      <div class="pwa-update-card">
-        <div class="pwa-update-icon-wrap">✨</div>
-        <div class="pwa-update-title">${title}</div>
-        <div class="pwa-update-desc">${desc}</div>
-        <div class="pwa-update-actions">
-          <button type="button" class="pwa-update-btn-dismiss" id="pwaUpdateDismissBtn">${dismissText}</button>
-          <button type="button" class="pwa-update-btn-primary" id="pwaUpdateConfirmBtn">${btnText}</button>
-        </div>
-      </div>
-    `;
-
-    document.body.appendChild(backdrop);
-
-    const confirmBtn = document.getElementById('pwaUpdateConfirmBtn');
-    const dismissBtn = document.getElementById('pwaUpdateDismissBtn');
-
-    dismissBtn.addEventListener('click', () => {
-      sessionStorage.setItem('pwa_update_dismissed', '1');
-      if (backdrop.parentNode) backdrop.parentNode.removeChild(backdrop);
-    });
-
-    confirmBtn.addEventListener('click', () => {
-      confirmBtn.disabled = true;
-      confirmBtn.innerHTML = `
-        <span class="auth-modal-spinner" style="display:inline-block;"></span>
-        <span>${updatingText}</span>
-      `;
-
-      const targetWorker = reg && (reg.waiting || (reg.installing && reg.installing.state === 'installed' ? reg.installing : null));
-
-      if (targetWorker) {
-        targetWorker.postMessage('SKIP_WAITING');
-        targetWorker.postMessage({ type: 'SKIP_WAITING' });
-      } else if (navigator.serviceWorker.controller) {
-        navigator.serviceWorker.controller.postMessage('SKIP_WAITING');
-        navigator.serviceWorker.controller.postMessage({ type: 'SKIP_WAITING' });
-      }
-
-      setTimeout(() => {
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.addEventListener('controllerchange', () => {
+      if (!isRefreshing) {
+        isRefreshing = true;
         window.location.reload();
-      }, 1000);
+      }
     });
   }
-  window.showPwaUpdateModal = showPwaUpdateModal;
 
-  // Регистрация Service Worker с автопроверкой обновлений
-  if ('serviceWorker' in navigator && window.location.protocol.startsWith('http')) {
-    let refreshing = false;
+  // ----- Ручной режим обновления приложения и кэша -----
+  window.handleManualAppUpdate = function() {
+    const lang = (localStorage.getItem("preferredLanguage") || document.documentElement.lang || "ru").toLowerCase();
+    let latestMsg = "У вас установлена последняя версия!";
+    let checkingMsg = "Проверка обновлений…";
+    let updatingMsg = "Обновление приложения…";
+    if (lang === "de") {
+      latestMsg = "Sie haben bereits die neueste Version!";
+      checkingMsg = "Suche nach Updates…";
+      updatingMsg = "App wird aktualisiert…";
+    } else if (lang === "ua" || lang === "uk") {
+      latestMsg = "У вас встановлена найновіша версія!";
+      checkingMsg = "Перевірка оновлень…";
+      updatingMsg = "Оновлення додатка…";
+    }
 
-    // Перезагрузить страницу при смене контроллера (после SKIP_WAITING)
-    navigator.serviceWorker.addEventListener('controllerchange', () => {
-      if (!refreshing) {
-        refreshing = true;
-        window.location.reload();
+    if (typeof showToast === 'function') {
+      showToast(checkingMsg, "info");
+    }
+
+    if (!('serviceWorker' in navigator)) {
+      if (typeof showToast === 'function') showToast(latestMsg, "info");
+      return;
+    }
+
+    navigator.serviceWorker.getRegistration().then(reg => {
+      if (!reg) {
+        if (typeof showToast === 'function') showToast(latestMsg, "info");
+        return;
       }
-    });
 
+      reg.update().then(() => {
+        if (reg.waiting) {
+          if (typeof showToast === 'function') showToast(updatingMsg, "success");
+          reg.waiting.postMessage({ type: 'SKIP_WAITING' });
+        } else if (reg.installing) {
+          if (typeof showToast === 'function') showToast(updatingMsg, "success");
+          reg.installing.addEventListener('statechange', function() {
+            if (this.state === 'installed' && reg.waiting) {
+              reg.waiting.postMessage({ type: 'SKIP_WAITING' });
+            }
+          });
+        } else {
+          setTimeout(() => {
+            if (typeof showToast === 'function') {
+              showToast(latestMsg, "success");
+            }
+          }, 400);
+        }
+      }).catch(() => {
+        if (typeof showToast === 'function') showToast(latestMsg, "info");
+      });
+    });
+  };
+
+  if ('serviceWorker' in navigator && window.location.protocol.startsWith('http')) {
     navigator.serviceWorker.register('sw.js', { scope: '/' })
       .then(reg => {
-        // 1. Если новый воркер уже ожидает активации
-        if (reg.waiting && navigator.serviceWorker.controller) {
-          showPwaUpdateModal(reg);
-        }
-
-        // 2. Отслеживать скачивание нового обновления во время работы приложения
-        reg.onupdatefound = () => {
-          const installingWorker = reg.installing;
-          if (!installingWorker) return;
-          installingWorker.onstatechange = () => {
-            if (installingWorker.state === 'installed' && navigator.serviceWorker.controller) {
-              showPwaUpdateModal(reg);
-            }
-          };
-        };
-
-        // 3. Функция проверки обновлений
-        const checkSWUpdates = () => {
-          reg.update().catch(err => console.log('SW update check failed:', err));
-        };
-
-        window.checkForAppUpdates = checkSWUpdates;
-
-        // Проверять при фокусе вкладки и каждые 30 минут
-        window.addEventListener('focus', checkSWUpdates);
-        document.addEventListener('visibilitychange', () => {
-          if (document.visibilityState === 'visible') {
-            checkSWUpdates();
-          }
-        });
-        setInterval(checkSWUpdates, 30 * 60 * 1000);
+        window.swRegistration = reg;
 
         // Initialize OneSignal ONLY after Service Worker is successfully active and ready
         navigator.serviceWorker.ready.then(() => {
           window.OneSignalDeferred = window.OneSignalDeferred || [];
           window.OneSignalDeferred.push(async function(OneSignal) {
-            await OneSignal.init({
-              appId: "817ea691-15bf-4e90-a20e-a710ed052184",
-              serviceWorkerPath: "sw.js",
-              serviceWorkerParam: { scope: "/" },
-              serviceWorkerOverrideForCustomPage: true
-            });
-            window.oneSignalReady = true;
-            if (typeof window.syncNotificationButtonState === 'function') {
-              window.syncNotificationButtonState();
+            try {
+              await OneSignal.init({
+                appId: "817ea691-15bf-4e90-a20e-a710ed052184",
+                serviceWorkerPath: "sw.js",
+                serviceWorkerParam: { scope: "/" },
+                serviceWorkerOverrideForCustomPage: true
+              });
+              window.oneSignalReady = true;
+              if (typeof window.syncNotificationButtonState === 'function') {
+                window.syncNotificationButtonState();
+              }
+            } catch (err) {
+              console.warn('[OneSignal] Push init error (non-critical):', err);
             }
           });
         });
