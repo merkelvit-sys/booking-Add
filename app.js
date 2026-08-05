@@ -1006,105 +1006,65 @@ window.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-  function onUpdateClick(registration) {
-    if (registration && registration.waiting) {
-      registration.waiting.postMessage({ type: 'SKIP_WAITING' });
+  // ----- Ручной режим обновления приложения и кэша -----
+  window.handleManualAppUpdate = function() {
+    const lang = (localStorage.getItem("preferredLanguage") || document.documentElement.lang || "ru").toLowerCase();
+    let latestMsg = "У вас установлена последняя версия!";
+    let checkingMsg = "Проверка обновлений…";
+    let updatingMsg = "Обновление приложения…";
+    if (lang === "de") {
+      latestMsg = "Sie haben bereits die neueste Version!";
+      checkingMsg = "Suche nach Updates…";
+      updatingMsg = "App wird aktualisiert…";
+    } else if (lang === "ua" || lang === "uk") {
+      latestMsg = "У вас встановлена найновіша версія!";
+      checkingMsg = "Перевірка оновлень…";
+      updatingMsg = "Оновлення додатка…";
     }
-  }
+
+    if (typeof showToast === 'function') {
+      showToast(checkingMsg, "info");
+    }
+
+    if (!('serviceWorker' in navigator)) {
+      if (typeof showToast === 'function') showToast(latestMsg, "info");
+      return;
+    }
+
+    navigator.serviceWorker.getRegistration().then(reg => {
+      if (!reg) {
+        if (typeof showToast === 'function') showToast(latestMsg, "info");
+        return;
+      }
+
+      reg.update().then(() => {
+        if (reg.waiting) {
+          if (typeof showToast === 'function') showToast(updatingMsg, "success");
+          reg.waiting.postMessage({ type: 'SKIP_WAITING' });
+        } else if (reg.installing) {
+          if (typeof showToast === 'function') showToast(updatingMsg, "success");
+          reg.installing.addEventListener('statechange', function() {
+            if (this.state === 'installed' && reg.waiting) {
+              reg.waiting.postMessage({ type: 'SKIP_WAITING' });
+            }
+          });
+        } else {
+          setTimeout(() => {
+            if (typeof showToast === 'function') {
+              showToast(latestMsg, "success");
+            }
+          }, 400);
+        }
+      }).catch(() => {
+        if (typeof showToast === 'function') showToast(latestMsg, "info");
+      });
+    });
+  };
 
   if ('serviceWorker' in navigator && window.location.protocol.startsWith('http')) {
     navigator.serviceWorker.register('sw.js', { scope: '/' })
       .then(reg => {
-        function showUpdateToast() {
-          if (document.getElementById('pwa-update-banner')) return;
-          if (sessionStorage.getItem('pwa_update_dismissed')) return;
-
-          const lang = (localStorage.getItem("preferredLanguage") || "ru").toLowerCase();
-          let msg = "Доступно обновление!";
-          let btnText = "Обновить";
-          if (lang === "de") {
-            msg = "Update verfügbar!";
-            btnText = "Aktualisieren";
-          } else if (lang === "ua" || lang === "uk") {
-            msg = "Доступне оновлення!";
-            btnText = "Оновити";
-          }
-          
-          const banner = document.createElement('div');
-          banner.id = 'pwa-update-banner';
-          banner.style.cssText = `
-            position: fixed;
-            bottom: 24px;
-            left: 50%;
-            transform: translateX(-50%);
-            background: #2563eb;
-            color: #fff;
-            padding: 12px 18px;
-            border-radius: 12px;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.25);
-            z-index: 100000;
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            font-family: system-ui, sans-serif;
-            font-size: 0.9rem;
-            font-weight: 600;
-            animation: slideUpUpdate 0.3s ease-out forwards;
-          `;
-          
-          const textSpan = document.createElement('span');
-          textSpan.textContent = msg;
-          
-          const btn = document.createElement('button');
-          btn.textContent = btnText;
-          btn.style.cssText = `
-            background: #fff;
-            color: #2563eb;
-            border: none;
-            padding: 6px 12px;
-            border-radius: 8px;
-            font-weight: bold;
-            cursor: pointer;
-            font-size: 0.8rem;
-            transition: opacity 0.2s;
-          `;
-          btn.addEventListener('click', () => {
-            sessionStorage.setItem('pwa_update_dismissed', '1');
-            if (banner.parentNode) banner.parentNode.removeChild(banner);
-            onUpdateClick(reg);
-          });
-          
-          banner.appendChild(textSpan);
-          banner.appendChild(btn);
-          document.body.appendChild(banner);
-          
-          if (!document.getElementById('pwa-update-style')) {
-            const style = document.createElement('style');
-            style.id = 'pwa-update-style';
-            style.textContent = `
-              @keyframes slideUpUpdate {
-                from { transform: translate(-50%, 20px); opacity: 0; }
-                to { transform: translate(-50%, 0); opacity: 1; }
-              }
-            `;
-            document.head.appendChild(style);
-          }
-        }
-
-        if (reg.waiting && navigator.serviceWorker.controller && !sessionStorage.getItem('pwa_update_dismissed')) {
-          showUpdateToast();
-        }
-
-        reg.addEventListener('updatefound', () => {
-          const newWorker = reg.installing;
-          if (newWorker) {
-            newWorker.addEventListener('statechange', () => {
-              if (newWorker.state === 'installed' && navigator.serviceWorker.controller && !sessionStorage.getItem('pwa_update_dismissed')) {
-                showUpdateToast();
-              }
-            });
-          }
-        });
+        window.swRegistration = reg;
 
         // Initialize OneSignal ONLY after Service Worker is successfully active and ready
         navigator.serviceWorker.ready.then(() => {
