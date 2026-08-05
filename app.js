@@ -645,9 +645,18 @@ function setAuthUser(user) {
   if (user) {
     localStorage.setItem(AUTH_KEY, JSON.stringify(user));
     window.currentUserRole = user.role;
+    hideAuthModal();
+    if (window.SyncCore) {
+      window.__appLaunchStarted = true;
+      SyncCore.runAppLaunch();
+      SyncCore.startAutoSync();
+    }
   } else {
     localStorage.removeItem(AUTH_KEY);
     window.currentUserRole = null;
+    if (window.SyncCore && typeof SyncCore.stopAutoSync === 'function') {
+      SyncCore.stopAutoSync();
+    }
   }
   authUser = user;
   checkAuthGuard();
@@ -700,26 +709,28 @@ function handleLogout() {
 
 function showAuthModal() {
   const modal = document.getElementById("authModal");
-  if (modal) {
-    modal.style.display = "flex";
-    const emailInput = document.getElementById("authEmail");
-    const errorEl = document.getElementById("authError");
-    const submitBtn = document.getElementById("authSubmitBtn");
-    if (emailInput) emailInput.value = "";
-    const passwordInput = document.getElementById("authPassword");
-    if (passwordInput) passwordInput.value = "";
-    if (errorEl) errorEl.textContent = "";
-    if (submitBtn) submitBtn.disabled = false;
-    const spinner = document.getElementById("authSpinner");
-    const btnText = document.getElementById("authBtnText");
-    if (spinner) spinner.style.display = "none";
-    if (btnText) {
-      const currentLang = (document.documentElement.lang || (window.location.pathname.includes("_de") ? "de" : window.location.pathname.includes("_ua") ? "ua" : "ru")).toLowerCase();
-      const defaultTexts = { ru: "Войти", de: "Anmelden", ua: "Увійти", uk: "Увійти" };
-      btnText.textContent = defaultTexts[currentLang] || S("authSubmit") || "Войти";
-    }
-    if (emailInput) emailInput.focus();
+  if (!modal) return;
+  // Предотвращаем повторное перезаполнение и мигание, если окно уже открыто
+  if (modal.style.display === "flex") return;
+
+  modal.style.display = "flex";
+  const emailInput = document.getElementById("authEmail");
+  const errorEl = document.getElementById("authError");
+  const submitBtn = document.getElementById("authSubmitBtn");
+  if (emailInput) emailInput.value = "";
+  const passwordInput = document.getElementById("authPassword");
+  if (passwordInput) passwordInput.value = "";
+  if (errorEl) errorEl.textContent = "";
+  if (submitBtn) submitBtn.disabled = false;
+  const spinner = document.getElementById("authSpinner");
+  const btnText = document.getElementById("authBtnText");
+  if (spinner) spinner.style.display = "none";
+  if (btnText) {
+    const currentLang = (document.documentElement.lang || (window.location.pathname.includes("_de") ? "de" : window.location.pathname.includes("_ua") ? "ua" : "ru")).toLowerCase();
+    const defaultTexts = { ru: "Войти", de: "Anmelden", ua: "Увійти", uk: "Увійти" };
+    btnText.textContent = defaultTexts[currentLang] || S("authSubmit") || "Войти";
   }
+  if (emailInput) setTimeout(() => emailInput.focus(), 100);
 }
 
 function hideAuthModal() {
@@ -1154,6 +1165,11 @@ window.addEventListener('DOMContentLoaded', () => {
 // ----------------------------------------------------------------------------
 (function ensureAutoSyncStarts() {
   function tryStart() {
+    const user = typeof getAuthUser === 'function' ? getAuthUser() : null;
+    if (!user || !user.email) {
+      console.log('[SyncCore] User not authenticated. Auto-sync disabled.');
+      return true; // Не запускаем синхронизацию до успешной авторизации
+    }
     if (window.SyncCore) {
       if (!window.__appLaunchStarted) {
         window.__appLaunchStarted = true;

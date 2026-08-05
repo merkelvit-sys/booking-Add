@@ -667,11 +667,24 @@ function buildApiUrl() {
   function showSplash() { var s = document.getElementById("splashScreen"); if (s) s.classList.remove("hidden"); }
   function hideSplash() { var s = document.getElementById("splashScreen"); if (s) s.classList.add("hidden"); }
 
+  function isUserAuthenticated() {
+    var u = (window.AppState && AppState.authUser) || (typeof getAuthUser === "function" ? getAuthUser() : null);
+    if (!u) {
+      try {
+        u = JSON.parse(localStorage.getItem("authUser"));
+      } catch (e) {}
+    }
+    return (u && u.email) ? true : false;
+  }
+
   // ----- Запуск приложения: оптимизированный старт под 200+ пользователей -----
-  // Шаг 1: мгновенный показ кэша (localStorage) — пользователь сразу видит интерфейс
-  // Шаг 2: случайная задержка 0–1500 мс перед сетевым запросом (jitter) →
-  //         размываем пиковую нагрузку, если 200+ человек откроют сайт одновременно
   function runAppLaunch() {
+    if (!isUserAuthenticated()) {
+      console.log("[SyncCore] User not authenticated. Auto-sync disabled.");
+      hideSplash();
+      return Promise.resolve();
+    }
+
     showSplash();
 
     // — Шаг 1: мгновенно показываем кэшированные данные (если есть) —
@@ -743,6 +756,11 @@ function buildApiUrl() {
 
   // Фоновое тихое обновление (без лишних уведомлений)
   function refreshSilently() {
+    if (!isUserAuthenticated()) {
+      console.log("[SyncCore] User not authenticated. Auto-sync disabled.");
+      stopAutoSync();
+      return Promise.resolve(false);
+    }
     if (isSyncLocked) return Promise.resolve(true);
     return fetchCombined().then(function (data) {
       if (!data) return;
@@ -778,6 +796,13 @@ function buildApiUrl() {
   }
 
   function adjustPollingInterval() {
+    if (!isUserAuthenticated()) {
+      if (autoTimer !== null) {
+        console.log("[SyncCore] User not authenticated. Stopping auto sync.");
+        stopAutoSync();
+      }
+      return;
+    }
     var now = Date.now();
     var isIdle = (now - lastUserActivityTime > IDLE_TIMEOUT_MS);
     var targetInterval = isIdle ? IDLE_SYNC_INTERVAL_MS : SYNC_INTERVAL_MS;
@@ -807,7 +832,7 @@ function buildApiUrl() {
   // Tab visibility changes
   document.addEventListener("visibilitychange", function () {
     isTabVisible = (document.visibilityState === "visible");
-    if (isTabVisible) {
+    if (isTabVisible && isUserAuthenticated()) {
       updateActivity();
       if (timeSinceLastSync() > SYNC_INTERVAL_MS) {
         refreshSilently();
@@ -820,6 +845,11 @@ function buildApiUrl() {
   setInterval(adjustPollingInterval, 30000);
 
   function startAutoSync() {
+    if (!isUserAuthenticated()) {
+      console.log("[SyncCore] User not authenticated. Auto-sync disabled.");
+      stopAutoSync();
+      return;
+    }
     adjustPollingInterval();
   }
   function stopAutoSync() {
