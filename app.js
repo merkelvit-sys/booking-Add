@@ -1351,6 +1351,109 @@ function selectDate(dateISO) {
   }
 }
 
+function goToNextDay() {
+  if (!selectedDateISO) return;
+  const current = new Date(selectedDateISO + "T00:00:00");
+  current.setDate(current.getDate() + 1);
+  const year = current.getFullYear();
+  const month = String(current.getMonth() + 1).padStart(2, '0');
+  const day = String(current.getDate()).padStart(2, '0');
+  const nextISO = `${year}-${month}-${day}`;
+
+  const card = document.querySelector(`.date-scroller .date-card[data-date="${nextISO}"]`);
+  if (card) {
+    selectDate(nextISO);
+  } else {
+    if (currentWeekOffset < 2) {
+      const nextOffset = currentWeekOffset + 1;
+      if (nextOffset === 0) switchWeek('this');
+      else if (nextOffset === 1) switchWeek('next');
+      else if (nextOffset === 2) switchWeek('afterNext');
+
+      setTimeout(() => {
+        const firstCard = document.querySelector('.date-scroller .date-card');
+        if (firstCard && firstCard.dataset.date) {
+          selectDate(firstCard.dataset.date);
+        }
+      }, 50);
+    }
+  }
+}
+
+function goToPrevDay() {
+  if (!selectedDateISO) return;
+  const current = new Date(selectedDateISO + "T00:00:00");
+  current.setDate(current.getDate() - 1);
+  const year = current.getFullYear();
+  const month = String(current.getMonth() + 1).padStart(2, '0');
+  const day = String(current.getDate()).padStart(2, '0');
+  const prevISO = `${year}-${month}-${day}`;
+
+  const card = document.querySelector(`.date-scroller .date-card[data-date="${prevISO}"]`);
+  if (card) {
+    selectDate(prevISO);
+  } else {
+    if (currentWeekOffset > -1) {
+      const prevOffset = currentWeekOffset - 1;
+      if (prevOffset === -1) switchWeek('prev');
+      else if (prevOffset === 0) switchWeek('this');
+      else if (prevOffset === 1) switchWeek('next');
+
+      setTimeout(() => {
+        const cards = document.querySelectorAll('.date-scroller .date-card');
+        const lastCard = cards[cards.length - 1];
+        if (lastCard && lastCard.dataset.date) {
+          selectDate(lastCard.dataset.date);
+        }
+      }, 50);
+    }
+  }
+}
+
+window.goToNextDay = goToNextDay;
+window.goToPrevDay = goToPrevDay;
+
+// ----------------------------------------------------------------------------
+// Глобальный обработчик свайпов для переключения дней на мобильных устройствах
+// ----------------------------------------------------------------------------
+let touchStartX = 0;
+let touchStartY = 0;
+let touchEndX = 0;
+let touchEndY = 0;
+const minSwipeDistance = 50; // Минимальная дистанция свайпа в px
+
+document.addEventListener('touchstart', (e) => {
+  if (e.target.closest('.modal, .auth-modal-overlay, #authModal, #dayEditorModal, input, textarea, select, button, .lang-segmented-control')) return;
+  if (!e.changedTouches || e.changedTouches.length === 0) return;
+  touchStartX = e.changedTouches[0].screenX;
+  touchStartY = e.changedTouches[0].screenY;
+}, { passive: true });
+
+document.addEventListener('touchend', (e) => {
+  if (e.target.closest('.modal, .auth-modal-overlay, #authModal, #dayEditorModal, input, textarea, select, button, .lang-segmented-control')) return;
+  if (!e.changedTouches || e.changedTouches.length === 0) return;
+  touchEndX = e.changedTouches[0].screenX;
+  touchEndY = e.changedTouches[0].screenY;
+  handleSwipeGesture();
+}, { passive: true });
+
+function handleSwipeGesture() {
+  const deltaX = touchEndX - touchStartX;
+  const deltaY = touchEndY - touchStartY;
+
+  // Проверяем, что это именно ГОРИЗОНТАЛЬНЫЙ свайп (смещение по X больше, чем по Y), 
+  // чтобы не переключать дни при обыкновенном вертикальном скролле страницы
+  if (Math.abs(deltaX) > Math.abs(deltaY) && Math.abs(deltaX) > minSwipeDistance) {
+    if (deltaX < 0) {
+      // Свайп влево -> Следующий день / Следующая неделя
+      if (typeof goToNextDay === 'function') goToNextDay();
+    } else {
+      // Свайп вправо -> Предыдущий день / Предыдущая неделя
+      if (typeof goToPrevDay === 'function') goToPrevDay();
+    }
+  }
+}
+
 // ----------------------------------------------------------------------------
 // API И КЭШИРОВАНИЕ ПОГОДЫ ДЛЯ МАРБУРГА (Open-Meteo API + 3h localStorage cache)
 // ----------------------------------------------------------------------------
