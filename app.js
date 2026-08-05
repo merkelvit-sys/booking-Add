@@ -994,90 +994,13 @@ window.addEventListener('DOMContentLoaded', () => {
   // Auth check: strict Auth Guard on init across all pages
   checkAuthGuard();
 
-  // ----- PWA Update Modal (Многоязычное окно обновления) -----
-  function showPwaUpdateModal(reg) {
-    if (document.getElementById('pwaUpdateModal')) return;
-    if (sessionStorage.getItem('pwa_update_dismissed')) return;
+  // ----- PWA Auto Update System (Бесшовное автообновление без навязчивых модалок) -----
+  const CURRENT_APP_VERSION = "59";
 
-    const lang = (localStorage.getItem("preferredLanguage") || document.documentElement.lang || "ru").toLowerCase();
-    
-    let title = "🚀 Доступно обновление!";
-    let desc = "Вышла новая версия приложения. Обновите сейчас, чтобы использовать актуальную версию и новые функции.";
-    let btnText = "Обновить сейчас";
-    let updatingText = "Обновление...";
-    let dismissText = "Позже";
-
-    if (lang === "de") {
-      title = "🚀 Neues Update verfügbar!";
-      desc = "Eine neue Version der App ist verfügbar. Aktualisieren Sie jetzt, um die neuesten Funktionen und Fehlerbehebungen zu nutzen.";
-      btnText = "Jetzt aktualisieren";
-      updatingText = "Wird aktualisiert...";
-      dismissText = "Später";
-    } else if (lang === "ua" || lang === "uk") {
-      title = "🚀 Доступне оновлення!";
-      desc = "Вийшла нова версія додатка. Оновіть зараз, щоб використовувати актуальну версію та нові функції.";
-      btnText = "Оновити зараз";
-      updatingText = "Оновлення...";
-      dismissText = "Пізніше";
-    }
-
-    const backdrop = document.createElement('div');
-    backdrop.id = 'pwaUpdateModal';
-    backdrop.className = 'pwa-update-backdrop';
-    backdrop.setAttribute('role', 'dialog');
-    backdrop.setAttribute('aria-modal', 'true');
-
-    backdrop.innerHTML = `
-      <div class="pwa-update-card">
-        <div class="pwa-update-icon-wrap">✨</div>
-        <div class="pwa-update-title">${title}</div>
-        <div class="pwa-update-desc">${desc}</div>
-        <div class="pwa-update-actions">
-          <button type="button" class="pwa-update-btn-dismiss" id="pwaUpdateDismissBtn">${dismissText}</button>
-          <button type="button" class="pwa-update-btn-primary" id="pwaUpdateConfirmBtn">${btnText}</button>
-        </div>
-      </div>
-    `;
-
-    document.body.appendChild(backdrop);
-
-    const confirmBtn = document.getElementById('pwaUpdateConfirmBtn');
-    const dismissBtn = document.getElementById('pwaUpdateDismissBtn');
-
-    dismissBtn.addEventListener('click', () => {
-      sessionStorage.setItem('pwa_update_dismissed', '1');
-      if (backdrop.parentNode) backdrop.parentNode.removeChild(backdrop);
-    });
-
-    confirmBtn.addEventListener('click', () => {
-      confirmBtn.disabled = true;
-      confirmBtn.innerHTML = `
-        <span class="auth-modal-spinner" style="display:inline-block;"></span>
-        <span>${updatingText}</span>
-      `;
-
-      const targetWorker = reg && (reg.waiting || (reg.installing && reg.installing.state === 'installed' ? reg.installing : null));
-
-      if (targetWorker) {
-        targetWorker.postMessage('SKIP_WAITING');
-        targetWorker.postMessage({ type: 'SKIP_WAITING' });
-      } else if (navigator.serviceWorker.controller) {
-        navigator.serviceWorker.controller.postMessage('SKIP_WAITING');
-        navigator.serviceWorker.controller.postMessage({ type: 'SKIP_WAITING' });
-      }
-
-      setTimeout(() => {
-        window.location.reload();
-      }, 1000);
-    });
-  }
-  window.showPwaUpdateModal = showPwaUpdateModal;
-
-  // Регистрация Service Worker с автопроверкой обновлений
   if ('serviceWorker' in navigator && window.location.protocol.startsWith('http')) {
     let refreshing = false;
 
-    // Перезагрузить страницу при смене контроллера (после SKIP_WAITING)
+    // Перезагрузить страницу при смене контроллера (когда новая версия берет управление)
     navigator.serviceWorker.addEventListener('controllerchange', () => {
       if (!refreshing) {
         refreshing = true;
@@ -1087,37 +1010,31 @@ window.addEventListener('DOMContentLoaded', () => {
 
     navigator.serviceWorker.register('sw.js', { scope: '/' })
       .then(reg => {
-        // 1. Если новый воркер уже ожидает активации
-        if (reg.waiting && navigator.serviceWorker.controller) {
-          showPwaUpdateModal(reg);
+        // Уведомление при успешном обновлении версии (показывается 1 раз)
+        const lastVersion = localStorage.getItem('pwa_installed_version');
+        if (lastVersion && lastVersion !== CURRENT_APP_VERSION) {
+          localStorage.setItem('pwa_installed_version', CURRENT_APP_VERSION);
+          const lang = (localStorage.getItem("preferredLanguage") || document.documentElement.lang || "ru").toLowerCase();
+          let msg = "🎉 Приложение успешно обновлено до версии v59!";
+          if (lang === "de") msg = "🎉 App erfolgreich auf Version v59 aktualisiert!";
+          else if (lang === "ua" || lang === "uk") msg = "🎉 Додаток успішно оновлено до версії v59!";
+          if (typeof showToast === 'function') {
+            setTimeout(() => showToast(msg, "success"), 1200);
+          }
+        } else if (!lastVersion) {
+          localStorage.setItem('pwa_installed_version', CURRENT_APP_VERSION);
         }
 
-        // 2. Отслеживать скачивание нового обновления во время работы приложения
-        reg.onupdatefound = () => {
-          const installingWorker = reg.installing;
-          if (!installingWorker) return;
-          installingWorker.onstatechange = () => {
-            if (installingWorker.state === 'installed' && navigator.serviceWorker.controller) {
-              showPwaUpdateModal(reg);
-            }
-          };
-        };
-
-        // 3. Функция проверки обновлений
+        // Проверять обновления при возврате на вкладку
         const checkSWUpdates = () => {
-          reg.update().catch(err => console.log('SW update check failed:', err));
+          reg.update().catch(() => {});
         };
 
         window.checkForAppUpdates = checkSWUpdates;
-
-        // Проверять при фокусе вкладки и каждые 30 минут
         window.addEventListener('focus', checkSWUpdates);
         document.addEventListener('visibilitychange', () => {
-          if (document.visibilityState === 'visible') {
-            checkSWUpdates();
-          }
+          if (document.visibilityState === 'visible') checkSWUpdates();
         });
-        setInterval(checkSWUpdates, 30 * 60 * 1000);
 
         // Initialize OneSignal ONLY after Service Worker is successfully active and ready
         navigator.serviceWorker.ready.then(() => {
