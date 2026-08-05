@@ -4513,9 +4513,16 @@ window.onerror = function (message, source, lineno, colno, error) {
 };
 
 window.addEventListener('unhandledrejection', function (event) {
-  console.error('[Unhandled Promise Rejection]', event.reason);
-  const reasonStr = String((event && event.reason) || '');
-  if (reasonStr.includes('NO_URL') || reasonStr.includes('OneSignal') || reasonStr.includes('quota') || reasonStr.includes('AbortError')) return;
+  const reason = event.reason;
+  const reasonStr = String((reason && (reason.message || reason)) || '');
+  const isAbort = (reason && reason.name === 'AbortError') || reasonStr.includes('AbortError');
+  const isExtensionError = reasonStr.includes('message port closed') || reasonStr.includes('NO_URL') || reasonStr.includes('push service error') || reasonStr.includes('Registration failed');
+
+  if (isAbort || isExtensionError || reasonStr.includes('OneSignal') || reasonStr.includes('quota')) {
+    event.preventDefault();
+    return;
+  }
+  console.error('[Unhandled Promise Rejection]', reason);
 });
 
 
