@@ -607,7 +607,6 @@ const LANG_LABELS = {
 function getTrolleyLabels() {
   return LANG_LABELS[getLang()] || LANG_LABELS.ru;
 }
-
 // Группа брони совпадает с текущей (для RU показываем и записи без группы — легаси)
 function bookingMatchesGroup(b, g) {
   return b.group === g || (!b.group && g === "RU");
