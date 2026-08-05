@@ -1,4 +1,4 @@
-﻿/* ==========================================================================
+/* ==========================================================================
    app-sync.css — стили для годового графика, splash-экрана и редактора дня
    Подключается ко всем языковым версиям (RU/UA/DE).
    ========================================================================== */
@@ -2115,3 +2115,115 @@ body, .month-block, .day-cell, .modal-content, .auth-modal-box, .board-card {
     display: none;
     margin-right: 6px;
 }
+
+/* ---------- PWA Update Modal ---------- */
+.pwa-update-backdrop {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.55);
+    backdrop-filter: blur(4px);
+    -webkit-backdrop-filter: blur(4px);
+    z-index: 100050;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 16px;
+    animation: pwaFadeIn 0.25s ease-out;
+}
+
+.pwa-update-card {
+    background: var(--card-bg, #ffffff);
+    color: var(--text, #1e293b);
+    width: 100%;
+    max-width: 380px;
+    border-radius: var(--radius-lg, 16px);
+    padding: 24px;
+    box-shadow: var(--shadow-lg, 0 10px 25px rgba(0,0,0,0.25));
+    text-align: center;
+    animation: pwaScaleUp 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+    border: 1px solid var(--border, rgba(120,120,120,0.15));
+}
+
+.pwa-update-icon-wrap {
+    width: 56px;
+    height: 56px;
+    margin: 0 auto 16px auto;
+    border-radius: 50%;
+    background: var(--primary-container, #eff6ff);
+    color: var(--primary, #2563eb);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 28px;
+}
+
+.pwa-update-title {
+    font-size: 1.15rem;
+    font-weight: 700;
+    margin-bottom: 8px;
+    color: var(--text, #0f172a);
+}
+
+.pwa-update-desc {
+    font-size: 0.88rem;
+    line-height: 1.45;
+    color: var(--text-muted, #64748b);
+    margin-bottom: 20px;
+}
+
+.pwa-update-actions {
+    display: flex;
+    gap: 10px;
+}
+
+.pwa-update-btn-primary {
+    flex: 1;
+    background: var(--primary, #2563eb);
+    color: #ffffff;
+    border: none;
+    border-radius: var(--radius-md, 12px);
+    padding: 12px 16px;
+    font-weight: 700;
+    font-size: 0.9rem;
+    cursor: pointer;
+    transition: background-color 0.2s, transform 0.1s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+}
+
+.pwa-update-btn-primary:hover {
+    background: var(--primary-hover, #1d4ed8);
+}
+
+.pwa-update-btn-primary:active {
+    transform: scale(0.98);
+}
+
+.pwa-update-btn-dismiss {
+    background: transparent;
+    color: var(--text-muted, #64748b);
+    border: 1px solid var(--border, #cbd5e1);
+    border-radius: var(--radius-md, 12px);
+    padding: 12px 16px;
+    font-weight: 600;
+    font-size: 0.9rem;
+    cursor: pointer;
+    transition: background 0.2s;
+}
+
+.pwa-update-btn-dismiss:hover {
+    background: rgba(120, 120, 120, 0.08);
+}
+
+@keyframes pwaFadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+@keyframes pwaScaleUp {
+    from { opacity: 0; transform: scale(0.92); }
+    to { opacity: 1; transform: scale(1); }
+}
+

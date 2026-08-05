@@ -7,7 +7,7 @@ self.addEventListener('message', (event) => {
   }
 });
 
-const CACHE_NAME = 'service-schedule-v58';
+const CACHE_NAME = 'service-schedule-v59';
 const ASSETS = [
   './',
   './index.html',
@@ -44,8 +44,6 @@ self.addEventListener('install', (event) => {
       );
     })
   );
-  // Автоматически пропускаем ожидание при установке
-  self.skipWaiting();
 });
 
 self.addEventListener('activate', (event) => {
