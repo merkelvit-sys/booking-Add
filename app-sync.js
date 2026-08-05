@@ -1827,9 +1827,12 @@ function buildApiUrl() {
         '<div id="dayEditorHolidayNotice" style="display: none; margin-bottom: 12px;"></div>' +
         '<div class="day-editor-info-card" id="dayEditorInfoCard" style="display: none; margin-bottom: 12px;"></div>' +
         '<div class="day-editor-bookings-card" id="dayEditorBookingsCard" style="background: rgba(120,120,120,0.06); border: 1px solid var(--border); border-radius: var(--radius-md); padding: 12px; margin-bottom: 12px;">' +
-          '<div style="font-weight: 700; font-size: 0.85rem; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center;">' +
+          '<div style="font-weight: 700; font-size: 0.85rem; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 6px;">' +
             '<span>' + (dict.bookingsTitle || '📋 Записи на этот день:') + '</span>' +
-            '<button type="button" id="btnGoToDateFromModal" class="btn-goto-date" style="background: var(--primary-container); color: var(--primary); border: 1px solid var(--primary); border-radius: var(--radius-sm); padding: 4px 8px; font-size: 0.75rem; font-weight: 700; cursor: pointer;">' + (dict.goToSchedule || '📅 В график') + '</button>' +
+            '<div style="display: flex; gap: 6px; align-items: center;">' +
+              '<button type="button" id="btnBookForDateFromModal" class="btn-book-date" style="background: var(--primary); color: #ffffff; border: none; border-radius: var(--radius-sm); padding: 4px 10px; font-size: 0.75rem; font-weight: 700; cursor: pointer; display: inline-flex; align-items: center; gap: 4px;">➕ Записаться</button>' +
+              '<button type="button" id="btnGoToDateFromModal" class="btn-goto-date" style="background: var(--primary-container); color: var(--primary); border: 1px solid var(--primary); border-radius: var(--radius-sm); padding: 4px 8px; font-size: 0.75rem; font-weight: 700; cursor: pointer;">' + (dict.goToSchedule || '📅 В график') + '</button>' +
+            '</div>' +
           '</div>' +
           '<div id="dayEditorBookingsList" style="font-size: 0.8rem; display: flex; flex-direction: column; gap: 6px;"></div>' +
         '</div>' +
@@ -2067,7 +2070,14 @@ function buildApiUrl() {
       });
     }
     if (!bookingsHTML) {
-      bookingsHTML = '<div style="color: var(--text-muted); font-style: italic; padding: 4px 0;">' + (dict.noBookings || 'Записей на этот день нет (свободно)') + '</div>';
+      bookingsHTML = '<div style="color: var(--text-muted); font-style: italic; padding: 6px 0; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px;">' +
+        '<span>' + (dict.noBookings || 'Записей на этот день нет (свободно)') + '</span>' +
+        '<button type="button" onclick="SyncCore._closeDayEditor(); if(typeof goToDate===\'function\') goToDate(\'' + date + '\');" style="background: var(--primary); color: #ffffff; border: none; border-radius: 6px; padding: 4px 10px; font-size: 0.75rem; font-weight: 700; cursor: pointer;">➕ Записаться на этот день</button>' +
+        '</div>';
+    } else {
+      bookingsHTML += '<div style="margin-top: 6px; text-align: right;">' +
+        '<button type="button" onclick="SyncCore._closeDayEditor(); if(typeof goToDate===\'function\') goToDate(\'' + date + '\');" style="background: rgba(37,99,235,0.1); color: var(--primary); border: 1px solid rgba(37,99,235,0.2); border-radius: 6px; padding: 4px 10px; font-size: 0.75rem; font-weight: 700; cursor: pointer;">✏️ Редактировать запись в графике</button>' +
+        '</div>';
     }
     var listEl = document.getElementById("dayEditorBookingsList");
     if (listEl) listEl.innerHTML = bookingsHTML;
@@ -2075,6 +2085,13 @@ function buildApiUrl() {
     var gotoBtn = document.getElementById("btnGoToDateFromModal");
     if (gotoBtn) {
       gotoBtn.onclick = function () {
+        closeDayEditor();
+        if (typeof goToDate === "function") goToDate(date);
+      };
+    }
+    var bookBtn = document.getElementById("btnBookForDateFromModal");
+    if (bookBtn) {
+      bookBtn.onclick = function () {
         closeDayEditor();
         if (typeof goToDate === "function") goToDate(date);
       };
