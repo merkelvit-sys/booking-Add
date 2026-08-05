@@ -2048,6 +2048,7 @@ function buildApiUrl() {
 
     // Заполнение подробного списка записей дня
     var dayBookings = (AppState.bookings || []).filter(function (b) { return b.date === date; });
+    var isAdminBooking = checkIsAdmin();
     var bookingsHTML = "";
     if (dayBookings.length > 0) {
       dayBookings.forEach(function (b) {
@@ -2055,22 +2056,28 @@ function buildApiUrl() {
         var time = b.time || "";
         if (b.cart1Lang && (b.name1 || b.name2)) {
           var names1 = [b.name1, b.name2].filter(Boolean).join(" • ");
+          var editBtn1 = isAdminBooking
+            ? '<button type="button" onclick="SyncCore._closeDayEditor(); if(typeof openQuickBookingModal===\'function\') openQuickBookingModal(\'' + loc.replace(/'/g, "\\'") + '\', \'' + date + '\', \'' + time + '\', 1); else if(typeof goToDate===\'function\') goToDate(\'' + date + '\');" style="background: var(--primary); color: #fff; border: none; border-radius: 6px; padding: 5px 10px; font-size: 0.75rem; font-weight: 700; cursor: pointer; flex-shrink: 0;">✏️ Изменить</button>'
+            : '';
           bookingsHTML += '<div style="background: var(--card-bg); padding: 8px 10px; border-radius: var(--radius-sm); border: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; gap: 8px;">' +
             '<div>' +
               '<div style="font-weight: 700; color: var(--primary);">🕒 ' + time + ' | 📍 ' + loc + ' (📦 ' + (dict.cart1Name || 'Тележка №1') + ' | ' + b.cart1Lang.toUpperCase() + ')</div>' +
               '<div style="color: var(--text); margin-top: 2px;">👥 ' + escapeHtml(names1) + '</div>' +
             '</div>' +
-            '<button type="button" onclick="SyncCore._closeDayEditor(); if(typeof openQuickBookingModal===\'function\') openQuickBookingModal(\'' + loc.replace(/'/g, "\\'") + '\', \'' + date + '\', \'' + time + '\', 1); else if(typeof goToDate===\'function\') goToDate(\'' + date + '\');" style="background: var(--primary); color: #fff; border: none; border-radius: 6px; padding: 5px 10px; font-size: 0.75rem; font-weight: 700; cursor: pointer; flex-shrink: 0;">✏️ Изменить</button>' +
+            editBtn1 +
             '</div>';
         }
         if (b.cart2Lang && (b.name3 || b.name4)) {
           var names2 = [b.name3, b.name4].filter(Boolean).join(" • ");
+          var editBtn2 = isAdminBooking
+            ? '<button type="button" onclick="SyncCore._closeDayEditor(); if(typeof openQuickBookingModal===\'function\') openQuickBookingModal(\'' + loc.replace(/'/g, "\\'") + '\', \'' + date + '\', \'' + time + '\', 2); else if(typeof goToDate===\'function\') goToDate(\'' + date + '\');" style="background: var(--primary); color: #fff; border: none; border-radius: 6px; padding: 5px 10px; font-size: 0.75rem; font-weight: 700; cursor: pointer; flex-shrink: 0;">✏️ Изменить</button>'
+            : '';
           bookingsHTML += '<div style="background: var(--card-bg); padding: 8px 10px; border-radius: var(--radius-sm); border: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; gap: 8px;">' +
             '<div>' +
               '<div style="font-weight: 700; color: var(--primary);">🕒 ' + time + ' | 📍 ' + loc + ' (📦 ' + (dict.cart2Name || 'Тележка №2') + ' | ' + b.cart2Lang.toUpperCase() + ')</div>' +
               '<div style="color: var(--text); margin-top: 2px;">👥 ' + escapeHtml(names2) + '</div>' +
             '</div>' +
-            '<button type="button" onclick="SyncCore._closeDayEditor(); if(typeof openQuickBookingModal===\'function\') openQuickBookingModal(\'' + loc.replace(/'/g, "\\'") + '\', \'' + date + '\', \'' + time + '\', 2); else if(typeof goToDate===\'function\') goToDate(\'' + date + '\');" style="background: var(--primary); color: #fff; border: none; border-radius: 6px; padding: 5px 10px; font-size: 0.75rem; font-weight: 700; cursor: pointer; flex-shrink: 0;">✏️ Изменить</button>' +
+            editBtn2 +
             '</div>';
         }
       });
