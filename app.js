@@ -1155,15 +1155,19 @@ window.addEventListener('DOMContentLoaded', () => {
     window.OneSignalDeferred = window.OneSignalDeferred || [];
     window.OneSignalDeferred.push(async function(OneSignal) {
       try {
-        await OneSignal.init({
-          appId: "817ea691-15bf-4e90-a20e-a710ed052184",
-          serviceWorkerPath: "sw.js",
-          serviceWorkerParam: { scope: "/" },
-          serviceWorkerOverrideForCustomPage: true
-        });
-        window.oneSignalReady = true;
-        if (typeof window.syncNotificationButtonState === 'function') {
-          window.syncNotificationButtonState();
+        if (window.location.hostname.includes('vercel.app') && window.location.protocol.startsWith('http')) {
+          await OneSignal.init({
+            appId: "817ea691-15bf-4e90-a20e-a710ed052184",
+            serviceWorkerPath: "sw.js",
+            serviceWorkerParam: { scope: "/" },
+            serviceWorkerOverrideForCustomPage: true
+          });
+          window.oneSignalReady = true;
+          if (typeof window.syncNotificationButtonState === 'function') {
+            window.syncNotificationButtonState();
+          }
+        } else {
+          console.log('[OneSignal] Skipped init on non-production origin:', window.location.origin);
         }
       } catch (err) {
         if (err && err.name !== 'AbortError') {
@@ -3667,9 +3671,11 @@ function renderScheduleBoard() {
   const todayStr = `${todayObj.getFullYear()}-${String(todayObj.getMonth() + 1).padStart(2, '0')}-${String(todayObj.getDate()).padStart(2, '0')}`;
   const isPastDate = selectedDateISO < todayStr;
 
+  const isAdminUser = (typeof checkIsAdmin === 'function') ? checkIsAdmin() : false;
+
   const btnTopAddLocation = document.getElementById('btnTopAddLocation');
   if (btnTopAddLocation) {
-    btnTopAddLocation.style.display = isPastDate ? 'none' : 'flex';
+    btnTopAddLocation.style.display = (isPastDate || !isAdminUser) ? 'none' : 'flex';
   }
 
   function cartCardHTML(cartNum, lang, n1, n2, locName, time, hasNames, actualTime) {
@@ -3693,8 +3699,8 @@ function renderScheduleBoard() {
     const isSingle = hasNames && ((n1 && !n2) || (!n1 && n2));
 
     if (hasNames) {
-      const deleteBtn = isPastDate
-        ? `<span class="readonly-badge" style="font-size:0.65rem; color:var(--text-muted); font-weight:600; padding:1px 5px; border:1px solid var(--border); border-radius:4px;">Read-Only</span>`
+      const deleteBtn = (isPastDate || !isAdminUser)
+        ? `<span class="readonly-badge" style="font-size:0.65rem; color:var(--text-muted); font-weight:600; padding:1px 5px; border:1px solid var(--border); border-radius:4px;">${isPastDate ? 'Read-Only' : '🔒'}</span>`
         : `<button type="button" class="btn-delete-booking" onclick="event.stopPropagation(); deleteBooking('${locName.replace(/'/g, "\\'")}', '${selectedDateISO}', '${(actualTime || time).replace(/'/g, "\\'")}', ${cartNum})" title="${S('deleteBooking')}" aria-label="${S('deleteBooking')}">🗑️</button>`;
 
       const displayName = n1 || n2;

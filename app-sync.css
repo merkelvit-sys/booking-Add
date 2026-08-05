@@ -32,7 +32,8 @@
     gap: 6px;
     margin-bottom: 14px;
     width: 100%;
-    flex-wrap: wrap;
+    flex-wrap: nowrap;
+    overflow: hidden;
 }
 
 .lang-segmented-control {
@@ -62,9 +63,9 @@ header h1 {
     padding: 5px 12px;
     font-size: 0.8rem;
     font-weight: 600;
-    color: var(--text, #1e293b);
-    background: var(--card-bg, rgba(255, 255, 255, 0.85));
-    border: 1px solid var(--border, rgba(203, 213, 225, 0.8));
+    color: #1e293b !important;
+    background: rgba(255, 255, 255, 0.85);
+    border: 1px solid rgba(203, 213, 225, 0.8);
     border-radius: 20px;
     box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
     backdrop-filter: blur(8px);
@@ -77,10 +78,13 @@ header h1 {
 
 [data-theme="dark"] .user-badge,
 body.dark-mode .user-badge,
-body.dark-theme .user-badge {
-    background: rgba(30, 41, 59, 0.9) !important;
-    color: #f8fafc !important;
-    border-color: rgba(255, 255, 255, 0.18) !important;
+body.dark-theme .user-badge,
+@media (prefers-color-scheme: dark) {
+    .user-badge {
+        background: rgba(30, 41, 59, 0.9) !important;
+        color: #ffffff !important;
+        border-color: rgba(255, 255, 255, 0.18) !important;
+    }
 }
 
 .user-badge .user-name {

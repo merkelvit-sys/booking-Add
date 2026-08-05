@@ -2140,15 +2140,11 @@ function buildApiUrl() {
     }
 
     var isAdmin = checkIsAdmin();
-    var adminControls = document.getElementById("dayEditorAdminControls");
-    var infoCard = document.getElementById("dayEditorInfoCard");
-    var saveBtn = document.getElementById("dayEditorSave");
-    var editBtn = document.getElementById("dayEditorEdit");
-    var cancelBtn = document.getElementById("dayEditorCancel");
-    var lang = getLang();
+
+    const adminControls = document.querySelectorAll('.admin-only-control, .admin-only');
 
     if (isAdmin) {
-      if (adminControls) adminControls.style.display = "block";
+      if (adminControls && adminControls.length > 0) adminControls.forEach(el => { el.style.display = "block"; });
       if (infoCard) { infoCard.style.display = "none"; infoCard.innerHTML = ""; }
       if (saveBtn) saveBtn.style.display = "inline-block";
       if (editBtn) editBtn.style.display = "none";
@@ -2162,10 +2158,11 @@ function buildApiUrl() {
         document.getElementById("dayEditorYearMessage").value = val;
       }
     } else {
-      if (adminControls) adminControls.style.display = "none";
+      if (adminControls && adminControls.length > 0) adminControls.forEach(el => { el.style.display = "none"; });
       if (saveBtn) saveBtn.style.display = "none";
       if (editBtn) editBtn.style.display = "none";
       if (cancelBtn) cancelBtn.textContent = (lang === "de" ? "Schließen" : (lang === "uk" || lang === "ua" ? "Закрити" : "Закрыть"));
+      setEditorLock(true);
 
       var infoHTML = "";
       var statusBadges = {
