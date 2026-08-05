@@ -1854,7 +1854,7 @@ function buildApiUrl() {
         '<div class="editor-actions">' +
           '<button type="button" class="btn-editor-cancel" id="dayEditorCancel">' + dict.cancel + '</button>' +
           '<button type="button" class="btn-editor-edit" id="dayEditorEdit" style="display:none;">✏️ ' + dict.edit + '</button>' +
-          '<button type="button" class="btn-editor-save" id="dayEditorSave">💾 ' + dict.saveChanges + '</button>' +
+          '<button type="button" class="btn-editor-save btn btn-primary" id="dayEditorSave">💾 ' + dict.saveChanges + '</button>' +
         '</div>' +
       '</div>';
     document.body.appendChild(modal);
@@ -1862,7 +1862,8 @@ function buildApiUrl() {
     modal.addEventListener("click", function (e) { if (e.target === modal) SyncCore._closeDayEditor(); });
     document.getElementById("dayEditorCancel").addEventListener("click", function () { SyncCore._closeDayEditor(); });
     document.getElementById("dayEditorEdit").addEventListener("click", enterEditMode);
-    document.getElementById("dayEditorSave").addEventListener("click", saveDayFromEditor);
+    var saveBtnEl = document.getElementById("dayEditorSave") || document.getElementById("saveYearDayBtn");
+    if (saveBtnEl) saveBtnEl.addEventListener("click", saveDayFromEditor);
     
     var btnSaveYearMsg = document.getElementById("btnSaveYearMessage");
     if (btnSaveYearMsg) {

@@ -58,21 +58,31 @@ header h1 {
 .user-badge {
     display: inline-flex;
     align-items: center;
-    gap: 4px;
-    padding: 3px 10px;
-    font-size: 0.76rem;
+    gap: 6px;
+    padding: 5px 12px;
+    font-size: 0.8rem;
     font-weight: 600;
     color: var(--text, #1e293b);
-    background: rgba(241, 245, 249, 0.9);
-    border: 1px solid rgba(203, 213, 225, 0.8);
+    background: var(--card-bg, rgba(255, 255, 255, 0.85));
+    border: 1px solid var(--border, rgba(203, 213, 225, 0.8));
     border-radius: 20px;
-    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
     backdrop-filter: blur(8px);
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
-    max-width: 180px;
+    max-width: 190px;
+    transition: all 0.2s ease;
 }
+
+[data-theme="dark"] .user-badge,
+body.dark-mode .user-badge,
+body.dark-theme .user-badge {
+    background: rgba(30, 41, 59, 0.9) !important;
+    color: #f8fafc !important;
+    border-color: rgba(255, 255, 255, 0.18) !important;
+}
+
 .user-badge .user-name {
     overflow: hidden;
     text-overflow: ellipsis;
@@ -81,17 +91,54 @@ header h1 {
 .user-badge .user-role {
     font-size: 0.68rem;
     font-weight: 700;
-    padding: 1px 5px;
+    padding: 2px 6px;
     border-radius: 10px;
     text-transform: lowercase;
 }
 .user-badge .user-role.role-admin {
-    background-color: rgba(239, 68, 68, 0.15);
-    color: #dc2626;
+    background-color: rgba(239, 68, 68, 0.2);
+    color: #ef4444;
+}
+[data-theme="dark"] .user-badge .user-role.role-admin,
+body.dark-mode .user-badge .user-role.role-admin,
+body.dark-theme .user-badge .user-role.role-admin {
+    background-color: rgba(239, 68, 68, 0.3) !important;
+    color: #fca5a5 !important;
 }
 .user-badge .user-role.role-user {
-    background-color: rgba(59, 130, 246, 0.15);
-    color: #2563eb;
+    background-color: rgba(59, 130, 246, 0.2);
+    color: #3b82f6;
+}
+[data-theme="dark"] .user-badge .user-role.role-user,
+body.dark-mode .user-badge .user-role.role-user,
+body.dark-theme .user-badge .user-role.role-user {
+    background-color: rgba(59, 130, 246, 0.3) !important;
+    color: #93c5fd !important;
+}
+
+/* ---------- Prominent Save Button in Day Editor Modal ---------- */
+.btn-editor-save,
+#saveYearDayBtn {
+    background: var(--primary, #1a73e8) !important;
+    color: #ffffff !important;
+    border: 1px solid var(--primary) !important;
+    border-radius: var(--radius-md, 8px) !important;
+    padding: 8px 16px !important;
+    font-weight: 700 !important;
+    font-size: 0.88rem !important;
+    cursor: pointer !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    gap: 6px !important;
+    transition: all 0.2s ease !important;
+    box-shadow: 0 2px 6px rgba(26, 115, 232, 0.3) !important;
+}
+.btn-editor-save:hover,
+#saveYearDayBtn:hover {
+    background: #1557b0 !important;
+    box-shadow: 0 4px 10px rgba(26, 115, 232, 0.4) !important;
+    transform: translateY(-1px) !important;
 }
 
 /* ---------- Splash Screen (экран загрузки при запуске) ---------- */
