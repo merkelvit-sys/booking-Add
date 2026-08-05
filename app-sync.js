@@ -1922,10 +1922,18 @@ function buildApiUrl() {
     var statusBox = document.getElementById("dayEditorStatus");
     if (statusBox) {
       var statusBtns = statusBox.querySelectorAll(".status-option");
+      var shouldLockStatus = locked || !isAdmin;
       for (var sb = 0; sb < statusBtns.length; sb++) {
-        if (locked || !isAdmin) {
+        if (shouldLockStatus) {
+          statusBtns[sb].setAttribute("disabled", "true");
+          statusBtns[sb].style.pointerEvents = "none";
+          statusBtns[sb].style.opacity = "0.7";
+          statusBtns[sb].style.cursor = "default";
+        } else {
           statusBtns[sb].removeAttribute("disabled");
           statusBtns[sb].style.pointerEvents = "";
+          statusBtns[sb].style.opacity = "";
+          statusBtns[sb].style.cursor = "";
         }
       }
     }
@@ -2028,17 +2036,26 @@ function buildApiUrl() {
     var opts = document.getElementById("dayEditorStatus");
     opts.innerHTML = "";
     var dict = I18N[getLang()];
+    var isAdminStatus = checkIsAdmin();
     ALLOWED.forEach(function (st) {
       var b = document.createElement("button");
       b.type = "button";
       b.className = "status-option" + (st === editorState.status ? " active" : "");
       b.textContent = dict.statuses[st];
       b.dataset.status = st;
-      b.onclick = function () {
-        editorState.status = st;
-        var all = opts.querySelectorAll(".status-option");
-        for (var i = 0; i < all.length; i++) all[i].classList.toggle("active", all[i].dataset.status === st);
-      };
+      if (isAdminStatus) {
+        b.onclick = function () {
+          editorState.status = st;
+          var all = opts.querySelectorAll(".status-option");
+          for (var i = 0; i < all.length; i++) all[i].classList.toggle("active", all[i].dataset.status === st);
+        };
+      } else {
+        // user: статус только для просмотра
+        b.setAttribute("disabled", "true");
+        b.style.pointerEvents = "none";
+        b.style.opacity = "0.75";
+        b.style.cursor = "default";
+      }
       opts.appendChild(b);
     });
 
