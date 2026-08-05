@@ -1220,10 +1220,27 @@ window.addEventListener('DOMContentLoaded', () => {
     }
   }
   document.addEventListener('keydown', handleQuickBookingKeydown);
-
-  // Проверить установку PWA через небольшой промежуток времени
-  setTimeout(checkPWAInstallation, 1500);
 });
+
+// ----------------------------------------------------------------------------
+// Safety Fallback Timeout: Guarantee Splash Hiding & Auth Check within 2.5 seconds
+// ----------------------------------------------------------------------------
+(function addSplashSafetyTimeout() {
+  setTimeout(function() {
+    const splash = document.getElementById("splashScreen");
+    if (splash && !splash.classList.contains("hidden")) {
+      console.warn("[Init] Safety fallback timeout (2.5s) triggered: hiding splash screen.");
+      splash.classList.add("hidden");
+      if (window.SyncCore && typeof SyncCore.hideSplash === "function") {
+        SyncCore.hideSplash();
+      }
+      const user = typeof getAuthUser === 'function' ? getAuthUser() : null;
+      if (!user || !user.email) {
+        if (typeof showAuthModal === 'function') showAuthModal();
+      }
+    }
+  }, 2500);
+})();
 
 // ----------------------------------------------------------------------------
 // Запуск автосинхронизации ДО наступления DOMContentLoaded (на случай, если
