@@ -24,6 +24,36 @@
     width: 100%;
 }
 
+/* ---------- Responsive Header Layout ---------- */
+.header-top-bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 6px;
+    margin-bottom: 14px;
+    width: 100%;
+    flex-wrap: wrap;
+}
+
+.lang-segmented-control {
+    display: inline-flex;
+    flex-shrink: 0;
+}
+
+.header-action-toolbar {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    flex-wrap: nowrap;
+    flex-shrink: 0;
+}
+
+header h1 {
+    font-size: clamp(1.1rem, 4.2vw, 1.45rem);
+    line-height: 1.25;
+    word-break: break-word;
+}
+
 /* ---------- User Profile Badge in Header ---------- */
 .user-badge {
     display: inline-flex;
