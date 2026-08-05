@@ -661,28 +661,47 @@ function getAuthUser() {
   }
 }
 
-function setAuthUser(user) {
-  if (user) {
-    localStorage.setItem(AUTH_KEY, JSON.stringify(user));
-    window.currentUserRole = user.role;
-    hideAuthModal();
+function onUserAuthenticated(user) {
+  if (!user || !user.email) return;
+
+  hideAuthModal();
+  checkAuthGuard();
+
+  // 2. Отложенный запуск фоновой синхронизации (через 500мс)
+  setTimeout(function() {
+    if (window.SyncCore) {
+      if (!window.__appLaunchStarted) {
+        window.__appLaunchStarted = true;
+        SyncCore.runAppLaunch();
+      }
+      if (typeof startAutoSync === 'function') startAutoSync();
+    }
+  }, 500);
+
+  // 3. Отложенный запуск OneSignal без всплывающих диалогов (через 2000мс)
+  setTimeout(function() {
     if (typeof initOneSignalIfAuth === 'function') {
       initOneSignalIfAuth();
     }
-    if (window.SyncCore) {
-      window.__appLaunchStarted = true;
-      SyncCore.runAppLaunch();
-      SyncCore.startAutoSync();
-    }
+  }, 2000);
+}
+window.onUserAuthenticated = onUserAuthenticated;
+
+function setAuthUser(user) {
+  if (user && user.email) {
+    localStorage.setItem(AUTH_KEY, JSON.stringify(user));
+    window.currentUserRole = user.role || null;
+    authUser = user;
+    onUserAuthenticated(user);
   } else {
     localStorage.removeItem(AUTH_KEY);
     window.currentUserRole = null;
     if (window.SyncCore && typeof SyncCore.stopAutoSync === 'function') {
       SyncCore.stopAutoSync();
     }
+    authUser = null;
+    checkAuthGuard();
   }
-  authUser = user;
-  checkAuthGuard();
 }
 
 function escapeHtml(str) {
@@ -1220,10 +1239,27 @@ window.addEventListener('DOMContentLoaded', () => {
     }
   }
   document.addEventListener('keydown', handleQuickBookingKeydown);
-
-  // Проверить установку PWA через небольшой промежуток времени
-  setTimeout(checkPWAInstallation, 1500);
 });
+
+// ----------------------------------------------------------------------------
+// Safety Fallback Timeout: Guarantee Splash Hiding & Auth Check within 2.5 seconds
+// ----------------------------------------------------------------------------
+(function addSplashSafetyTimeout() {
+  setTimeout(function() {
+    const splash = document.getElementById("splashScreen");
+    if (splash && !splash.classList.contains("hidden")) {
+      console.warn("[Init] Safety fallback timeout (2.5s) triggered: hiding splash screen.");
+      splash.classList.add("hidden");
+      if (window.SyncCore && typeof SyncCore.hideSplash === "function") {
+        SyncCore.hideSplash();
+      }
+      const user = typeof getAuthUser === 'function' ? getAuthUser() : null;
+      if (!user || !user.email) {
+        if (typeof showAuthModal === 'function') showAuthModal();
+      }
+    }
+  }, 2500);
+})();
 
 // ----------------------------------------------------------------------------
 // Запуск автосинхронизации ДО наступления DOMContentLoaded (на случай, если
@@ -1242,11 +1278,15 @@ window.addEventListener('DOMContentLoaded', () => {
       return true; // Не запускаем синхронизацию до успешной авторизации
     }
     if (window.SyncCore) {
-      if (!window.__appLaunchStarted) {
-        window.__appLaunchStarted = true;
-        SyncCore.runAppLaunch();
+      if (typeof onUserAuthenticated === 'function') {
+        onUserAuthenticated(user);
+      } else {
+        if (!window.__appLaunchStarted) {
+          window.__appLaunchStarted = true;
+          SyncCore.runAppLaunch();
+        }
+        startAutoSync();
       }
-      startAutoSync();
       return true;
     }
     return false;

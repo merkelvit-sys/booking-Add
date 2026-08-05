@@ -1809,6 +1809,7 @@ function buildApiUrl() {
   }
 
   // ----- Редактор дня (модальное окно) -----
+  // ----- Редактор дня (модальное окно) -----
   function ensureDayEditor() {
     if (document.getElementById("dayEditorModal")) return;
     var dict = I18N[getLang()];
@@ -1824,6 +1825,7 @@ function buildApiUrl() {
         '</div>' +
         '<div class="editor-date" id="dayEditorDate"></div>' +
         '<div id="dayEditorHolidayNotice" style="display: none; margin-bottom: 12px;"></div>' +
+        '<div class="day-editor-info-card" id="dayEditorInfoCard" style="display: none; margin-bottom: 12px;"></div>' +
         '<div class="day-editor-bookings-card" id="dayEditorBookingsCard" style="background: rgba(120,120,120,0.06); border: 1px solid var(--border); border-radius: var(--radius-md); padding: 12px; margin-bottom: 12px;">' +
           '<div style="font-weight: 700; font-size: 0.85rem; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center;">' +
             '<span>' + (dict.bookingsTitle || '📋 Записи на этот день:') + '</span>' +
@@ -1831,25 +1833,27 @@ function buildApiUrl() {
           '</div>' +
           '<div id="dayEditorBookingsList" style="font-size: 0.8rem; display: flex; flex-direction: column; gap: 6px;"></div>' +
         '</div>' +
-        '<div class="editor-field"><label id="dayEditorStatusLabel">' + dict.statusLabel + '</label><div class="status-options" id="dayEditorStatus" data-lockable></div></div>' +
-        '<div class="editor-field" data-lockable><label id="dayEditorDescLabel">' + dict.descLabel + '</label><textarea id="dayEditorDesc" maxlength="500"></textarea></div>' +
-        '<div class="editor-field" data-lockable>' +
-          '<label id="dayEditorNoteLabel">' + dict.noteLabel + ' <span id="dayEditorNoteBadge"></span></label>' +
-          '<textarea id="dayEditorNote" maxlength="500"></textarea>' +
-          '<div class="quick-presets-container" id="dayEditorPresets">' +
-            (dict.presets || []).map(function (p) {
-              return '<button type="button" class="quick-preset-btn" data-preset="' + p.replace(/"/g, '&quot;') + '">' + p + '</button>';
-            }).join('') +
+        '<div id="dayEditorAdminControls">' +
+          '<div class="editor-field"><label id="dayEditorStatusLabel">' + dict.statusLabel + '</label><div class="status-options" id="dayEditorStatus" data-lockable></div></div>' +
+          '<div class="editor-field" data-lockable><label id="dayEditorDescLabel">' + dict.descLabel + '</label><textarea id="dayEditorDesc" maxlength="500"></textarea></div>' +
+          '<div class="editor-field" data-lockable>' +
+            '<label id="dayEditorNoteLabel">' + dict.noteLabel + ' <span id="dayEditorNoteBadge"></span></label>' +
+            '<textarea id="dayEditorNote" maxlength="500"></textarea>' +
+            '<div class="quick-presets-container" id="dayEditorPresets">' +
+              (dict.presets || []).map(function (p) {
+                return '<button type="button" class="quick-preset-btn" data-preset="' + p.replace(/"/g, '&quot;') + '">' + p + '</button>';
+              }).join('') +
+            '</div>' +
           '</div>' +
-        '</div>' +
-        '<div class="editor-field" id="dayEditorYearMessageField" style="display: none;">' +
-          '<label id="dayEditorYearMessageLabel">' + (dict.yearMessageLabel || 'Объявление на вкладке График (YearSchedule)') + '</label>' +
-          '<textarea id="dayEditorYearMessage" maxlength="500" placeholder="' + (dict.yearMessagePlaceholder || 'Введите текст объявления...') + '"></textarea>' +
-          '<div style="display: flex; gap: 8px; margin-top: 8px;"><button type="button" id="btnSaveYearMessage" class="btn-editor-save" style="flex: 1;">' + (dict.saveYearMessage || 'Отправить объявление') + '</button><button type="button" id="btnDeleteYearMessage" class="btn-editor-delete" style="background: #dc2626; color: #fff; border: none; border-radius: 8px; padding: 8px 12px; cursor: pointer; font-weight: 600; font-size: 0.85rem;">🗑️ ' + (dict.deleteYearMessage || 'Удалить') + '</button></div>' +
+          '<div class="editor-field" id="dayEditorYearMessageField" style="display: none;">' +
+            '<label id="dayEditorYearMessageLabel">' + (dict.yearMessageLabel || 'Объявление на вкладке График (YearSchedule)') + '</label>' +
+            '<textarea id="dayEditorYearMessage" maxlength="500" placeholder="' + (dict.yearMessagePlaceholder || 'Введите текст объявления...') + '"></textarea>' +
+            '<div style="display: flex; gap: 8px; margin-top: 8px;"><button type="button" id="btnSaveYearMessage" class="btn-editor-save" style="flex: 1;">' + (dict.saveYearMessage || 'Отправить объявление') + '</button><button type="button" id="btnDeleteYearMessage" class="btn-editor-delete" style="background: #dc2626; color: #fff; border: none; border-radius: 8px; padding: 8px 12px; cursor: pointer; font-weight: 600; font-size: 0.85rem;">🗑️ ' + (dict.deleteYearMessage || 'Удалить') + '</button></div>' +
+          '</div>' +
         '</div>' +
         '<div class="editor-actions">' +
           '<button type="button" class="btn-editor-cancel" id="dayEditorCancel">' + dict.cancel + '</button>' +
-          '<button type="button" class="btn-editor-edit" id="dayEditorEdit">✏️ ' + dict.edit + '</button>' +
+          '<button type="button" class="btn-editor-edit" id="dayEditorEdit" style="display:none;">✏️ ' + dict.edit + '</button>' +
           '<button type="button" class="btn-editor-save" id="dayEditorSave">💾 ' + dict.saveChanges + '</button>' +
         '</div>' +
       '</div>';
@@ -1899,9 +1903,6 @@ function buildApiUrl() {
     var modal = document.getElementById("dayEditorModal");
     if (!modal) return;
     var isAdmin = checkIsAdmin();
-    if (!isAdmin) {
-      locked = true; // Обычные пользователи не могут редактировать поля дня
-    }
 
     var descEl = document.getElementById("dayEditorDesc");
     var noteEl = document.getElementById("dayEditorNote");
@@ -1914,50 +1915,21 @@ function buildApiUrl() {
       noteEl.readOnly = locked || !isAdmin;
     }
 
-    var fields = modal.querySelectorAll("[data-lockable]");
-    for (var i = 0; i < fields.length; i++) {
-      var el = fields[i];
-      if (el.tagName === "TEXTAREA" || el.tagName === "INPUT") {
-        el.disabled = locked || !isAdmin;
-        el.readOnly = locked || !isAdmin;
-      }
-      var inner = el.querySelectorAll("button, .trolley-picker, .status-option");
-      for (var j = 0; j < inner.length; j++) {
-        if (locked || !isAdmin) {
-          inner[j].setAttribute("disabled", "disabled");
-          inner[j].style.pointerEvents = "none";
-        } else {
-          inner[j].removeAttribute("disabled");
-          inner[j].style.pointerEvents = "";
-        }
-      }
-      if (locked || !isAdmin) el.classList.add("is-locked"); else el.classList.remove("is-locked");
-    }
-
     var statusBox = document.getElementById("dayEditorStatus");
     if (statusBox) {
       var statusBtns = statusBox.querySelectorAll(".status-option");
       for (var sb = 0; sb < statusBtns.length; sb++) {
         if (locked || !isAdmin) {
-          statusBtns[sb].setAttribute("disabled", "disabled");
-          statusBtns[sb].style.pointerEvents = "none";
-        } else {
           statusBtns[sb].removeAttribute("disabled");
           statusBtns[sb].style.pointerEvents = "";
         }
       }
     }
 
-    var presets = modal.querySelectorAll("#dayEditorPresets .quick-preset-btn");
-    for (var p = 0; p < presets.length; p++) {
-      presets[p].disabled = locked || !isAdmin;
-      if (!isAdmin) presets[p].style.display = "none";
-    }
-
     var editBtn = document.getElementById("dayEditorEdit");
     var saveBtn = document.getElementById("dayEditorSave");
-    if (editBtn) editBtn.style.display = (locked && isAdmin) ? "" : "none";
-    if (saveBtn) saveBtn.style.display = (!locked && isAdmin) ? "" : "none";
+    if (editBtn) editBtn.style.display = "none";
+    if (saveBtn) saveBtn.style.display = isAdmin ? "inline-block" : "none";
   }
 
   function enterEditMode() {
@@ -1965,19 +1937,12 @@ function buildApiUrl() {
     setEditorLock(false);
   }
 
-  // Добавляет текст шаблона в поле примечания. При добавлении «проблемного»
-  // шаблона (поломка тележки/нет литературы) автоматически включает режим
-  // редактирования и переключает статус на «Особое» (special) — сервер принимает
-  // special с пустой тележкой, поэтому заметка гарантированно сохраняется.
   function applyQuickPreset(text) {
     var note = document.getElementById("dayEditorNote");
     if (!note) return;
-    // Клик по шаблону из режима просмотра — сразу переходим в редактирование,
-    // чтобы действие не было «мёртвым» и сохранение стало возможным.
     if (note.disabled) enterEditMode();
     note.value = (note.value ? note.value + ", " : "") + text;
 
-    // Проблемная заметка без языка тележки сохраняется только со статусом special.
     if (!editorState.cart1Lang && !editorState.cart2Lang) {
       editorState.status = "special";
       var opts = document.getElementById("dayEditorStatus");
@@ -2121,20 +2086,70 @@ function buildApiUrl() {
         presetBtns[pi].onclick = function () { applyQuickPreset(this.dataset.preset); };
       }
     }
-    var yearMsgField = document.getElementById("dayEditorYearMessageField");
-    if (yearMsgField) {
-      if (window.currentUserRole === 'admin') {
+
+    var isAdmin = checkIsAdmin();
+    var adminControls = document.getElementById("dayEditorAdminControls");
+    var infoCard = document.getElementById("dayEditorInfoCard");
+    var saveBtn = document.getElementById("dayEditorSave");
+    var editBtn = document.getElementById("dayEditorEdit");
+    var cancelBtn = document.getElementById("dayEditorCancel");
+    var lang = getLang();
+
+    if (isAdmin) {
+      if (adminControls) adminControls.style.display = "block";
+      if (infoCard) { infoCard.style.display = "none"; infoCard.innerHTML = ""; }
+      if (saveBtn) saveBtn.style.display = "inline-block";
+      if (editBtn) editBtn.style.display = "none";
+      if (cancelBtn) cancelBtn.textContent = dict.cancel || "Отмена";
+      setEditorLock(false);
+      var yearMsgField = document.getElementById("dayEditorYearMessageField");
+      if (yearMsgField) {
         yearMsgField.style.display = "block";
-        var currentLang = getLang();
         var messages = (AppState && AppState.yearScheduleMessages) || {};
-        var val = (currentLang === "de") ? (messages["de"] || "") : (messages[currentLang] || messages["ru"] || messages["ua"] || messages["uk"] || "");
+        var val = (lang === "de") ? (messages["de"] || "") : (messages[lang] || messages["ru"] || messages["ua"] || messages["uk"] || "");
         document.getElementById("dayEditorYearMessage").value = val;
-      } else {
-        yearMsgField.style.display = "none";
+      }
+    } else {
+      if (adminControls) adminControls.style.display = "none";
+      if (saveBtn) saveBtn.style.display = "none";
+      if (editBtn) editBtn.style.display = "none";
+      if (cancelBtn) cancelBtn.textContent = (lang === "de" ? "Schließen" : (lang === "uk" || lang === "ua" ? "Закрити" : "Закрыть"));
+
+      var infoHTML = "";
+      var statusBadges = {
+        closed: { icon: "🚫", bg: "rgba(239, 68, 68, 0.1)", fg: "#dc2626", text: dict.statuses.closed },
+        event: { icon: "📅", bg: "rgba(245, 158, 11, 0.1)", fg: "#d97706", text: dict.statuses.event },
+        holiday: { icon: "🎉", bg: "rgba(16, 185, 129, 0.1)", fg: "#059669", text: dict.statuses.holiday },
+        special: { icon: "⭐", bg: "rgba(147, 51, 234, 0.1)", fg: "#7c3aed", text: dict.statuses.special }
+      };
+
+      if (effectiveStatus && effectiveStatus !== "available" && statusBadges[effectiveStatus]) {
+        var sb = statusBadges[effectiveStatus];
+        infoHTML += '<div style="background: ' + sb.bg + '; color: ' + sb.fg + '; border: 1px solid ' + sb.fg + '; border-radius: var(--radius-sm); padding: 8px 12px; font-weight: 700; font-size: 0.85rem; text-align: center; margin-bottom: 8px;">' +
+          sb.icon + ' ' + sb.text + '</div>';
+      }
+
+      if (effectiveDesc) {
+        infoHTML += '<div style="background: rgba(37, 99, 235, 0.06); border: 1px solid rgba(37, 99, 235, 0.2); border-radius: var(--radius-sm); padding: 10px; margin-bottom: 8px;">' +
+          '<div style="font-weight: 700; font-size: 0.8rem; color: var(--primary); margin-bottom: 4px;">📝 ' + dict.descLabel + ':</div>' +
+          '<div style="font-size: 0.85rem; color: var(--text);">' + escapeHtml(effectiveDesc) + '</div>' +
+          '</div>';
+      }
+
+      if (effectiveNote) {
+        infoHTML += '<div style="background: rgba(245, 158, 11, 0.06); border: 1px solid rgba(245, 158, 11, 0.2); border-radius: var(--radius-sm); padding: 10px; margin-bottom: 8px;">' +
+          '<div style="font-weight: 700; font-size: 0.8rem; color: #d97706; margin-bottom: 4px;">📌 ' + dict.noteLabel + ':</div>' +
+          '<div style="font-size: 0.85rem; color: var(--text);">' + escapeHtml(effectiveNote) + '</div>' +
+          '</div>';
+      }
+
+      if (infoCard) {
+        infoCard.innerHTML = infoHTML;
+        infoCard.style.display = infoHTML ? "block" : "none";
       }
     }
+
     document.getElementById("dayEditorModal").style.display = "flex";
-    setEditorLock(true);
   }
 
   function updateDayEditorNoteBadge() {
