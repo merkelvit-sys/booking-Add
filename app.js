@@ -666,6 +666,9 @@ function setAuthUser(user) {
     localStorage.setItem(AUTH_KEY, JSON.stringify(user));
     window.currentUserRole = user.role;
     hideAuthModal();
+    if (typeof initOneSignalIfAuth === 'function') {
+      initOneSignalIfAuth();
+    }
     if (window.SyncCore) {
       window.__appLaunchStarted = true;
       SyncCore.runAppLaunch();
@@ -1121,31 +1124,47 @@ window.addEventListener('DOMContentLoaded', () => {
     });
   };
 
+  function initOneSignalIfAuth() {
+    const user = typeof getAuthUser === 'function' ? getAuthUser() : null;
+    if (!user || !user.email) {
+      console.log('[OneSignal] Deferred: User unauthenticated. Skipping init.');
+      return;
+    }
+    if (window.oneSignalReady || window.__oneSignalInited) return;
+    window.__oneSignalInited = true;
+
+    window.OneSignalDeferred = window.OneSignalDeferred || [];
+    window.OneSignalDeferred.push(async function(OneSignal) {
+      try {
+        await OneSignal.init({
+          appId: "817ea691-15bf-4e90-a20e-a710ed052184",
+          serviceWorkerPath: "sw.js",
+          serviceWorkerParam: { scope: "/" },
+          serviceWorkerOverrideForCustomPage: true
+        });
+        window.oneSignalReady = true;
+        if (typeof window.syncNotificationButtonState === 'function') {
+          window.syncNotificationButtonState();
+        }
+      } catch (err) {
+        if (err && err.name !== 'AbortError') {
+          console.warn('[OneSignal] Push init warning (non-critical):', err);
+        }
+      }
+    });
+  }
+  window.initOneSignalIfAuth = initOneSignalIfAuth;
+
   if ('serviceWorker' in navigator && window.location.protocol.startsWith('http')) {
     navigator.serviceWorker.register('sw.js', { scope: '/' })
       .then(reg => {
         window.swRegistration = reg;
-
-        // Initialize OneSignal ONLY after Service Worker is successfully active and ready
         navigator.serviceWorker.ready.then(() => {
-          window.OneSignalDeferred = window.OneSignalDeferred || [];
-          window.OneSignalDeferred.push(async function(OneSignal) {
-            try {
-              await OneSignal.init({
-                appId: "817ea691-15bf-4e90-a20e-a710ed052184",
-                serviceWorkerPath: "sw.js",
-                serviceWorkerParam: { scope: "/" },
-                serviceWorkerOverrideForCustomPage: true
-              });
-              window.oneSignalReady = true;
-              if (typeof window.syncNotificationButtonState === 'function') {
-                window.syncNotificationButtonState();
-              }
-            } catch (err) {
-              console.warn('[OneSignal] Push init error (non-critical):', err);
-            }
-          });
-        });
+          // Only initialize OneSignal if user is ALREADY authenticated
+          if (typeof isAuthenticated === 'function' && isAuthenticated()) {
+            initOneSignalIfAuth();
+          }
+        }).catch(err => console.warn('[SW] Ready warning:', err));
       })
       .catch(err => console.log('Service Worker Failed', err));
   }
