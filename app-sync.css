@@ -3,6 +3,27 @@
    Подключается ко всем языковым версиям (RU/UA/DE).
    ========================================================================== */
 
+/* ---------- Fix input field overflow in modals & forms ---------- */
+.modal-body .form-control,
+.modal-body input,
+.auth-modal-input,
+.input-field,
+.auth-modal-overlay input,
+.modal-content input,
+.modal-content textarea {
+    position: relative;
+    overflow: hidden;
+    box-sizing: border-box;
+}
+
+.input-wrapper,
+.form-group,
+.editor-field,
+.auth-modal-box {
+    position: relative;
+    width: 100%;
+}
+
 /* ---------- Splash Screen (экран загрузки при запуске) ---------- */
 .splash-screen {
     position: fixed;

@@ -415,6 +415,12 @@ function buildApiUrl() {
         }
         return res;
       }).catch(function (err) {
+        if (err && (err.name === 'AbortError' || (opts && opts.signal && opts.signal.aborted))) {
+          console.warn("[SyncCore] Fetch request aborted (tab hidden or new request created), skipping retries.");
+          var abortErr = new Error("AbortError");
+          abortErr.name = "AbortError";
+          throw abortErr;
+        }
         if (n < maxAttempts) {
           var delay = Math.pow(2, n - 1) * 1000 + Math.floor(Math.random() * 1000);
           console.warn("[SyncCore] Fetch network error, retrying attempt " + (n + 1) + " in " + delay + "ms", err);
@@ -616,11 +622,20 @@ function buildApiUrl() {
     activeSyncAbortController = (typeof AbortController !== 'undefined') ? new AbortController() : null;
     var signal = activeSyncAbortController ? activeSyncAbortController.signal : null;
 
+    // Разумный таймаут для отмены висящего запроса (15 секунд)
+    var timeoutId = setTimeout(function() {
+      if (activeSyncAbortController) {
+        try { activeSyncAbortController.abort(); } catch (e) {}
+      }
+    }, 15000);
+
     return processOfflineQueue().catch(function() {}).then(function() {
       return fetchWithRetry(buildApiUrl, { cache: "no-store", signal: signal }).then(function (res) {
+        clearTimeout(timeoutId);
         if (!res.ok) throw new Error("HTTP_" + res.status);
         return res.json();
       }).then(function (data) {
+        clearTimeout(timeoutId);
         if (data && data.status === "error") throw new Error(data.message || "SERVER_ERROR");
         return {
           bookings: Array.isArray(data.bookings) ? data.bookings : (Array.isArray(data) ? data : []),
@@ -628,6 +643,13 @@ function buildApiUrl() {
           yearScheduleMessages: data.yearScheduleMessages || {}
         };
       });
+    }).catch(function(err) {
+      clearTimeout(timeoutId);
+      if (err && (err.name === "AbortError" || (err.message && err.message.indexOf("Abort") !== -1))) {
+        console.warn("[SyncCore] Combined fetch aborted (tab hidden or superseded).");
+        return null;
+      }
+      throw err;
     });
   }
 
@@ -672,13 +694,15 @@ function buildApiUrl() {
     return new Promise(function (resolve) {
       setTimeout(function () {
         fetchCombined().then(function (data) {
+          if (!data) return;
           var bookings = (data.bookings || []).map(normalizeBooking);
           var sched = mergeSchedules(data.schedule, loadCache());
           updateAppState({ bookings: bookings, schedule: sched, yearScheduleMessages: data.yearScheduleMessages });
           lastSyncOnline = true;
           lastSyncTime   = Date.now();
           if (typeof renderYearGrid === 'function') renderYearGrid();
-        }).catch(function () {
+        }).catch(function (err) {
+          if (err && err.name === "AbortError") return;
           lastSyncOnline = false;
           if (!hasCachedData) {
             // Нет кэша и нет сети — строим пустой год как заглушку
@@ -699,6 +723,7 @@ function buildApiUrl() {
   // Ручное обновление (кнопка «Обновить данные» / в годовом табе)
   function refreshAll() {
     return fetchCombined().then(function (data) {
+      if (!data) return false;
       var bookings = (data.bookings || []).map(normalizeBooking);
       var sched = mergeSchedules(data.schedule, loadCache());
       updateAppState({ bookings: bookings, schedule: sched, yearScheduleMessages: data.yearScheduleMessages });
@@ -707,7 +732,8 @@ function buildApiUrl() {
       showToast(t("updated"), "success");
       updateSyncBadge();
       return true;
-    }).catch(function () {
+    }).catch(function (err) {
+      if (err && err.name === "AbortError") return false;
       lastSyncOnline = false;
       showToast(t("syncError"), "error");
       updateSyncBadge();
@@ -719,6 +745,7 @@ function buildApiUrl() {
   function refreshSilently() {
     if (isSyncLocked) return Promise.resolve(true);
     return fetchCombined().then(function (data) {
+      if (!data) return;
       var bookings = (data.bookings || []).map(normalizeBooking);
       var sched = mergeSchedules(data.schedule, loadCache());
       updateAppState({ bookings: bookings, schedule: sched, yearScheduleMessages: data.yearScheduleMessages });
