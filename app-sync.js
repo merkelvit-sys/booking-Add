@@ -586,20 +586,48 @@ function buildApiUrl() {
     return processNext(0);
   }
 
+  // Автоматическая отправка офлайн-очереди при восстановлении подключения
+  window.addEventListener('online', function () {
+    console.log("[SyncCore] Connection restored. Flushing offline queue...");
+    var queue = getOfflineQueue();
+    var count = queue.length;
+    if (count > 0) {
+      processOfflineQueue().then(function () {
+        var lang = (localStorage.getItem("preferredLanguage") || document.documentElement.lang || "ru").toLowerCase();
+        var msg = "Офлайн-записи успешно отправлены на сервер!";
+        if (lang === "de") msg = "Offline-Buchungen erfolgreich an den Server gesendet!";
+        else if (lang === "ua" || lang === "uk") msg = "Офлайн-записи успішно надіслано на сервер!";
+        if (typeof showToast === 'function') showToast(msg, "success");
+        if (typeof refreshAll === 'function') refreshAll();
+      }).catch(function (err) {
+        console.warn("[SyncCore] Error flushing offline queue:", err);
+      });
+    }
+  });
+
+  var activeSyncAbortController = null;
+
   function fetchCombined() {
     if (!isValidScriptUrl(GOOGLE_SCRIPT_URL)) return Promise.reject(new Error("NO_URL"));
+
+    if (activeSyncAbortController) {
+      try { activeSyncAbortController.abort(); } catch (e) {}
+    }
+    activeSyncAbortController = (typeof AbortController !== 'undefined') ? new AbortController() : null;
+    var signal = activeSyncAbortController ? activeSyncAbortController.signal : null;
+
     return processOfflineQueue().catch(function() {}).then(function() {
-    return fetchWithRetry(buildApiUrl, { cache: "no-store" }).then(function (res) {
-      if (!res.ok) throw new Error("HTTP_" + res.status);
-      return res.json();
-    }).then(function (data) {
-      if (data && data.status === "error") throw new Error(data.message || "SERVER_ERROR");
-      return {
-        bookings: Array.isArray(data.bookings) ? data.bookings : (Array.isArray(data) ? data : []),
-        schedule: Array.isArray(data.schedule) ? data.schedule : [],
-        yearScheduleMessages: data.yearScheduleMessages || {}
-      };
-    });
+      return fetchWithRetry(buildApiUrl, { cache: "no-store", signal: signal }).then(function (res) {
+        if (!res.ok) throw new Error("HTTP_" + res.status);
+        return res.json();
+      }).then(function (data) {
+        if (data && data.status === "error") throw new Error(data.message || "SERVER_ERROR");
+        return {
+          bookings: Array.isArray(data.bookings) ? data.bookings : (Array.isArray(data) ? data : []),
+          schedule: Array.isArray(data.schedule) ? data.schedule : [],
+          yearScheduleMessages: data.yearScheduleMessages || {}
+        };
+      });
     });
   }
 

@@ -4374,15 +4374,27 @@ async function submitQuickBooking(e) {
 
 
 // ----------------------------------------------------------------------------
-// Глобальная обработка ошибок (silent logging — без alert в продакшне)
+// Глобальная обработка ошибок (Global Error Boundary)
 // ----------------------------------------------------------------------------
 window.onerror = function (message, source, lineno, colno, error) {
   console.error('[App Error]', message, 'at', source, 'line', lineno, error);
-  return false; // позволяем браузеру тоже залогировать
+  // Игнорируем ошибки сторонних браузерных расширений
+  if (source && (source.includes('extension') || source.includes('chrome-extension'))) return false;
+  
+  if (typeof showToast === 'function') {
+    const lang = (localStorage.getItem("preferredLanguage") || document.documentElement.lang || "ru").toLowerCase();
+    let msg = "Произошла временная ошибка интерфейса. Запустите перезагрузку или попробуйте ещё раз.";
+    if (lang === "de") msg = "Ein vorübergehender Fehler ist aufgetreten. Bitte laden Sie die Seite neu.";
+    else if (lang === "ua" || lang === "uk") msg = "Сталася тимчасова помилка інтерфейсу. Спробуйте оновити сторінку.";
+    showToast(msg, "error");
+  }
+  return false;
 };
 
 window.addEventListener('unhandledrejection', function (event) {
   console.error('[Unhandled Promise Rejection]', event.reason);
+  const reasonStr = String((event && event.reason) || '');
+  if (reasonStr.includes('NO_URL') || reasonStr.includes('OneSignal') || reasonStr.includes('quota') || reasonStr.includes('AbortError')) return;
 });
 
 
