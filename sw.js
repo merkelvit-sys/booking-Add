@@ -11,16 +11,17 @@ try {
   console.warn('[SW] OneSignal import skipped/failed:', e);
 }
 
-const CACHE_NAME = 'service-schedule-v73';
+const CACHE_VER = 'v74';
+const CACHE_NAME = 'service-schedule-v74';
 const ASSETS = [
   './',
   './index.html',
   './index_ua.html',
   './index_de.html',
-  './app.js',
+  './app.js?v=74',
   './trolley.js',
-  './app-sync.js',
-  './app-sync.css',
+  './app-sync.js?v=74',
+  './app-sync.css?v=74',
   './icon.svg',
   './icon-192.png',
   './icon-512.png',
