@@ -201,6 +201,16 @@ const I18N = {
     errCritical: "Критична помилка JS:\nПовідомлення: {msg}\nФайл: {file}\nРядок: {line}",
     errUnhandled: "Необроблена помилка (Promise):\nОпис: {reason}",
 
+    authTitle: "Доступ до розкладу",
+    authDesc: "Введіть ваш email для авторизації.",
+    authPlaceholder: "your@email.com",
+    authSubmit: "Увійти",
+    authError: "Email не знайдено або не активний.",
+    authNetworkError: "Помилка мережі. Спробуйте ще раз.",
+    authLoading: "Перевірка...",
+    authLogout: "Вийти",
+    authWelcome: "Ласкаво просимо, {name}!",
+
     pwaIos: `<div class="pwa-steps">
         <div class="pwa-step"><span class="pwa-step-num">1</span><span>Натисніть кнопку <strong>«Поділитися»</strong> (квадрат зі стрілкою вгору) в меню Safari.</span></div>
         <div class="pwa-step"><span class="pwa-step-num">2</span><span>Прокрутіть меню вниз та виберіть <strong>«На екран «Додому»»</strong>.</span></div>
@@ -376,6 +386,16 @@ const I18N = {
   de: {
     errCritical: "Kritischer JS-Fehler:\nNachricht: {msg}\nDatei: {file}\nZeile: {line}",
     errUnhandled: "Unbehandelter Fehler (Promise):\nBeschreibung: {reason}",
+
+    authTitle: "Zugang zum Dienstplan",
+    authDesc: "Geben Sie Ihre E-Mail-Adresse ein.",
+    authPlaceholder: "your@email.com",
+    authSubmit: "Anmelden",
+    authError: "E-Mail nicht gefunden oder nicht aktiv.",
+    authNetworkError: "Netzwerkfehler. Bitte versuchen Sie es erneut.",
+    authLoading: "Wird geprüft...",
+    authLogout: "Abmelden",
+    authWelcome: "Willkommen, {name}!",
 
     pwaIos: `<div class="pwa-steps">
         <div class="pwa-step"><span class="pwa-step-num">1</span><span>Tippen Sie im Safari-Menü auf die Schaltfläche <strong>„Teilen“</strong> (Quadrat mit Pfeil nach oben).</span></div>
@@ -662,11 +682,30 @@ function setAuthUser(user) {
   checkAuthGuard();
 }
 
+function escapeHtml(str) {
+  return String(str || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+}
+
 function updateAuthUI() {
   const logoutBtns = document.querySelectorAll("#btnLogout, #logoutBtn, .logout-btn");
   logoutBtns.forEach(function(btn) {
     btn.style.display = authUser ? "inline-flex" : "none";
   });
+
+  const userBadge = document.getElementById("userBadge");
+  if (userBadge) {
+    if (authUser && authUser.email) {
+      const displayName = (authUser.name && String(authUser.name).trim()) 
+        ? String(authUser.name).trim() 
+        : authUser.email.split("@")[0];
+      const displayRole = authUser.role || "user";
+      userBadge.innerHTML = `<span class="user-name">${escapeHtml(displayName)}</span> <span class="user-role role-${escapeHtml(displayRole)}">(${escapeHtml(displayRole)})</span>`;
+      userBadge.style.display = "inline-flex";
+    } else {
+      userBadge.style.display = "none";
+      userBadge.innerHTML = "";
+    }
+  }
 
   if (typeof window.syncNotificationButtonState === 'function') {
     window.syncNotificationButtonState();
@@ -779,7 +818,10 @@ async function handleAuthSubmit(event) {
       setAuthUser(data.user);
       if (passwordInput) passwordInput.value = "";
       hideAuthModal();
-      showToast(S("authWelcome", { name: data.user.name || data.user.email }), "success");
+      const userName = (data.user.name && String(data.user.name).trim()) 
+        ? String(data.user.name).trim() 
+        : (data.user.email ? data.user.email.split("@")[0] : "");
+      showToast(S("authWelcome", { name: userName }), "success");
       hapticFeedback([50, 50, 50]); // Success login feedback
       if (typeof renderAllTabs === "function") renderAllTabs();
     } else {

@@ -24,6 +24,46 @@
     width: 100%;
 }
 
+/* ---------- User Profile Badge in Header ---------- */
+.user-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 3px 10px;
+    font-size: 0.76rem;
+    font-weight: 600;
+    color: var(--text, #1e293b);
+    background: rgba(241, 245, 249, 0.9);
+    border: 1px solid rgba(203, 213, 225, 0.8);
+    border-radius: 20px;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+    backdrop-filter: blur(8px);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 180px;
+}
+.user-badge .user-name {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+.user-badge .user-role {
+    font-size: 0.68rem;
+    font-weight: 700;
+    padding: 1px 5px;
+    border-radius: 10px;
+    text-transform: lowercase;
+}
+.user-badge .user-role.role-admin {
+    background-color: rgba(239, 68, 68, 0.15);
+    color: #dc2626;
+}
+.user-badge .user-role.role-user {
+    background-color: rgba(59, 130, 246, 0.15);
+    color: #2563eb;
+}
+
 /* ---------- Splash Screen (экран загрузки при запуске) ---------- */
 .splash-screen {
     position: fixed;
