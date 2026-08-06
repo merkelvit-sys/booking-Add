@@ -15,7 +15,7 @@
       weekdays: ["Пн","Вт","Ср","Чт","Пт","Сб","Вс"],
       statuses: { available:"Служение", closed:"Выходной", event:"Событие", holiday:"Праздник", special:"Особое" },
       dayEditorTitle:"День служения", statusLabel:"Статус", descLabel:"Описание события", noteLabel:"Заметка", trolleyLabel:"Тележка", trolleyPlaceholder:"— выберите —", trolleys:{ru:"Русская",ua:"Украинская",de:"Немецкая"}, noTrolley:"Выберите тележку",
-      yearMessageLabel:"Объявление на вкладке График (YearSchedule)", yearMessagePlaceholder:"Введите текст объявления...", saveYearMessage:"Отправить объявление", deleteYearMessage:"Удалить объявление года", deleteDayEvent:"Удалить событие дня",
+      yearMessageLabel:"Девиз года", yearMessagePlaceholder:"Введите девиз года...", saveYearMessage:"Сохранить изменения", deleteYearMessage:"Удалить девиз года", deleteDayEvent:"Удалить событие дня",
       cart1Name:"Тележка №1 (Стенд 1)", cart2Name:"Тележка №2 (Стенд 2)", cart1Lang:"Язык тележки №1", cart2Lang:"Язык тележки №2", bookingsTitle:"📋 Записи на этот день:", goToSchedule:"📅 В график", noBookings:"Записей на этот день нет (свободно)",
       preacher1:"Возвещатель 1 (ФИО)", preacher2:"Возвещатель 2 (ФИО)",
       save:"Сохранить", cancel:"Отмена", confirmDeleteYes:"Да, удалить", savedTitle:"Сохранено", errorTitle:"Ошибка", ok:"OK", daySaved:"Данные дня успешно сохранены!", saving:"Сохранение…", saved:"Данные сохранены", edit:"Редактировать", saveChanges:"Сохранить изменения", saveError:"Ошибка сохранения", saveVerifyFail:"Сервер не сохранил изменения. Пересоздайте Web App (Deploy → New version) с новым кодом google_script.txt.",
@@ -43,7 +43,7 @@
       weekdays: ["Пн","Вт","Ср","Чт","Пт","Сб","Нд"],
       statuses: { available:"Служіння", closed:"Вихідний", event:"Подія", holiday:"Свято", special:"Особливе" },
       dayEditorTitle:"День служіння", statusLabel:"Статус", descLabel:"Опис події", noteLabel:"Примітка", trolleyLabel:"Візок", trolleyPlaceholder:"— оберіть —", trolleys:{ru:"Російська",ua:"Українська",de:"Німецька"}, noTrolley:"Оберіть візок",
-      yearMessageLabel:"Оголошення на вкладці Графік (YearSchedule)", yearMessagePlaceholder:"Введіть текст оголошення...", saveYearMessage:"Надіслати оголошення", deleteYearMessage:"Видалити оголошення", deleteDayEvent:"Видалити подію дня",
+      yearMessageLabel:"Девіз року", yearMessagePlaceholder:"Введіть девіз року...", saveYearMessage:"Зберегти зміни", deleteYearMessage:"Видалити девіз року", deleteDayEvent:"Видалити подію дня",
       cart1Name:"Візок №1 (Стенд 1)", cart2Name:"Візок №2 (Стенд 2)", cart1Lang:"Мова візка №1", cart2Lang:"Мова візка №2", bookingsTitle:"📋 Записи на цей день:", goToSchedule:"📅 До розкладу", noBookings:"Записів на цей день немає (вільно)",
       preacher1:"Возвіщувач 1 (ПІБ)", preacher2:"Возвіщувач 2 (ПІБ)",
       save:"Зберегти", cancel:"Скасувати", confirmDeleteYes:"Так, видалити", savedTitle:"Збережено", errorTitle:"Помилка", ok:"OK", daySaved:"Дані дня успішно збережено!", saving:"Збереження…", saved:"Дані збережено", edit:"Редагувати", saveChanges:"Зберегти зміни", saveError:"Помилка збереження", saveVerifyFail:"Сервер не зберіг зміни. Перевидіть Web App (Deploy → New version) з новим кодом google_script.txt.",
@@ -71,7 +71,7 @@
       weekdays: ["Mo","Di","Mi","Do","Fr","Sa","So"],
       statuses: { available:"Dienst", closed:"Frei", event:"Veranstaltung", holiday:"Feiertag", special:"Besonderes" },
       dayEditorTitle:"Diensttag", statusLabel:"Status", descLabel:"Ereignisbeschreibung", noteLabel:"Notiz", trolleyLabel:"Trolley", trolleyPlaceholder:"— auswählen —", trolleys:{ru:"Russisch",ua:"Ukrainisch",de:"Deutsch"}, noTrolley:"Trolley auswählen",
-      yearMessageLabel:"Ankündigung auf der Registerkarte Zeitplan (YearSchedule)", yearMessagePlaceholder:"Geben Sie den Text der Ankündigung ein...", saveYearMessage:"Ankündigung senden", deleteYearMessage:"Jahresankündigung löschen", deleteDayEvent:"Ereignis löschen",
+      yearMessageLabel:"Jahresmotto", yearMessagePlaceholder:"Geben Sie das Jahresmotto ein...", saveYearMessage:"Änderungen speichern", deleteYearMessage:"Jahresmotto löschen", deleteDayEvent:"Ereignis löschen",
       cart1Name:"Trolley №1 (Stand 1)", cart2Name:"Trolley №2 (Stand 2)", cart1Lang:"Sprache Trolley №1", cart2Lang:"Sprache Trolley №2", bookingsTitle:"📋 Einträge für diesen Tag:", goToSchedule:"📅 Zum Zeitplan", noBookings:"Keine Einträge für diesen Tag (frei)",
       save:"Speichern", cancel:"Abbrechen", confirmDeleteYes:"Ja, löschen", savedTitle:"Gespeichert", errorTitle:"Fehler", ok:"OK", daySaved:"Daten des Tages erfolgreich gespeichert!", saving:"Speichern…", saved:"Daten gespeichert", edit:"Bearbeiten", saveChanges:"Änderungen speichern", saveError:"Speicherfehler", saveVerifyFail:"Server hat die Änderungen nicht gespeichert. Erstellen Sie die Web App neu (Deploy → New version) mit dem neuen Code google_script.txt.",
       offline:"Keine Verbindung zum Server. Letzter gespeicherter Plan wird angezeigt.",
@@ -1874,9 +1874,8 @@ function buildApiUrl() {
             '</div>' +
           '</div>' +
           '<div class="editor-field" id="dayEditorYearMessageField" style="display: none;">' +
-            '<label id="dayEditorYearMessageLabel">' + (dict.yearMessageLabel || 'Объявление на вкладке График (YearSchedule)') + '</label>' +
-            '<textarea id="dayEditorYearMessage" maxlength="500" placeholder="' + (dict.yearMessagePlaceholder || 'Введите текст объявления...') + '"></textarea>' +
-            '<div style="display: flex; gap: 8px; margin-top: 8px;"><button type="button" id="btnSaveYearMessage" class="btn-editor-save" style="flex: 1;">' + (dict.saveYearMessage || 'Отправить объявление') + '</button><button type="button" id="btnDeleteYearMessage" class="btn-editor-delete" style="background: #dc2626; color: #fff; border: none; border-radius: 8px; padding: 8px 12px; cursor: pointer; font-weight: 600; font-size: 0.85rem;">🗑️ ' + (dict.deleteYearMessage || 'Удалить') + '</button></div>' +
+            '<label id="dayEditorYearMessageLabel">' + (dict.yearMessageLabel || 'Девиз года') + '</label>' +
+            '<textarea id="dayEditorYearMessage" maxlength="500" placeholder="' + (dict.yearMessagePlaceholder || 'Введите девиз года...') + '"></textarea>' +
           '</div>' +
         '</div>' +
         '<div class="editor-actions">' +
@@ -2513,7 +2512,52 @@ function buildApiUrl() {
       saveBtn.textContent = t("saving") || "Сохранение…";
     }
 
-    saveDay(day).then(function () {
+    // Проверяем, изменился ли девиз года
+    var yearMessageEl = document.getElementById("dayEditorYearMessage");
+    var yearMessagePromise = Promise.resolve();
+    if (yearMessageEl) {
+      var currentMsg = yearMessageEl.value.trim();
+      var lang = getLang();
+      var messages = (AppState && AppState.yearScheduleMessages) || {};
+      var initialMsg = (lang === "de") ? (messages["de"] || "") : (messages[lang] || messages["ru"] || messages["ua"] || messages["uk"] || "");
+      if (currentMsg !== initialMsg) {
+        var email = (window.AppState && AppState.authUser && AppState.authUser.email) || "";
+        var body = JSON.stringify({
+          action: "year_message_update",
+          key: API_KEY,
+          language: getApiLang(),
+          email: email,
+          message: currentMsg
+        });
+        yearMessagePromise = fetchWithRetry(buildApiUrl, {
+          method: "POST",
+          mode: "cors",
+          body: body
+        }).then(function (res) {
+          if (!res.ok) throw new Error("HTTP_" + res.status);
+          return res.json();
+        }).then(function (data) {
+          if (data && data.status === "success") {
+            if (!AppState.yearScheduleMessages) {
+              AppState.yearScheduleMessages = {};
+            }
+            var curLang = getLang();
+            AppState.yearScheduleMessages[curLang] = currentMsg;
+            if (curLang === "ru" || curLang === "ua" || curLang === "uk") {
+              AppState.yearScheduleMessages["ru"] = currentMsg;
+              AppState.yearScheduleMessages["ua"] = currentMsg;
+              AppState.yearScheduleMessages["uk"] = currentMsg;
+            }
+            localStorage.setItem("yearScheduleMessages", JSON.stringify(AppState.yearScheduleMessages));
+            return true;
+          } else {
+            throw new Error((data && data.message) || "Unknown error");
+          }
+        });
+      }
+    }
+
+    Promise.all([saveDay(day), yearMessagePromise]).then(function () {
       if (saveBtn) {
         saveBtn.textContent = "✅ " + (t("saved") || "Сохранено!");
         saveBtn.classList.add("btn-saved-success");
@@ -2985,10 +3029,10 @@ function buildApiUrl() {
     
     if (message.length > 0) {
       var titles = {
-        ru: "Важное объявление",
-        uk: "Важливе оголошення",
-        ua: "Важливе оголошення",
-        de: "Wichtige Ankündigung"
+        ru: "Девиз года",
+        uk: "Девіз року",
+        ua: "Девіз року",
+        de: "Jahresmotto"
       };
       var title = titles[currentLang] || titles.ru;
       
