@@ -3475,7 +3475,9 @@ function getDayScheduleInfo(dateISO) {
   }
 
   if (window.AppState && Array.isArray(window.AppState.schedule)) {
-    const rows = window.AppState.schedule.filter(r => r.date === dateISO);
+    const clientLang = getLang();
+    const normClientLang = clientLang === 'uk' ? 'ua' : clientLang;
+    const rows = window.AppState.schedule.filter(r => r.date === dateISO && (r.language === normClientLang || !r.language));
     for (const r of rows) {
       if (r.status === "closed") {
         status = "closed";
