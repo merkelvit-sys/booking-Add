@@ -259,7 +259,17 @@
   }
 
   function normalizeDateValue(v) {
-    if (/^\d{4}-\d{2}-\d{2}$/.test(v || "")) return v;
+    if (typeof v === "string") {
+      v = v.trim();
+      if (/^\d{4}-\d{2}-\d{2}$/.test(v)) return v;
+      var clean = v.replace(" ", "T");
+      if (/^\d{4}-\d{2}-\d{2}T/.test(clean)) {
+        var d = new Date(clean);
+        if (!isNaN(d.getTime())) return isoOf(d);
+      }
+      var d2 = new Date(clean);
+      if (!isNaN(d2.getTime())) return isoOf(d2);
+    }
     if (v instanceof Date && !isNaN(v.getTime())) return isoOf(v);
     var d = new Date(v);
     if (!isNaN(d.getTime())) return isoOf(d);

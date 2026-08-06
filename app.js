@@ -918,12 +918,15 @@ function getBookings() {
   if (!src || !src.length) src = databaseBookings;
   return (src || []).map(function (b) {
     let d = b.date;
-    if (d && (d.indexOf(' ') > -1 || d.indexOf('T') > -1)) {
-      const dt = new Date(d);
-      if (!isNaN(dt.getTime())) {
-        d = dt.getFullYear() + '-' +
-            String(dt.getMonth() + 1).padStart(2, '0') + '-' +
-            String(dt.getDate()).padStart(2, '0');
+    if (d && typeof d === 'string') {
+      const cleanD = d.replace(' ', 'T');
+      if (cleanD.indexOf('T') > -1) {
+        const dt = new Date(cleanD);
+        if (!isNaN(dt.getTime())) {
+          d = dt.getFullYear() + '-' +
+              String(dt.getMonth() + 1).padStart(2, '0') + '-' +
+              String(dt.getDate()).padStart(2, '0');
+        }
       }
     }
     return Object.assign({}, b, { date: d });
@@ -976,7 +979,7 @@ window.addEventListener('beforeinstallprompt', (e) => {
 // On iOS and Android — show header install button if not already installed
 window.addEventListener('DOMContentLoaded', () => {
   const ua = navigator.userAgent.toLowerCase();
-  const isIOS = /ipad|iphone|ipod/.test(ua) && !window.MSStream;
+  const isIOS = (/ipad|iphone|ipod/.test(ua) && !window.MSStream) || (navigator.maxTouchPoints && navigator.maxTouchPoints > 2 && /macintosh/.test(ua));
   const isAndroid = /android/.test(ua);
   const isStandalone = window.navigator.standalone || window.matchMedia('(display-mode: standalone)').matches;
   if ((isIOS || isAndroid) && !isStandalone) {
@@ -1002,7 +1005,7 @@ function checkPWAInstallation() {
   if (!banner || !bodyText) return;
 
   const userAgent = navigator.userAgent.toLowerCase();
-  const isIOS = /ipad|iphone|ipod/.test(userAgent) && !window.MSStream;
+  const isIOS = (/ipad|iphone|ipod/.test(userAgent) && !window.MSStream) || (navigator.maxTouchPoints && navigator.maxTouchPoints > 2 && /macintosh/.test(userAgent));
 
   if (isIOS) {
     bodyText.innerHTML = S('pwaIos');
@@ -1481,7 +1484,8 @@ function selectDate(dateISO) {
 
 function goToNextDay() {
   if (!selectedDateISO) return;
-  const current = new Date(selectedDateISO + "T00:00:00");
+  const parts = selectedDateISO.split('-');
+  const current = new Date(parseInt(parts[0], 10), parseInt(parts[1], 10) - 1, parseInt(parts[2], 10));
   current.setDate(current.getDate() + 1);
   const year = current.getFullYear();
   const month = String(current.getMonth() + 1).padStart(2, '0');
@@ -1510,7 +1514,8 @@ function goToNextDay() {
 
 function goToPrevDay() {
   if (!selectedDateISO) return;
-  const current = new Date(selectedDateISO + "T00:00:00");
+  const parts = selectedDateISO.split('-');
+  const current = new Date(parseInt(parts[0], 10), parseInt(parts[1], 10) - 1, parseInt(parts[2], 10));
   current.setDate(current.getDate() - 1);
   const year = current.getFullYear();
   const month = String(current.getMonth() + 1).padStart(2, '0');
@@ -1712,7 +1717,8 @@ async function updateScheduleWeatherWidget(isoDate) {
 
   const todayObj = new Date();
   todayObj.setHours(0, 0, 0, 0);
-  const targetObj = new Date(targetISO + 'T00:00:00');
+  const parts = targetISO.split('-');
+  const targetObj = new Date(parseInt(parts[0], 10), parseInt(parts[1], 10) - 1, parseInt(parts[2], 10));
   const diffDays = Math.round((targetObj - todayObj) / 86400000);
 
   const outOfRangeMsg = {
@@ -1771,7 +1777,8 @@ window.updateScheduleWeatherWidget = updateScheduleWeatherWidget;
 function goToDate(dateISO) {
   if (!dateISO) return;
   // Неделя, содержащая выбранную дату (понедельник = начало).
-  const target = new Date(dateISO + "T00:00:00");
+  const parts = dateISO.split('-');
+  const target = new Date(parseInt(parts[0], 10), parseInt(parts[1], 10) - 1, parseInt(parts[2], 10));
   if (isNaN(target.getTime())) return;
   const today = new Date();
   today.setHours(0, 0, 0, 0);
@@ -3329,13 +3336,16 @@ async function fetchDataFromSpreadsheet() {
     if (Array.isArray(data)) {
       databaseBookings = data.map(b => {
         let normalizedDate = b.date;
-        if (normalizedDate && (normalizedDate.includes(" ") || normalizedDate.includes("T"))) {
-          const d = new Date(normalizedDate);
-          if (!isNaN(d.getTime())) {
-            const yyyy = d.getFullYear();
-            const mm = String(d.getMonth() + 1).padStart(2, '0');
-            const dd = String(d.getDate()).padStart(2, '0');
-            normalizedDate = `${yyyy}-${mm}-${dd}`;
+        if (normalizedDate && typeof normalizedDate === 'string') {
+          const cleanDate = normalizedDate.replace(' ', 'T');
+          if (cleanDate.includes('T')) {
+            const d = new Date(cleanDate);
+            if (!isNaN(d.getTime())) {
+              const yyyy = d.getFullYear();
+              const mm = String(d.getMonth() + 1).padStart(2, '0');
+              const dd = String(d.getDate()).padStart(2, '0');
+              normalizedDate = `${yyyy}-${mm}-${dd}`;
+            }
           }
         }
         return {

@@ -39,6 +39,7 @@
     <link rel="apple-touch-icon" href="icon-192.png">
     <link rel="icon" type="image/svg+xml" href="icon.svg">
     <meta name="mobile-web-app-capable" content="yes"> <!-- Updated PWA standalone support -->
+    <meta name="apple-mobile-web-app-capable" content="yes"> <!-- iOS PWA standalone support -->
     <meta name="apple-mobile-web-app-status-bar-style" content="default">
     <meta name="apple-mobile-web-app-title" content="Dienst DE">
     <meta name="theme-color" content="#2563eb">
@@ -1363,8 +1364,10 @@
         /* ── Safe area для iPhone с вырезом (notch) ──────────────────────── */
         @supports (padding-top: env(safe-area-inset-top)) {
             body {
-                padding-top: env(safe-area-inset-top);
-                padding-bottom: env(safe-area-inset-bottom);
+                padding-top: calc(clamp(8px, 3vw, 16px) + env(safe-area-inset-top));
+                padding-bottom: calc(clamp(8px, 3vw, 16px) + env(safe-area-inset-bottom));
+                padding-left: calc(clamp(8px, 3vw, 16px) + env(safe-area-inset-left));
+                padding-right: calc(clamp(8px, 3vw, 16px) + env(safe-area-inset-right));
             }
         }
 
@@ -1621,8 +1624,19 @@
             padding-bottom: 8px;
             border-bottom: 1px dashed var(--border);
         }
+
+        /* Prevent auto-zooming on iOS when focusing inputs/selects on mobile */
+        @media screen and (max-width: 768px) {
+            .input-field,
+            .add-location-input,
+            select.input-field,
+            input[type="text"].input-field,
+            input[type="password"].input-field {
+                font-size: 16px !important;
+            }
+        }
     </style>
-    <link rel="stylesheet" href="app-sync.css?v=78">
+    <link rel="stylesheet" href="app-sync.css?v=80">
 </head>
 <body>
 

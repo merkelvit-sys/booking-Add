@@ -16,7 +16,7 @@ const ASSETS = [
   './app.js?v=80',
   './trolley.js',
   './app-sync.js?v=79',
-  './app-sync.css?v=79',
+  './app-sync.css?v=80',
   './icon.svg',
   './icon-192.png',
   './icon-512.png',
