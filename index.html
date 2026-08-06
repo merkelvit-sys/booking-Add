@@ -2071,27 +2071,27 @@
                                 <svg viewBox="0 0 24 24" style="width: 14px; height: 14px;"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z" fill="currentColor"/></svg>
                             </button>
                         </div>
-                        <input type="text" id="qbTime" class="input-field" disabled style="background-color: var(--primary-container); border-color: var(--border); opacity: 0.85; cursor: not-allowed;" placeholder="например, 10:00 - 12:00">
+                        <select id="qbTime" class="input-field" style="cursor: pointer; background-color: var(--card-bg); border-color: var(--border); color: var(--text);"></select>
                     </div>
                 </div>
                 <div class="form-section-compact" style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px;">
                     <div>
                         <div style="display: flex; align-items: center; gap: 4px; margin-bottom: 4px;">
                             <label class="compact-label" id="qbLocationLabel" style="margin-bottom: 0;">Место</label>
-                            <button type="button" class="btn-info-toggle" onclick="toggleInfo(this)" style="padding: 2px; height: 18px; display: inline-flex; align-items: center;" data-tooltip="Выбранная локация проведения служения (только для чтения)">
+                            <button type="button" class="btn-info-toggle" onclick="toggleInfo(this)" style="padding: 2px; height: 18px; display: inline-flex; align-items: center;" data-tooltip="Выберите место проведения служения.">
                                 <svg viewBox="0 0 24 24" style="width: 14px; height: 14px;"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z" fill="currentColor"/></svg>
                             </button>
                         </div>
-                        <input type="text" id="qbLocation" class="input-field" disabled style="background-color: var(--primary-container); border-color: var(--border); opacity: 0.85; cursor: not-allowed;">
+                        <select id="qbLocation" class="input-field" style="cursor: pointer; background-color: var(--card-bg); border-color: var(--border); color: var(--text);"></select>
                     </div>
                     <div>
                         <div style="display: flex; align-items: center; gap: 4px; margin-bottom: 4px;">
                             <label class="compact-label" id="qbCartLabel" style="margin-bottom: 0;">Тележка</label>
-                            <button type="button" class="btn-info-toggle" onclick="toggleInfo(this)" style="padding: 2px; height: 18px; display: inline-flex; align-items: center;" data-tooltip="Номер стенда-тележки для этой смены (только для чтения)">
+                            <button type="button" class="btn-info-toggle" onclick="toggleInfo(this)" style="padding: 2px; height: 18px; display: inline-flex; align-items: center;" data-tooltip="Выберите номер тележки-стенда.">
                                 <svg viewBox="0 0 24 24" style="width: 14px; height: 14px;"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z" fill="currentColor"/></svg>
                             </button>
                         </div>
-                        <input type="text" id="qbCart" class="input-field" disabled style="background-color: var(--primary-container); border-color: var(--border); opacity: 0.85; cursor: not-allowed;">
+                        <select id="qbCart" class="input-field" style="cursor: pointer; background-color: var(--card-bg); border-color: var(--border); color: var(--text);"></select>
                     </div>
                 </div>
                 
@@ -2229,7 +2229,7 @@
         </svg>
     </button>
     <script src="trolley.js"></script>
-    <script src="app.js?v=78"></script>
-    <script src="app-sync.js?v=78"></script>
+    <script src="app.js?v=79"></script>
+    <script src="app-sync.js?v=79"></script>
 </body>
 </html>

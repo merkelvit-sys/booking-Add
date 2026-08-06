@@ -651,21 +651,6 @@ let currentWeekOffset = 0;
 let authUser = null;
 const AUTH_KEY = "authUser";
 
-function isUserAdmin() {
-  if (window.currentUser && window.currentUser.role === 'admin') return true;
-  if (window.AppState && window.AppState.authUser && window.AppState.authUser.role === 'admin') return true;
-  try {
-    const stored = JSON.parse(localStorage.getItem("authUser"));
-    if (stored && stored.role === 'admin') {
-      window.currentUser = stored;
-      if (window.AppState && !window.AppState.authUser) window.AppState.authUser = stored;
-      return true;
-    }
-  } catch (e) {}
-  return false;
-}
-window.isUserAdmin = isUserAdmin;
-
 function getAuthUser() {
   try {
     const raw = localStorage.getItem(AUTH_KEY);
@@ -705,16 +690,12 @@ window.onUserAuthenticated = onUserAuthenticated;
 function setAuthUser(user) {
   if (user && user.email) {
     localStorage.setItem(AUTH_KEY, JSON.stringify(user));
-    window.currentUser = user;
     window.currentUserRole = user.role || null;
-    if (window.AppState) window.AppState.authUser = user;
     authUser = user;
     onUserAuthenticated(user);
   } else {
     localStorage.removeItem(AUTH_KEY);
-    window.currentUser = null;
     window.currentUserRole = null;
-    if (window.AppState) window.AppState.authUser = null;
     if (window.SyncCore && typeof SyncCore.stopAutoSync === 'function') {
       SyncCore.stopAutoSync();
     }
@@ -759,9 +740,7 @@ function isAuthenticated() {
 
 function checkAuthGuard() {
   authUser = getAuthUser();
-  window.currentUser = authUser;
   window.currentUserRole = authUser ? authUser.role : null;
-  if (window.AppState) window.AppState.authUser = authUser;
   updateAuthUI();
 
   const isAuth = isAuthenticated();
@@ -1102,16 +1081,12 @@ window.addEventListener('DOMContentLoaded', () => {
 
   if ('serviceWorker' in navigator) {
     navigator.serviceWorker.addEventListener('controllerchange', () => {
-      if (!isRefreshing && sessionStorage.getItem('sw_refreshing') !== 'true') {
+      if (!isRefreshing) {
         isRefreshing = true;
-        try { sessionStorage.setItem('sw_refreshing', 'true'); } catch (e) {}
         window.location.reload();
       }
     });
   }
-  setTimeout(() => {
-    try { sessionStorage.removeItem('sw_refreshing'); } catch (e) {}
-  }, 4000);
 
   // ----- Ручной режим обновления приложения и кэша -----
   window.handleManualAppUpdate = function() {
@@ -3192,10 +3167,6 @@ async function verifyBookingSaved(clientRecords, providedServerBookings) {
 }
 
 async function deleteBooking(location, date, time, cartNumber) {
-  if (!isUserAdmin()) {
-    showToast(getLang() === 'uk' ? 'У вас немає прав для видалення записів' : (getLang() === 'de' ? 'Sie haben keine Berechtigung, Einträge zu löschen' : 'У вас нет прав для удаления записей'), "error");
-    return;
-  }
   const todayObj = new Date();
   const todayStr = `${todayObj.getFullYear()}-${String(todayObj.getMonth() + 1).padStart(2, '0')}-${String(todayObj.getDate()).padStart(2, '0')}`;
   if (date < todayStr) {
@@ -3700,7 +3671,7 @@ function renderScheduleBoard() {
   const todayStr = `${todayObj.getFullYear()}-${String(todayObj.getMonth() + 1).padStart(2, '0')}-${String(todayObj.getDate()).padStart(2, '0')}`;
   const isPastDate = selectedDateISO < todayStr;
 
-  const isAdminUser = isUserAdmin();
+  const isAdminUser = (typeof checkIsAdmin === 'function') ? checkIsAdmin() : false;
 
   const btnTopAddLocation = document.getElementById('btnTopAddLocation');
   if (btnTopAddLocation) {
@@ -4065,6 +4036,22 @@ function autofillMyNames() {
   }
 }
 
+function getAllLocationsForSelect() {
+  let savedLocations = safeGetLocalStorageJSON('customLocations', []);
+  if (!savedLocations || savedLocations.length === 0) {
+    savedLocations = DEFAULT_LOCATIONS;
+  }
+  const names = savedLocations.map(l => (typeof l === 'string' ? l : l.name)).filter(Boolean);
+  const uniqueNames = Array.from(new Set(names));
+  return uniqueNames.length > 0 ? uniqueNames : ["Hauptbahnhof", "Erlenring", "Schloß"];
+}
+
+function getAllTimeslotsForSelect() {
+  const customTimes = safeGetLocalStorageJSON('customTimes', []);
+  const merged = [...DEFAULT_TIMES, ...customTimes];
+  return Array.from(new Set(merged.length > 0 ? merged : ["09:00 - 11:00", "11:00 - 13:00", "13:00 - 15:00", "15:00 - 17:00", "17:00 - 19:00"]));
+}
+
 function openQuickBookingModal(locName, dateISO, timeSlot, cartNum) {
   hapticFeedback(30); // Quick modal open feedback
   const todayObj = new Date();
@@ -4088,165 +4075,199 @@ function openQuickBookingModal(locName, dateISO, timeSlot, cartNum) {
     } else {
       warnMsg = `⚠️ ${statusLabel}: Служение ${formatDateReadable ? formatDateReadable(dateISO) : dateISO} отменено.${extraText ? '\n\n' + extraText : ''}`;
     }
-    // Используем showDayAnnouncementDialog если доступен, иначе showToast
     if (typeof showDayAnnouncementWarning === 'function') {
       showDayAnnouncementWarning(dateISO, dayInfo);
     } else {
       showToast(warnMsg, 'warning', 5000);
     }
-    return; // Блокируем открытие формы бронирования
+    return;
   }
 
   const modal = document.getElementById('quickBookingModal');
   if (!modal) return;
 
-  modal.dataset.location = locName;
-  modal.dataset.date = dateISO;
-  modal.dataset.time = timeSlot;
-  modal.dataset.cartNum = cartNum;
+  const qbDateInput = document.getElementById('qbDate');
+  if (qbDateInput) qbDateInput.value = formatDateReadable(dateISO);
 
-  document.getElementById('qbDate').value = formatDateReadable(dateISO);
-  document.getElementById('qbLocation').value = locName;
-  document.getElementById('qbTime').value = timeSlot;
-
-  const qbCartInput = document.getElementById('qbCart');
-  if (qbCartInput) qbCartInput.value = `${S('cartLabel')} №${cartNum}`;
-
-  // Находим существующую бронь на этот слот времени
-  const booking = getBookings().find(b =>
-    b.date === dateISO &&
-    b.location === locName &&
-    b.time === timeSlot
-  );
-
-  const name1Input = document.getElementById('qbName1');
-  const name2Input = document.getElementById('qbName2');
-
-  name1Input.placeholder = getLang() === 'uk' ? 'Вісник 1 (ПІБ)' : (getLang() === 'de' ? 'Verkündiger 1 (Name)' : 'Возвещатель 1 (ФИО)');
-  name2Input.placeholder = getLang() === 'uk' ? 'Вісник 2 (ПІБ)' : (getLang() === 'de' ? 'Verkündiger 2 (Name)' : 'Возвещатель 2 (ФИО)');
-
-  const activeLang = getLang() === 'uk' ? 'ua' : getLang();
-  let prefillLang = activeLang;
-  let isOccupied = false;
-  let isSingle = false;
-
-  if (booking) {
-    if (cartNum === 1 && (booking.name1 || booking.name2)) {
-      name1Input.value = booking.name1 || "";
-      name2Input.value = booking.name2 || "";
-      prefillLang = (booking.cart1Lang || activeLang).toLowerCase();
-      if (booking.name1 && booking.name2) {
-        isOccupied = true;
-      } else {
-        isSingle = true;
-      }
-    } else if (cartNum === 2 && (booking.name3 || booking.name4)) {
-      name1Input.value = booking.name3 || "";
-      name2Input.value = booking.name4 || "";
-      prefillLang = (booking.cart2Lang || activeLang).toLowerCase();
-      if (booking.name3 && booking.name4) {
-        isOccupied = true;
-      } else {
-        isSingle = true;
-      }
-    }
+  // 1. Инициализация и заполнение списка Места (Location Select)
+  const qbLocationSelect = document.getElementById('qbLocation');
+  const allLocs = getAllLocationsForSelect();
+  if (qbLocationSelect) {
+    qbLocationSelect.innerHTML = allLocs.map(l => `<option value="${escapeHtml(l)}">${escapeHtml(l)}</option>`).join('');
+    const targetLoc = allLocs.includes(locName) ? locName : (allLocs[0] || "Hauptbahnhof");
+    qbLocationSelect.value = targetLoc;
+    qbLocationSelect.disabled = false;
+    qbLocationSelect.style.cursor = "pointer";
   }
 
-  const autofillBtn = document.getElementById('qbAutofillBtn');
-  const rememberCheckbox = document.getElementById('qbRememberMyNames');
+  // 2. Инициализация и заполнение списка Времени (Time Select)
+  const qbTimeSelect = document.getElementById('qbTime');
+  const allTimes = getAllTimeslotsForSelect();
+  if (qbTimeSelect) {
+    qbTimeSelect.innerHTML = allTimes.map(t => `<option value="${escapeHtml(t)}">${escapeHtml(t)}</option>`).join('');
+    const targetTime = allTimes.includes(timeSlot) ? timeSlot : (allTimes[0] || "09:00 - 11:00");
+    qbTimeSelect.value = targetTime;
+    qbTimeSelect.disabled = false;
+    qbTimeSelect.style.cursor = "pointer";
+  }
 
-  if (isOccupied) {
-    name1Input.disabled = true;
-    name2Input.disabled = true;
-    if (autofillBtn) autofillBtn.style.display = 'none';
-  } else if (isSingle) {
-    if (name1Input.value) {
-      name1Input.disabled = true;
-      name2Input.disabled = false;
-      name2Input.value = "";
+  // 3. Инициализация и заполнение списка Тележки (Cart Select)
+  const qbCartSelect = document.getElementById('qbCart');
+  if (qbCartSelect) {
+    qbCartSelect.innerHTML = `
+      <option value="1">${S('cartLabel')} №1</option>
+      <option value="2">${S('cartLabel')} №2</option>
+    `;
+    const targetCart = (cartNum === 2 || String(cartNum) === '2') ? '2' : '1';
+    qbCartSelect.value = targetCart;
+    qbCartSelect.disabled = false;
+    qbCartSelect.style.cursor = "pointer";
+  }
+
+  const updateSlotState = () => {
+    const selectedLoc = qbLocationSelect ? qbLocationSelect.value.trim() : locName;
+    const selectedTime = qbTimeSelect ? qbTimeSelect.value.trim() : timeSlot;
+    const selectedCart = qbCartSelect ? (parseInt(qbCartSelect.value, 10) || 1) : (parseInt(cartNum, 10) || 1);
+
+    modal.dataset.location = selectedLoc;
+    modal.dataset.date = dateISO;
+    modal.dataset.time = selectedTime;
+    modal.dataset.cartNum = selectedCart;
+
+    // Находим существующую бронь на этот слот времени
+    const booking = getBookings().find(b =>
+      b.date === dateISO &&
+      b.location === selectedLoc &&
+      b.time === selectedTime
+    );
+
+    const name1Input = document.getElementById('qbName1');
+    const name2Input = document.getElementById('qbName2');
+
+    if (name1Input) name1Input.placeholder = getLang() === 'uk' ? 'Вісник 1 (ПІБ)' : (getLang() === 'de' ? 'Verkündiger 1 (Name)' : 'Возвещатель 1 (ФИО)');
+    if (name2Input) name2Input.placeholder = getLang() === 'uk' ? 'Вісник 2 (ПІБ)' : (getLang() === 'de' ? 'Verkündiger 2 (Name)' : 'Возвещатель 2 (ФИО)');
+
+    const activeLang = getLang() === 'uk' ? 'ua' : getLang();
+    let prefillLang = activeLang;
+    let isOccupied = false;
+    let isSingle = false;
+
+    if (booking) {
+      if (selectedCart === 1 && (booking.name1 || booking.name2)) {
+        if (name1Input) name1Input.value = booking.name1 || "";
+        if (name2Input) name2Input.value = booking.name2 || "";
+        prefillLang = (booking.cart1Lang || activeLang).toLowerCase();
+        if (booking.name1 && booking.name2) isOccupied = true;
+        else isSingle = true;
+      } else if (selectedCart === 2 && (booking.name3 || booking.name4)) {
+        if (name1Input) name1Input.value = booking.name3 || "";
+        if (name2Input) name2Input.value = booking.name4 || "";
+        prefillLang = (booking.cart2Lang || activeLang).toLowerCase();
+        if (booking.name3 && booking.name4) isOccupied = true;
+        else isSingle = true;
+      } else {
+        if (name1Input) name1Input.value = "";
+        if (name2Input) name2Input.value = "";
+      }
     } else {
-      name2Input.disabled = true;
-      name1Input.disabled = false;
-      name1Input.value = "";
+      if (name1Input) name1Input.value = "";
+      if (name2Input) name2Input.value = "";
     }
-    const savedMyName1 = localStorage.getItem('myPreacherName1') || "";
-    const savedMyName2 = localStorage.getItem('myPreacherName2') || "";
-    if (savedMyName1 || savedMyName2) {
-      if (autofillBtn) autofillBtn.style.display = 'block';
-    } else {
+
+    const autofillBtn = document.getElementById('qbAutofillBtn');
+    const rememberCheckbox = document.getElementById('qbRememberMyNames');
+
+    if (isOccupied) {
+      if (name1Input) name1Input.disabled = true;
+      if (name2Input) name2Input.disabled = true;
       if (autofillBtn) autofillBtn.style.display = 'none';
-    }
-    if (rememberCheckbox) {
-      rememberCheckbox.checked = false;
-    }
-  } else {
-    name1Input.disabled = false;
-    name2Input.disabled = false;
-    // Prefill names from localStorage (prioritize dedicated myPreacherNames)
-    const savedMyName1 = localStorage.getItem('myPreacherName1') || "";
-    const savedMyName2 = localStorage.getItem('myPreacherName2') || "";
-
-    if (savedMyName1 || savedMyName2) {
-      name1Input.value = savedMyName1;
-      name2Input.value = savedMyName2;
-      if (autofillBtn) autofillBtn.style.display = 'block';
-    } else {
-      // Fallback to legacy names
-      if (cartNum === 1) {
-        name1Input.value = localStorage.getItem('pwaName1') || "";
-        name2Input.value = localStorage.getItem('pwaName2') || "";
+    } else if (isSingle) {
+      if (name1Input && name2Input) {
+        if (name1Input.value) {
+          name1Input.disabled = true;
+          name2Input.disabled = false;
+          name2Input.value = "";
+        } else {
+          name2Input.disabled = true;
+          name1Input.disabled = false;
+          name1Input.value = "";
+        }
+      }
+      const savedMyName1 = localStorage.getItem('myPreacherName1') || "";
+      const savedMyName2 = localStorage.getItem('myPreacherName2') || "";
+      if (savedMyName1 || savedMyName2) {
+        if (autofillBtn) autofillBtn.style.display = 'block';
       } else {
-        name1Input.value = localStorage.getItem('pwaName3') || "";
-        name2Input.value = localStorage.getItem('pwaName4') || "";
+        if (autofillBtn) autofillBtn.style.display = 'none';
       }
-      if (autofillBtn) autofillBtn.style.display = 'none';
-    }
-    
-    if (rememberCheckbox) {
-      rememberCheckbox.checked = !savedMyName1 && !savedMyName2;
-    }
-    const chkSendPush = document.getElementById('chkSendPush');
-    if (chkSendPush) {
-      chkSendPush.checked = true;
-    }
-    const chkSendPushLabel = document.getElementById('chkSendPushLabel');
-    if (chkSendPushLabel) {
-      chkSendPushLabel.textContent = S('qbSendPush');
-    }
-  }
+      if (rememberCheckbox) rememberCheckbox.checked = false;
+    } else {
+      if (name1Input) name1Input.disabled = false;
+      if (name2Input) name2Input.disabled = false;
+      const savedMyName1 = localStorage.getItem('myPreacherName1') || "";
+      const savedMyName2 = localStorage.getItem('myPreacherName2') || "";
 
-  // Restore draft if exists and slot is not fully occupied/single
-  if (!isOccupied && !isSingle) {
-    try {
-      const draft = JSON.parse(localStorage.getItem('qb_draft'));
-      if (draft) {
-        if (draft.name1) name1Input.value = draft.name1;
-        if (draft.name2) name2Input.value = draft.name2;
-        if (draft.lang) prefillLang = draft.lang.toLowerCase();
+      if (savedMyName1 || savedMyName2) {
+        if (name1Input) name1Input.value = savedMyName1;
+        if (name2Input) name2Input.value = savedMyName2;
+        if (autofillBtn) autofillBtn.style.display = 'block';
+      } else {
+        if (selectedCart === 1) {
+          if (name1Input) name1Input.value = localStorage.getItem('pwaName1') || "";
+          if (name2Input) name2Input.value = localStorage.getItem('pwaName2') || "";
+        } else {
+          if (name1Input) name1Input.value = localStorage.getItem('pwaName3') || "";
+          if (name2Input) name2Input.value = localStorage.getItem('pwaName4') || "";
+        }
+        if (autofillBtn) autofillBtn.style.display = 'none';
       }
-    } catch (e) {}
-  }
+      
+      if (rememberCheckbox) rememberCheckbox.checked = !savedMyName1 && !savedMyName2;
+      const chkSendPush = document.getElementById('chkSendPush');
+      if (chkSendPush) chkSendPush.checked = true;
+      const chkSendPushLabel = document.getElementById('chkSendPushLabel');
+      if (chkSendPushLabel) chkSendPushLabel.textContent = S('qbSendPush');
+    }
 
-  selectedQBLang = prefillLang;
-  const labels = getTrolleyLabels();
-  const qbLangPicker = document.getElementById("qbLangPicker");
-  if (qbLangPicker && window.TrolleyUI) {
-    qbLangPicker.innerHTML = "";
-    qbLangPicker.appendChild(window.TrolleyUI.createGroupPicker(labels, selectedQBLang, function (g) {
-      selectedQBLang = g;
-    }));
-    qbLangPicker.style.pointerEvents = (isOccupied || isSingle) ? "none" : "auto";
-  }
+    if (!isOccupied && !isSingle) {
+      try {
+        const draft = JSON.parse(localStorage.getItem('qb_draft'));
+        if (draft) {
+          if (draft.name1 && name1Input) name1Input.value = draft.name1;
+          if (draft.name2 && name2Input) name2Input.value = draft.name2;
+          if (draft.lang) prefillLang = draft.lang.toLowerCase();
+        }
+      } catch (e) {}
+    }
+
+    selectedQBLang = prefillLang;
+    const labels = getTrolleyLabels();
+    const qbLangPicker = document.getElementById("qbLangPicker");
+    if (qbLangPicker && window.TrolleyUI) {
+      qbLangPicker.innerHTML = "";
+      qbLangPicker.appendChild(window.TrolleyUI.createGroupPicker(labels, selectedQBLang, function (g) {
+        selectedQBLang = g;
+      }));
+      qbLangPicker.style.pointerEvents = (isOccupied || isSingle) ? "none" : "auto";
+    }
+  };
+
+  if (qbLocationSelect) qbLocationSelect.onchange = updateSlotState;
+  if (qbTimeSelect) qbTimeSelect.onchange = updateSlotState;
+  if (qbCartSelect) qbCartSelect.onchange = updateSlotState;
+
+  updateSlotState();
 
   modal.style.display = 'flex';
   document.body.style.overflow = 'hidden';
 
   setTimeout(() => {
-    if (isSingle) {
-      if (!name1Input.disabled) name1Input.focus();
-      else if (!name2Input.disabled) name2Input.focus();
-    } else if (!isOccupied && name1Input) {
+    const name1Input = document.getElementById('qbName1');
+    const name2Input = document.getElementById('qbName2');
+    if (name1Input && !name1Input.disabled) {
       name1Input.focus();
+    } else if (name2Input && !name2Input.disabled) {
+      name2Input.focus();
     }
   }, 100);
 }
@@ -4254,6 +4275,8 @@ function openQuickBookingModal(locName, dateISO, timeSlot, cartNum) {
 function closeQuickBookingModal() {
   const modal = document.getElementById('quickBookingModal');
   if (!modal) return;
+
+  const savedDate = modal.dataset.date;
 
   modal.style.display = 'none';
 
@@ -4268,7 +4291,7 @@ function closeQuickBookingModal() {
   const qbLangPicker = document.getElementById("qbLangPicker");
   if (qbLangPicker) qbLangPicker.innerHTML = "";
   selectedQBLang = "";
-   removeGlobalTooltip();
+  removeGlobalTooltip();
 
   document.body.style.overflow = '';
 
@@ -4276,6 +4299,13 @@ function closeQuickBookingModal() {
     previousActiveElement.focus();
   }
   previousActiveElement = null;
+
+  if (savedDate && typeof openDayEditor === 'function') {
+    const dayModal = document.getElementById('dayEditorModal');
+    if (dayModal && dayModal.style.display !== 'none') {
+      openDayEditor(savedDate);
+    }
+  }
 }
 
 window.openQuickBookingModal = openQuickBookingModal;
