@@ -1939,33 +1939,65 @@ function buildApiUrl() {
     var modal = document.getElementById("dayEditorModal");
     if (!modal) return;
     var isAdmin = isUserAdmin();
+    var shouldLock = locked || !isAdmin;
 
-    var descEl = document.getElementById("dayEditorDesc");
-    var noteEl = document.getElementById("dayEditorNote");
-    if (descEl) {
-      descEl.disabled = locked || !isAdmin;
-      descEl.readOnly = locked || !isAdmin;
-    }
-    if (noteEl) {
-      noteEl.disabled = locked || !isAdmin;
-      noteEl.readOnly = locked || !isAdmin;
+    var textareas = [
+      document.getElementById("dayEditorDesc"),
+      document.getElementById("dayEditorNote"),
+      document.getElementById("dayEditorYearMessage")
+    ];
+
+    textareas.forEach(function (el) {
+      if (!el) return;
+      if (shouldLock) {
+        el.disabled = true;
+        el.readOnly = true;
+        el.setAttribute("disabled", "true");
+        el.setAttribute("readonly", "true");
+        el.style.pointerEvents = "none";
+        el.style.opacity = "0.65";
+        el.style.cursor = "not-allowed";
+      } else {
+        el.disabled = false;
+        el.readOnly = false;
+        el.removeAttribute("disabled");
+        el.removeAttribute("readonly");
+        el.style.pointerEvents = "auto";
+        el.style.opacity = "1";
+        el.style.cursor = "text";
+        el.style.backgroundColor = "var(--card-bg, #ffffff)";
+        el.style.color = "var(--text, #1e293b)";
+      }
+    });
+
+    var presetBtns = modal.querySelectorAll(".quick-preset-btn");
+    for (var pb = 0; pb < presetBtns.length; pb++) {
+      if (shouldLock) {
+        presetBtns[pb].setAttribute("disabled", "true");
+        presetBtns[pb].style.pointerEvents = "none";
+        presetBtns[pb].style.opacity = "0.65";
+      } else {
+        presetBtns[pb].removeAttribute("disabled");
+        presetBtns[pb].style.pointerEvents = "auto";
+        presetBtns[pb].style.opacity = "1";
+        presetBtns[pb].style.cursor = "pointer";
+      }
     }
 
     var statusBox = document.getElementById("dayEditorStatus");
     if (statusBox) {
       var statusBtns = statusBox.querySelectorAll(".status-option");
-      var shouldLockStatus = locked || !isAdmin;
       for (var sb = 0; sb < statusBtns.length; sb++) {
-        if (shouldLockStatus) {
+        if (shouldLock) {
           statusBtns[sb].setAttribute("disabled", "true");
           statusBtns[sb].style.pointerEvents = "none";
           statusBtns[sb].style.opacity = "0.7";
           statusBtns[sb].style.cursor = "default";
         } else {
           statusBtns[sb].removeAttribute("disabled");
-          statusBtns[sb].style.pointerEvents = "";
-          statusBtns[sb].style.opacity = "";
-          statusBtns[sb].style.cursor = "";
+          statusBtns[sb].style.pointerEvents = "auto";
+          statusBtns[sb].style.opacity = "1";
+          statusBtns[sb].style.cursor = "pointer";
         }
       }
     }
