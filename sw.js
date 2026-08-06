@@ -1,14 +1,10 @@
+importScripts('https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.sw.js');
+
 self.addEventListener('message', (event) => {
   if (event.data && (event.data === 'SKIP_WAITING' || event.data.type === 'SKIP_WAITING')) {
     self.skipWaiting();
   }
 });
-
-try {
-  importScripts('https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.sw.js');
-} catch (e) {
-  console.warn('[SW] OneSignal import skipped/failed:', e);
-}
 
 const CACHE_VER = 'v79';
 const CACHE_NAME = 'service-schedule-v79';
