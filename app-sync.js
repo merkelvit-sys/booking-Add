@@ -277,6 +277,12 @@
       scheduleIndex[day.date].push(day);
     }
   }
+  function getScheduleRows(date) {
+    var currentLangCode = getApiLang();
+    return (scheduleIndex[date] || []).filter(function (r) {
+      return r.language === currentLangCode || !r.language;
+    });
+  }
   function currentScheduleYear() {
     if (yearSchedule.length && yearSchedule[0].date) return parseInt(yearSchedule[0].date.split("-")[0], 10);
     return new Date().getFullYear();
@@ -287,16 +293,17 @@
     year = year || new Date().getFullYear();
     var out = [];
     var d = new Date(year, 0, 1);
+    var lang = getApiLang();
     while (d.getFullYear() === year) {
       var iso = isoOf(d);
-      out.push({ date: iso, cartNumber: 1, trolley: "", status: "available", description: "", note: "" });
-      out.push({ date: iso, cartNumber: 2, trolley: "", status: "available", description: "", note: "" });
+      out.push({ date: iso, cartNumber: 1, trolley: "", status: "available", description: "", note: "", language: lang });
+      out.push({ date: iso, cartNumber: 2, trolley: "", status: "available", description: "", note: "", language: lang });
       d.setDate(d.getDate() + 1);
     }
     return out;
   }
 
-  // Объединяет дубликаты по дате+номеру тележки, сохраняя заполненный статус, описание и заметку
+  // Объединяет дубликаты по дате+номеру тележки+языку, сохраняя заполненный статус, описание и заметку
   function dedupeSchedule(arr) {
     if (!Array.isArray(arr)) return [];
     var seen = {};
@@ -306,7 +313,8 @@
       var dateIso = normalizeDateValue(day.date);
       if (!dateIso) continue;
       var cartNum = parseInt(day.cartNumber, 10) || 1;
-      var key = dateIso + "|" + cartNum;
+      var langKey = (day.language || "").trim().toLowerCase();
+      var key = dateIso + "|" + cartNum + "|" + langKey;
 
       if (!seen[key]) {
         seen[key] = {
@@ -315,7 +323,8 @@
           trolley: (day.trolley || "").trim().toLowerCase(),
           status: day.status || "available",
           description: (day.description || "").trim(),
-          note: (day.note || "").trim()
+          note: (day.note || "").trim(),
+          language: langKey
         };
       } else {
         var existing = seen[key];
@@ -330,7 +339,8 @@
           trolley: tr,
           status: st,
           description: desc,
-          note: nt
+          note: nt,
+          language: langKey
         };
       }
     }
@@ -350,12 +360,16 @@
   }
   function upsertDay(day) {
     var found = false;
+    var lang = getApiLang();
     for (var i = 0; i < yearSchedule.length; i++) {
-      if (yearSchedule[i].date === day.date && (parseInt(yearSchedule[i].cartNumber, 10) || 1) === (parseInt(day.cartNumber, 10) || 1)) {
+      if (yearSchedule[i].date === day.date && (parseInt(yearSchedule[i].cartNumber, 10) || 1) === (parseInt(day.cartNumber, 10) || 1) && yearSchedule[i].language === lang) {
         yearSchedule[i] = day; found = true; break;
       }
     }
-    if (!found) yearSchedule.push(day);
+    if (!found) {
+      day.language = lang;
+      yearSchedule.push(day);
+    }
     // Перестраиваем индекс полностью (без накопления дублей при повторных обновлениях)
     scheduleIndex[day.date] = yearSchedule.filter(function (r) { return r.date === day.date; });
   }
@@ -1001,12 +1015,13 @@ function buildApiUrl() {
   // Записывает/обновляет язык конкретной тележки (cartNumber=1|2) в YearSchedule.
   function setYearCart(date, cartNumber, lang) {
     var found = -1;
+    var activeLang = getApiLang();
     for (var i = 0; i < yearSchedule.length; i++) {
       var row = yearSchedule[i];
-      if (row.date === date && (parseInt(row.cartNumber, 10) || 0) === cartNumber) { found = i; break; }
+      if (row.date === date && (parseInt(row.cartNumber, 10) || 0) === cartNumber && row.language === activeLang) { found = i; break; }
     }
     if (found === -1) {
-      yearSchedule.push({ date: date, cartNumber: cartNumber, trolley: "", status: "available", description: "", note: "" });
+      yearSchedule.push({ date: date, cartNumber: cartNumber, trolley: "", status: "available", description: "", note: "", language: activeLang });
       found = yearSchedule.length - 1;
     }
     if (lang) yearSchedule[found].trolley = lang;
@@ -1259,7 +1274,7 @@ function buildApiUrl() {
   // ----- Эффективный рендеринг годовой сетки -----
   function getDayLangSetForDate(iso) {
     var set = {};
-    var rows = scheduleIndex[iso] || [];
+    var rows = getScheduleRows(iso);
     rows.forEach(function (r) {
       addLangToSet(set, r.trolley);
     });
@@ -1298,7 +1313,7 @@ function buildApiUrl() {
         if (cell.classList.contains("empty")) continue;
 
         var iso = cell.dataset.date;
-        var rows = scheduleIndex[iso] || [];
+        var rows = getScheduleRows(iso);
         
         var status = "available";
         var dayLangSet = {};
@@ -1521,7 +1536,7 @@ function buildApiUrl() {
         (function (currentDay) {
           var iso = year + "-" + pad(m + 1) + "-" + pad(currentDay);
           iso = (iso || "").trim();
-          var rows = scheduleIndex[iso] || [];
+          var rows = getScheduleRows(iso);
           
           var status = "available";
           var dayLangSet = {};
@@ -1646,7 +1661,7 @@ function buildApiUrl() {
       if (!cell || cell.classList.contains("empty")) return;
       var dateISO = cell.dataset.date;
       var status = cell.dataset.status;
-      var rows = scheduleIndex[dateISO] || [];
+      var rows = getScheduleRows(dateISO);
       var dayLangSet = getDayLangSetForDate(dateISO);
       showTooltipForCell(cell, dateISO, status, rows, dayLangSet);
     });
@@ -1704,7 +1719,7 @@ function buildApiUrl() {
         if (targetCell) {
           targetCell.focus();
           var focusedStatus = targetCell.dataset.status;
-          var focusedRows = scheduleIndex[nextIso] || [];
+          var focusedRows = getScheduleRows(nextIso);
           var focusedLangs = getDayLangSetForDate(nextIso);
           showTooltipForCell(targetCell, nextIso, focusedStatus, focusedRows, focusedLangs);
         }
@@ -2088,7 +2103,7 @@ function buildApiUrl() {
     const gotoBtn = document.getElementById("btnGoToDateFromModal");
     const bookBtn = document.getElementById("btnBookForDateFromModal");
     const adminControls = document.querySelectorAll('#dayEditorAdminControls, .admin-only-control, .admin-only');
-    var rows = scheduleIndex[date] || [];
+    var rows = getScheduleRows(date);
     var cart1Rows = rows.filter(function (r) { return (parseInt(r.cartNumber, 10) || 1) === 1; });
     var cart2Rows = rows.filter(function (r) { return (parseInt(r.cartNumber, 10) || 1) === 2; });
 
@@ -2688,10 +2703,11 @@ function buildApiUrl() {
     setYearCart(day.date, 1, day.cart1Lang);
     setYearCart(day.date, 2, day.cart2Lang);
     // Проставляем статус/описание/заметку в обе строки
+    var activeLang = getApiLang();
     [1, 2].forEach(function (cn) {
       var found = false;
       for (var i = 0; i < yearSchedule.length; i++) {
-        if (yearSchedule[i].date === day.date && (parseInt(yearSchedule[i].cartNumber, 10) || 1) === cn) {
+        if (yearSchedule[i].date === day.date && (parseInt(yearSchedule[i].cartNumber, 10) || 1) === cn && yearSchedule[i].language === activeLang) {
           yearSchedule[i].status = day.status;
           yearSchedule[i].description = day.description;
           yearSchedule[i].note = day.note;
@@ -2699,7 +2715,7 @@ function buildApiUrl() {
         }
       }
       if (!found) {
-        yearSchedule.push({ date: day.date, cartNumber: cn, trolley: cn === 1 ? day.cart1Lang : day.cart2Lang, status: day.status, description: day.description, note: day.note });
+        yearSchedule.push({ date: day.date, cartNumber: cn, trolley: cn === 1 ? day.cart1Lang : day.cart2Lang, status: day.status, description: day.description, note: day.note, language: activeLang });
       }
     });
     setSchedule(yearSchedule);

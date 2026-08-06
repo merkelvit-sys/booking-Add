@@ -3517,11 +3517,12 @@ function renderScheduleBoard() {
   const info = getDayScheduleInfo(selectedDateISO);
   if (info) {
     if (info.status === "closed") {
+      const closedSuffix = getLang() === 'uk' ? '(Служіння скасовано)' : (getLang() === 'de' ? '(Dienst abgesagt)' : '(Служение отменено)');
       const bannerHTML = `
         <div class="day-status-banner banner-closed">
           <span style="font-size: 2rem; line-height: 1;">🚫</span>
           <div style="flex: 1;">
-            <h4 style="margin: 0 0 4px 0; font-size: 1.1rem; font-weight: 700;">📢 ${getLocalizedStatusName('closed')} (Служение отменено)</h4>
+            <h4 style="margin: 0 0 4px 0; font-size: 1.1rem; font-weight: 700;">📢 ${getLocalizedStatusName('closed')} ${closedSuffix}</h4>
             ${info.description ? `<p style="margin: 0 0 4px 0; font-size: 0.9rem;">${info.description}</p>` : ''}
             ${info.note ? `<p style="margin: 0; font-size: 0.85rem; opacity: 0.9; font-style: italic;">${info.note}</p>` : ''}
           </div>
@@ -3548,12 +3549,14 @@ function renderScheduleBoard() {
         bannerClass = "banner-special";
       }
       
+      const bannerPrefix = getLang() === 'uk' ? '📢 Оголошення' : (getLang() === 'de' ? '📢 Ankündigung' : '📢 Объявление');
+      const bannerTitleDefault = getLang() === 'uk' ? 'Інформація' : (getLang() === 'de' ? 'Information' : 'Информация');
       const bannerHTML = `
         <div class="day-status-banner ${bannerClass}">
           <span style="font-size: 1.6rem; line-height: 1;">${icon}</span>
           <div style="flex: 1;">
             <h4 style="margin: 0 0 4px 0; font-size: 1rem; font-weight: 700;">
-              📢 Объявление: ${info.status !== "available" ? getLocalizedStatusName(info.status) : S('infoTitle', 'Информация')}
+              ${bannerPrefix}: ${info.status !== "available" ? getLocalizedStatusName(info.status) : S('infoTitle', bannerTitleDefault)}
             </h4>
             ${info.description ? `<p style="margin: 0 0 4px 0; font-size: 0.9rem;">${info.description}</p>` : ''}
             ${info.note ? `<p style="margin: 0; font-size: 0.8rem; opacity: 0.85; font-style: italic;">${info.note}</p>` : ''}
