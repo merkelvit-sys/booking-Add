@@ -635,7 +635,7 @@ function bookingMatchesGroup(b, g) {
 // ----------------------------------------------------------------------------
 // Константы и состояние
 // ----------------------------------------------------------------------------
-const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwV6YsBIC2XhuugMp_qTd2kHd55MP0ZJAJhXf93YiWqs66k90zeULNhooVXs03o2DaH/exec";
+const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwsBLJvAwCZCc2IGZ2M6XBOODm_YsXxgnKl2RllYOMg0Vi-eDq4AKspqIUtZJbbdj7Y/exec";
 // Вы можете указать прямую постоянную ссылку на ваше приложение ниже, чтобы кнопка «Поделиться» отправляла именно её.
 // Если оставить пустым "", ссылка будет определяться автоматически на основе текущего адреса страницы с очисткой preview-адресов.
 const SHARE_APP_URL = "";
