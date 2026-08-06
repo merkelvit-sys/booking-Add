@@ -1829,10 +1829,7 @@ function buildApiUrl() {
         '<div class="day-editor-bookings-card" id="dayEditorBookingsCard" style="background: rgba(120,120,120,0.06); border: 1px solid var(--border); border-radius: var(--radius-md); padding: 12px; margin-bottom: 12px;">' +
           '<div style="font-weight: 700; font-size: 0.85rem; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 6px;">' +
             '<span>' + (dict.bookingsTitle || '📋 Записи на этот день:') + '</span>' +
-            '<div style="display: flex; gap: 6px; align-items: center;">' +
-              '<button type="button" id="btnBookForDateFromModal" class="btn-book-date" style="background: var(--primary); color: #ffffff; border: none; border-radius: var(--radius-sm); padding: 4px 10px; font-size: 0.75rem; font-weight: 700; cursor: pointer; display: inline-flex; align-items: center; gap: 4px;">➕ Записаться</button>' +
-              '<button type="button" id="btnGoToDateFromModal" class="btn-goto-date" style="background: var(--primary-container); color: var(--primary); border: 1px solid var(--primary); border-radius: var(--radius-sm); padding: 4px 8px; font-size: 0.75rem; font-weight: 700; cursor: pointer;">' + (dict.goToSchedule || '📅 В график') + '</button>' +
-            '</div>' +
+            '<button type="button" id="btnGoToDateFromModal" class="btn-goto-date" style="background: var(--primary-container); color: var(--primary); border: 1px solid var(--primary); border-radius: var(--radius-sm); padding: 4px 8px; font-size: 0.75rem; font-weight: 700; cursor: pointer;">' + (dict.goToSchedule || '📅 В график') + '</button>' +
           '</div>' +
           '<div id="dayEditorBookingsList" style="font-size: 0.8rem; display: flex; flex-direction: column; gap: 6px;"></div>' +
         '</div>' +
@@ -2221,29 +2218,19 @@ function buildApiUrl() {
     if (!bookingsHTML) {
       bookingsHTML = '<div style="color: var(--text-muted); font-style: italic; padding: 6px 0; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px;">' +
         '<span>' + (dict.noBookings || 'Записей на этот день нет (свободно)') + '</span>' +
-        '<button type="button" onclick="SyncCore._closeDayEditor(); if(typeof openQuickBookingModal===\'function\') openQuickBookingModal(\'Марбург\', \'' + date + '\', \'09:00 - 11:00\', 1); else if(typeof goToDate===\'function\') goToDate(\'' + date + '\');" style="background: var(--primary); color: #ffffff; border: none; border-radius: 6px; padding: 6px 12px; font-size: 0.78rem; font-weight: 700; cursor: pointer;">➕ Записаться на этот день</button>' +
+        '<button type="button" onclick="SyncCore._closeDayEditor(); if(typeof openQuickBookingModal===\'function\') openQuickBookingModal(\'Марбург\', \'' + date + '\', \'09:00 - 11:00\', 1); else if(typeof goToDate===\'function\') goToDate(\'' + date + '\');" style="background: var(--primary); color: #ffffff; border: none; border-radius: 6px; padding: 6px 12px; font-size: 0.78rem; font-weight: 700; cursor: pointer;">➕ ' + (getLang() === 'uk' ? 'Записатися' : (getLang() === 'de' ? 'Eintragen' : 'Записаться')) + '</button>' +
         '</div>';
     } else {
-      bookingsHTML += '<div style="margin-top: 6px; text-align: right;">' +
-        '<button type="button" onclick="SyncCore._closeDayEditor(); if(typeof goToDate===\'function\') goToDate(\'' + date + '\');" style="background: rgba(37,99,235,0.1); color: var(--primary); border: 1px solid rgba(37,99,235,0.2); border-radius: 6px; padding: 4px 10px; font-size: 0.75rem; font-weight: 700; cursor: pointer;">📅 В график недели</button>' +
+      bookingsHTML += '<div style="margin-top: 8px; text-align: left;">' +
+        '<button type="button" onclick="SyncCore._closeDayEditor(); if(typeof openQuickBookingModal===\'function\') openQuickBookingModal(\'Марбург\', \'' + date + '\', \'09:00 - 11:00\', 1); else if(typeof goToDate===\'function\') goToDate(\'' + date + '\');" style="background: var(--primary); color: #ffffff; border: none; border-radius: 6px; padding: 6px 12px; font-size: 0.78rem; font-weight: 700; cursor: pointer;">➕ ' + (getLang() === 'uk' ? 'Додати ще один запис' : (getLang() === 'de' ? 'Weitere Buchung hinzufügen' : 'Добавить еще запись')) + '</button>' +
         '</div>';
     }
     if (bookingsList) bookingsList.innerHTML = bookingsHTML;
 
     if (gotoBtn) {
       gotoBtn.onclick = function () {
-        closeDayEditor();
+        SyncCore._closeDayEditor();
         if (typeof goToDate === "function") goToDate(date);
-      };
-    }
-    if (bookBtn) {
-      bookBtn.onclick = function () {
-        closeDayEditor();
-        if (typeof openQuickBookingModal === "function") {
-          openQuickBookingModal('Марбург', date, '09:00 - 11:00', 1);
-        } else if (typeof goToDate === "function") {
-          goToDate(date);
-        }
       };
     }
 
