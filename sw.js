@@ -6,14 +6,14 @@ self.addEventListener('message', (event) => {
   }
 });
 
-const CACHE_VER = 'v79';
-const CACHE_NAME = 'service-schedule-v79';
+const CACHE_VER = 'v80';
+const CACHE_NAME = 'service-schedule-v80';
 const ASSETS = [
   './',
   './index.html',
   './index_ua.html',
   './index_de.html',
-  './app.js?v=79',
+  './app.js?v=80',
   './trolley.js',
   './app-sync.js?v=79',
   './app-sync.css?v=79',

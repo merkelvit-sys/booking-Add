@@ -3766,7 +3766,13 @@ function renderScheduleBoard() {
             .replace(/[\s\.,•\-]+/g, '')
             .trim();
         };
+        const curUser = (typeof getAuthUser === 'function') ? getAuthUser() : null;
+        const curUserName = curUser ? curUser.name : "";
+        const curUserEmail = curUser ? curUser.email : "";
+
         const namesToCheck = [
+          curUserName,
+          curUserEmail ? curUserEmail.split("@")[0] : "",
           localStorage.getItem('myPreacherName1'),
           localStorage.getItem('myPreacherName2'),
           localStorage.getItem('pwaName1'),
