@@ -3759,9 +3759,41 @@ function renderScheduleBoard() {
     const isSingle = hasNames && ((n1 && !n2) || (!n1 && n2));
 
     if (hasNames) {
-      const deleteBtn = (isPastDate || !isAdminUser)
-        ? `<span class="readonly-badge" style="font-size:0.65rem; color:var(--text-muted); font-weight:600; padding:1px 5px; border:1px solid var(--border); border-radius:4px;">${isPastDate ? 'Read-Only' : '🔒'}</span>`
-        : `<button type="button" class="btn-delete-booking" onclick="event.stopPropagation(); deleteBooking('${locName.replace(/'/g, "\\'")}', '${selectedDateISO}', '${(actualTime || time).replace(/'/g, "\\'")}', ${cartNum})" title="${S('deleteBooking')}" aria-label="${S('deleteBooking')}">🗑️</button>`;
+      const isOwnBooking = (nameA, nameB) => {
+        const normalizeName = (name) => {
+          return (name || "")
+            .toLowerCase()
+            .replace(/[\s\.,•\-]+/g, '')
+            .trim();
+        };
+        const namesToCheck = [
+          localStorage.getItem('myPreacherName1'),
+          localStorage.getItem('myPreacherName2'),
+          localStorage.getItem('pwaName1'),
+          localStorage.getItem('pwaName2'),
+          localStorage.getItem('pwaName3'),
+          localStorage.getItem('pwaName4')
+        ].map(normalizeName).filter(Boolean);
+
+        if (namesToCheck.length === 0) return false;
+
+        const bNames = [nameA, nameB].map(normalizeName).filter(Boolean);
+        return bNames.some(bName => {
+          return namesToCheck.some(checkName => {
+            if (bName === checkName) return true;
+            if (checkName.length >= 4 && bName.includes(checkName)) return true;
+            if (bName.length >= 4 && checkName.includes(bName)) return true;
+            return false;
+          });
+        });
+      };
+
+      const isOwn = isOwnBooking(n1, n2);
+      const canDelete = isAdminUser || (isOwn && !isPastDate);
+
+      const deleteBtn = canDelete
+        ? `<button type="button" class="btn-delete-booking" onclick="event.stopPropagation(); deleteBooking('${locName.replace(/'/g, "\\'")}', '${selectedDateISO}', '${(actualTime || time).replace(/'/g, "\\'")}', ${cartNum})" title="${S('deleteBooking')}" aria-label="${S('deleteBooking')}">🗑️</button>`
+        : `<span class="readonly-badge" style="font-size:0.65rem; color:var(--text-muted); font-weight:600; padding:1px 5px; border:1px solid var(--border); border-radius:4px;">${isPastDate ? 'Read-Only' : '🔒'}</span>`;
 
       const displayName = n1 || n2;
 
