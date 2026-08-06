@@ -1102,12 +1102,16 @@ window.addEventListener('DOMContentLoaded', () => {
 
   if ('serviceWorker' in navigator) {
     navigator.serviceWorker.addEventListener('controllerchange', () => {
-      if (!isRefreshing) {
+      if (!isRefreshing && sessionStorage.getItem('sw_refreshing') !== 'true') {
         isRefreshing = true;
+        try { sessionStorage.setItem('sw_refreshing', 'true'); } catch (e) {}
         window.location.reload();
       }
     });
   }
+  setTimeout(() => {
+    try { sessionStorage.removeItem('sw_refreshing'); } catch (e) {}
+  }, 4000);
 
   // ----- Ручной режим обновления приложения и кэша -----
   window.handleManualAppUpdate = function() {
