@@ -1984,6 +1984,7 @@ function buildApiUrl() {
   function checkIsAdmin() {
     return isUserAdmin();
   }
+  window.checkIsAdmin = checkIsAdmin;
 
   // Блокирует/разблокирует все поля редактирования дня (режим просмотра/редактирования)
   function setEditorLock(locked) {

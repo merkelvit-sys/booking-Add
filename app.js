@@ -3229,11 +3229,68 @@ async function verifyBookingSaved(clientRecords, providedServerBookings) {
 }
 
 async function deleteBooking(location, date, time, cartNumber) {
+  const isAdminUser = (typeof checkIsAdmin === 'function') ? checkIsAdmin() : (typeof isUserAdmin === 'function' ? isUserAdmin() : false);
+  
   const todayObj = new Date();
   const todayStr = `${todayObj.getFullYear()}-${String(todayObj.getMonth() + 1).padStart(2, '0')}-${String(todayObj.getDate()).padStart(2, '0')}`;
-  if (date < todayStr) {
-    showToast("Нельзя удалять записи за прошлые дни", "error");
+  
+  if (date < todayStr && !isAdminUser) {
+    showToast(getLang() === 'uk' ? "Не можна видаляти записи за минулі дні" : (getLang() === 'de' ? "Buchungen für vergangene Tage können nicht gelöscht werden" : "Нельзя удалять записи за прошлые дни"), "error");
     return;
+  }
+
+  if (!isAdminUser) {
+    // Получаем все записи и ищем нужную
+    const allBookings = getBookings();
+    const booking = allBookings.find(b => b.date === date && b.location === location && b.time === time);
+    let nameA = "";
+    let nameB = "";
+    if (booking) {
+      if (cartNumber === 1) {
+        nameA = booking.name1 || "";
+        nameB = booking.name2 || "";
+      } else if (cartNumber === 2) {
+        nameA = booking.name3 || "";
+        nameB = booking.name4 || "";
+      }
+    }
+
+    const normalizeName = (name) => {
+      return (name || "")
+        .toLowerCase()
+        .replace(/[\s\.,•\-]+/g, '')
+        .trim();
+    };
+
+    const curUser = (typeof getAuthUser === 'function') ? getAuthUser() : null;
+    const curUserName = curUser ? curUser.name : "";
+    const curUserEmail = curUser ? curUser.email : "";
+
+    const namesToCheck = [
+      curUserName,
+      curUserEmail ? curUserEmail.split("@")[0] : "",
+      localStorage.getItem('myPreacherName1'),
+      localStorage.getItem('myPreacherName2'),
+      localStorage.getItem('pwaName1'),
+      localStorage.getItem('pwaName2'),
+      localStorage.getItem('pwaName3'),
+      localStorage.getItem('pwaName4')
+    ].map(normalizeName).filter(Boolean);
+
+    const bNames = [nameA, nameB].map(normalizeName).filter(Boolean);
+    const isOwn = bNames.some(bName => {
+      return namesToCheck.some(checkName => {
+        if (bName === checkName) return true;
+        if (checkName.length >= 4 && bName.includes(checkName)) return true;
+        if (bName.length >= 4 && checkName.includes(bName)) return true;
+        return false;
+      });
+    });
+
+    if (!isOwn) {
+      showToast(getLang() === 'uk' ? "Ви можете видаляти лише свої власні записи" : (getLang() === 'de' ? "Sie können nur Ihre eigenen Buchungen löschen" : "Вы можете удалять только свои собственные записи"), "error");
+      return;
+    }
   }
 
   if (!(await SyncCore.confirmDelete(S('confirmDelete')))) {
