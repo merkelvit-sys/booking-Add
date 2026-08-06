@@ -927,6 +927,10 @@ function buildApiUrl() {
       setSchedule(AppState.schedule);
       saveCache(AppState.schedule);
     }
+    if (newData.yearScheduleMessages !== undefined) {
+      AppState.yearScheduleMessages = newData.yearScheduleMessages || {};
+      localStorage.setItem("yearScheduleMessages", JSON.stringify(AppState.yearScheduleMessages));
+    }
 
     renderAllTabs(isForce);
   }
