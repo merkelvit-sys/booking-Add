@@ -622,12 +622,12 @@ function buildApiUrl() {
     activeSyncAbortController = (typeof AbortController !== 'undefined') ? new AbortController() : null;
     var signal = activeSyncAbortController ? activeSyncAbortController.signal : null;
 
-    // Разумный таймаут для отмены висящего запроса (15 секунд)
+    // Разумный таймаут для отмены висящего запроса (45 секунд)
     var timeoutId = setTimeout(function() {
       if (activeSyncAbortController) {
         try { activeSyncAbortController.abort(); } catch (e) {}
       }
-    }, 15000);
+    }, 45000);
 
     return processOfflineQueue().catch(function() {}).then(function() {
       return fetchWithRetry(buildApiUrl, { cache: "no-store", signal: signal }).then(function (res) {
@@ -2665,7 +2665,7 @@ function buildApiUrl() {
         return res.json().catch(function () {
           return { status: "error", message: "HTTP " + res.status };
         });
-      }), 20000, "year_update").then(function (resp) {
+      }), 45000, "year_update").then(function (resp) {
         var isSuccess = resp && (
           resp.status === "ok" ||
           resp.result === "success" ||
