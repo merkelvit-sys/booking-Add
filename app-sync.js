@@ -1827,13 +1827,39 @@ function buildApiUrl() {
         '<div id="dayEditorHolidayNotice" style="display: none; margin-bottom: 12px;"></div>' +
         '<div class="day-editor-info-card" id="dayEditorInfoCard" style="display: none; margin-bottom: 12px;"></div>' +
         '<div class="day-editor-bookings-card" id="dayEditorBookingsCard" style="background: rgba(120,120,120,0.06); border: 1px solid var(--border); border-radius: var(--radius-md); padding: 12px; margin-bottom: 12px;">' +
-          '<div style="font-weight: 700; font-size: 0.85rem; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center;">' +
+          '<div style="font-weight: 700; font-size: 0.85rem; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 6px;">' +
             '<span>' + (dict.bookingsTitle || '📋 Записи на этот день:') + '</span>' +
-            '<button type="button" id="btnGoToDateFromModal" class="btn-goto-date" style="background: var(--primary-container); color: var(--primary); border: 1px solid var(--primary); border-radius: var(--radius-sm); padding: 4px 8px; font-size: 0.75rem; font-weight: 700; cursor: pointer;">' + (dict.goToSchedule || '📅 В график') + '</button>' +
+            '<div style="display: flex; gap: 6px; align-items: center;">' +
+              '<button type="button" id="btnBookForDateFromModal" class="btn-book-date" style="background: var(--primary); color: #ffffff; border: none; border-radius: var(--radius-sm); padding: 4px 10px; font-size: 0.75rem; font-weight: 700; cursor: pointer; display: inline-flex; align-items: center; gap: 4px;">➕ Записаться</button>' +
+              '<button type="button" id="btnGoToDateFromModal" class="btn-goto-date" style="background: var(--primary-container); color: var(--primary); border: 1px solid var(--primary); border-radius: var(--radius-sm); padding: 4px 8px; font-size: 0.75rem; font-weight: 700; cursor: pointer;">' + (dict.goToSchedule || '📅 В график') + '</button>' +
+            '</div>' +
           '</div>' +
           '<div id="dayEditorBookingsList" style="font-size: 0.8rem; display: flex; flex-direction: column; gap: 6px;"></div>' +
         '</div>' +
         '<div id="dayEditorAdminControls">' +
+          '<div class="editor-field" id="dayEditorCartLangsField">' +
+            '<label id="dayEditorCartLangsLabel" style="font-weight: 700;">📦 ' + (getLang() === "uk" ? "Мови візків (бейджі дня)" : (getLang() === "de" ? "Trolley-Sprachen (Tages-Badges)" : "Языки тележек (бейджи дня)")) + '</label>' +
+            '<div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 6px;">' +
+              '<div>' +
+                '<div style="font-size: 0.75rem; font-weight: 700; margin-bottom: 4px; color: var(--text-muted);">' + (dict.cart1Name || "Тележка №1") + '</div>' +
+                '<div class="status-options" id="dayEditorCart1LangOptions">' +
+                  '<button type="button" class="status-option cart-lang-btn" data-cart="1" data-lang="">—</button>' +
+                  '<button type="button" class="status-option cart-lang-btn" data-cart="1" data-lang="ru">RU</button>' +
+                  '<button type="button" class="status-option cart-lang-btn" data-cart="1" data-lang="ua">UA</button>' +
+                  '<button type="button" class="status-option cart-lang-btn" data-cart="1" data-lang="de">DE</button>' +
+                '</div>' +
+              '</div>' +
+              '<div>' +
+                '<div style="font-size: 0.75rem; font-weight: 700; margin-bottom: 4px; color: var(--text-muted);">' + (dict.cart2Name || "Тележка №2") + '</div>' +
+                '<div class="status-options" id="dayEditorCart2LangOptions">' +
+                  '<button type="button" class="status-option cart-lang-btn" data-cart="2" data-lang="">—</button>' +
+                  '<button type="button" class="status-option cart-lang-btn" data-cart="2" data-lang="ru">RU</button>' +
+                  '<button type="button" class="status-option cart-lang-btn" data-cart="2" data-lang="ua">UA</button>' +
+                  '<button type="button" class="status-option cart-lang-btn" data-cart="2" data-lang="de">DE</button>' +
+                '</div>' +
+              '</div>' +
+            '</div>' +
+          '</div>' +
           '<div class="editor-field"><label id="dayEditorStatusLabel">' + dict.statusLabel + '</label><div class="status-options" id="dayEditorStatus" data-lockable></div></div>' +
           '<div class="editor-field" data-lockable><label id="dayEditorDescLabel">' + dict.descLabel + '</label><textarea id="dayEditorDesc" maxlength="500"></textarea></div>' +
           '<div class="editor-field" data-lockable>' +
@@ -1889,21 +1915,30 @@ function buildApiUrl() {
     addDayTip("dayEditorNoteLabel", "note");
   }
 
-  function checkIsAdmin() {
-    if (window.currentUserRole === 'admin') return true;
-    if (window.AppState && AppState.authUser && AppState.authUser.role === 'admin') return true;
+  function isUserAdmin() {
+    if (window.currentUser && window.currentUser.role === 'admin') return true;
+    if (window.AppState && window.AppState.authUser && window.AppState.authUser.role === 'admin') return true;
     try {
       var stored = JSON.parse(localStorage.getItem("authUser"));
-      if (stored && stored.role === 'admin') return true;
+      if (stored && stored.role === 'admin') {
+        window.currentUser = stored;
+        if (window.AppState && !window.AppState.authUser) window.AppState.authUser = stored;
+        return true;
+      }
     } catch (e) {}
     return false;
+  }
+  window.isUserAdmin = isUserAdmin;
+
+  function checkIsAdmin() {
+    return isUserAdmin();
   }
 
   // Блокирует/разблокирует все поля редактирования дня (режим просмотра/редактирования)
   function setEditorLock(locked) {
     var modal = document.getElementById("dayEditorModal");
     if (!modal) return;
-    var isAdmin = checkIsAdmin();
+    var isAdmin = isUserAdmin();
 
     var descEl = document.getElementById("dayEditorDesc");
     var noteEl = document.getElementById("dayEditorNote");
@@ -1919,26 +1954,43 @@ function buildApiUrl() {
     var statusBox = document.getElementById("dayEditorStatus");
     if (statusBox) {
       var statusBtns = statusBox.querySelectorAll(".status-option");
+      var shouldLockStatus = locked || !isAdmin;
       for (var sb = 0; sb < statusBtns.length; sb++) {
-        if (locked || !isAdmin) {
+        if (shouldLockStatus) {
+          statusBtns[sb].setAttribute("disabled", "true");
+          statusBtns[sb].style.pointerEvents = "none";
+          statusBtns[sb].style.opacity = "0.7";
+          statusBtns[sb].style.cursor = "default";
+        } else {
           statusBtns[sb].removeAttribute("disabled");
           statusBtns[sb].style.pointerEvents = "";
+          statusBtns[sb].style.opacity = "";
+          statusBtns[sb].style.cursor = "";
         }
       }
     }
 
     var editBtn = document.getElementById("dayEditorEdit");
     var saveBtn = document.getElementById("dayEditorSave");
+    var adminControls = document.querySelectorAll("#dayEditorAdminControls, .admin-only-control, .admin-only");
+
     if (editBtn) editBtn.style.display = "none";
     if (saveBtn) saveBtn.style.display = isAdmin ? "inline-block" : "none";
+
+    if (adminControls && adminControls.length > 0) {
+      adminControls.forEach(function(el) {
+        el.style.display = isAdmin ? "block" : "none";
+      });
+    }
   }
 
   function enterEditMode() {
-    if (!checkIsAdmin()) return;
+    if (!isUserAdmin()) return;
     setEditorLock(false);
   }
 
   function applyQuickPreset(text) {
+    if (!isUserAdmin()) return;
     var note = document.getElementById("dayEditorNote");
     if (!note) return;
     if (note.disabled) enterEditMode();
@@ -1964,6 +2016,20 @@ function buildApiUrl() {
       tooltip.removeAttribute("data-active-date");
     }
     ensureDayEditor();
+    const dayEditorDateEl = document.getElementById("dayEditorDate");
+    const holidayNoticeEl = document.getElementById("dayEditorHolidayNotice");
+    const dayEditorStatusEl = document.getElementById("dayEditorStatus");
+    const descInput = document.getElementById("dayEditorDesc");
+    const noteInput = document.getElementById("dayEditorNote");
+    const saveBtn = document.getElementById("dayEditorSave");
+    const editBtn = document.getElementById("dayEditorEdit");
+    const cancelBtn = document.getElementById("dayEditorCancel");
+    const infoCard = document.getElementById("dayEditorInfoCard");
+    const modalEl = document.getElementById("dayEditorModal");
+    const bookingsList = document.getElementById("dayEditorBookingsList");
+    const gotoBtn = document.getElementById("btnGoToDateFromModal");
+    const bookBtn = document.getElementById("btnBookForDateFromModal");
+    const adminControls = document.querySelectorAll('#dayEditorAdminControls, .admin-only-control, .admin-only');
     var rows = scheduleIndex[date] || [];
     var cart1Rows = rows.filter(function (r) { return (parseInt(r.cartNumber, 10) || 1) === 1; });
     var cart2Rows = rows.filter(function (r) { return (parseInt(r.cartNumber, 10) || 1) === 2; });
@@ -1994,12 +2060,11 @@ function buildApiUrl() {
       if (!effectiveNote && rows[rj].note) effectiveNote = rows[rj].note;
     }
 
-    document.getElementById("dayEditorDate").textContent = formatDateHuman(date);
+    if (dayEditorDateEl) dayEditorDateEl.textContent = formatDateHuman(date);
 
     var yearNum = parseInt(date.split("-")[0], 10);
     var yearHolidays = getHolidaysForYear(yearNum);
     var holidayInfo = yearHolidays[date];
-    var holidayNoticeEl = document.getElementById("dayEditorHolidayNotice");
     if (holidayNoticeEl) {
       if (holidayInfo) {
         var lang = getLang();
@@ -2022,29 +2087,72 @@ function buildApiUrl() {
       }
     }
 
-    var opts = document.getElementById("dayEditorStatus");
-    opts.innerHTML = "";
+    if (dayEditorStatusEl) dayEditorStatusEl.innerHTML = "";
     var dict = I18N[getLang()];
+    var isAdminStatus = isUserAdmin();
     ALLOWED.forEach(function (st) {
       var b = document.createElement("button");
       b.type = "button";
       b.className = "status-option" + (st === editorState.status ? " active" : "");
       b.textContent = dict.statuses[st];
       b.dataset.status = st;
-      b.onclick = function () {
-        editorState.status = st;
-        var all = opts.querySelectorAll(".status-option");
-        for (var i = 0; i < all.length; i++) all[i].classList.toggle("active", all[i].dataset.status === st);
-      };
-      opts.appendChild(b);
+      if (isAdminStatus) {
+        b.onclick = function () {
+          editorState.status = st;
+          var all = dayEditorStatusEl.querySelectorAll(".status-option");
+          for (var i = 0; i < all.length; i++) all[i].classList.toggle("active", all[i].dataset.status === st);
+        };
+      } else {
+        // user: статус только для просмотра
+        b.setAttribute("disabled", "true");
+        b.style.pointerEvents = "none";
+        b.style.opacity = "0.75";
+        b.style.cursor = "default";
+      }
+      dayEditorStatusEl.appendChild(b);
     });
 
-    document.getElementById("dayEditorDesc").value = effectiveDesc;
-    document.getElementById("dayEditorNote").value = effectiveNote;
+    // Обновление и привязка кнопок выбора языковых бейджей для Тележки 1 и Тележки 2
+    [1, 2].forEach(function (cn) {
+      var optContainer = document.getElementById("dayEditorCart" + cn + "LangOptions");
+      if (!optContainer) return;
+      var curLang = (cn === 1 ? editorState.cart1Lang : editorState.cart2Lang) || "";
+      var btns = optContainer.querySelectorAll(".cart-lang-btn");
+      for (var i = 0; i < btns.length; i++) {
+        var b = btns[i];
+        var langVal = (b.dataset.lang || "").toLowerCase();
+        b.classList.toggle("active", langVal === (curLang || "").toLowerCase());
+        if (isAdminStatus) {
+          b.removeAttribute("disabled");
+          b.style.pointerEvents = "";
+          b.style.opacity = "";
+          b.style.cursor = "pointer";
+          b.onclick = (function (cartNum, langSetting) {
+            return function () {
+              if (cartNum === 1) editorState.cart1Lang = langSetting;
+              else editorState.cart2Lang = langSetting;
+              var siblings = optContainer.querySelectorAll(".cart-lang-btn");
+              for (var k = 0; k < siblings.length; k++) {
+                siblings[k].classList.toggle("active", (siblings[k].dataset.lang || "").toLowerCase() === langSetting.toLowerCase());
+              }
+            };
+          })(cn, langVal);
+        } else {
+          b.setAttribute("disabled", "true");
+          b.style.pointerEvents = "none";
+          b.style.opacity = "0.75";
+          b.style.cursor = "default";
+        }
+      }
+    });
+
+    if (descInput) descInput.value = effectiveDesc;
+    if (noteInput) noteInput.value = effectiveNote;
     updateDayEditorNoteBadge();
 
     // Заполнение подробного списка записей дня
     var dayBookings = (AppState.bookings || []).filter(function (b) { return b.date === date; });
+    var isAdminBooking = isUserAdmin();
     var bookingsHTML = "";
     if (dayBookings.length > 0) {
       dayBookings.forEach(function (b) {
@@ -2052,52 +2160,72 @@ function buildApiUrl() {
         var time = b.time || "";
         if (b.cart1Lang && (b.name1 || b.name2)) {
           var names1 = [b.name1, b.name2].filter(Boolean).join(" • ");
-          bookingsHTML += '<div style="background: var(--card-bg); padding: 8px; border-radius: var(--radius-sm); border: 1px solid var(--border);">' +
-            '<div style="font-weight: 700; color: var(--primary);">🕒 ' + time + ' | 📍 ' + loc + ' (📦 ' + (dict.cart1Name || 'Тележка №1 (Стенд 1)') + ' | ' + b.cart1Lang.toUpperCase() + ')</div>' +
-            '<div style="color: var(--text); margin-top: 2px;">👥 ' + names1 + '</div>' +
+          var editBtn1 = isAdminBooking
+            ? '<button type="button" onclick="SyncCore._closeDayEditor(); if(typeof openQuickBookingModal===\'function\') openQuickBookingModal(\'' + loc.replace(/'/g, "\\'") + '\', \'' + date + '\', \'' + time + '\', 1); else if(typeof goToDate===\'function\') goToDate(\'' + date + '\');" style="background: var(--primary); color: #fff; border: none; border-radius: 6px; padding: 5px 10px; font-size: 0.75rem; font-weight: 700; cursor: pointer; flex-shrink: 0;">✏️ Изменить</button>'
+            : '';
+          bookingsHTML += '<div style="background: var(--card-bg); padding: 8px 10px; border-radius: var(--radius-sm); border: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; gap: 8px;">' +
+            '<div>' +
+              '<div style="font-weight: 700; color: var(--primary);">🕒 ' + time + ' | 📍 ' + loc + ' (📦 ' + (dict.cart1Name || 'Тележка №1') + ' | ' + b.cart1Lang.toUpperCase() + ')</div>' +
+              '<div style="color: var(--text); margin-top: 2px;">👥 ' + escapeHtml(names1) + '</div>' +
+            '</div>' +
+            editBtn1 +
             '</div>';
         }
         if (b.cart2Lang && (b.name3 || b.name4)) {
           var names2 = [b.name3, b.name4].filter(Boolean).join(" • ");
-          bookingsHTML += '<div style="background: var(--card-bg); padding: 8px; border-radius: var(--radius-sm); border: 1px solid var(--border);">' +
-            '<div style="font-weight: 700; color: var(--primary);">🕒 ' + time + ' | 📍 ' + loc + ' (📦 ' + (dict.cart2Name || 'Тележка №2 (Стенд 2)') + ' | ' + b.cart2Lang.toUpperCase() + ')</div>' +
-            '<div style="color: var(--text); margin-top: 2px;">👥 ' + names2 + '</div>' +
+          var editBtn2 = isAdminBooking
+            ? '<button type="button" onclick="SyncCore._closeDayEditor(); if(typeof openQuickBookingModal===\'function\') openQuickBookingModal(\'' + loc.replace(/'/g, "\\'") + '\', \'' + date + '\', \'' + time + '\', 2); else if(typeof goToDate===\'function\') goToDate(\'' + date + '\');" style="background: var(--primary); color: #fff; border: none; border-radius: 6px; padding: 5px 10px; font-size: 0.75rem; font-weight: 700; cursor: pointer; flex-shrink: 0;">✏️ Изменить</button>'
+            : '';
+          bookingsHTML += '<div style="background: var(--card-bg); padding: 8px 10px; border-radius: var(--radius-sm); border: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; gap: 8px;">' +
+            '<div>' +
+              '<div style="font-weight: 700; color: var(--primary);">🕒 ' + time + ' | 📍 ' + loc + ' (📦 ' + (dict.cart2Name || 'Тележка №2') + ' | ' + b.cart2Lang.toUpperCase() + ')</div>' +
+              '<div style="color: var(--text); margin-top: 2px;">👥 ' + escapeHtml(names2) + '</div>' +
+            '</div>' +
+            editBtn2 +
             '</div>';
         }
       });
     }
     if (!bookingsHTML) {
-      bookingsHTML = '<div style="color: var(--text-muted); font-style: italic; padding: 4px 0;">' + (dict.noBookings || 'Записей на этот день нет (свободно)') + '</div>';
+      bookingsHTML = '<div style="color: var(--text-muted); font-style: italic; padding: 6px 0; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px;">' +
+        '<span>' + (dict.noBookings || 'Записей на этот день нет (свободно)') + '</span>' +
+        '<button type="button" onclick="SyncCore._closeDayEditor(); if(typeof openQuickBookingModal===\'function\') openQuickBookingModal(\'Марбург\', \'' + date + '\', \'09:00 - 11:00\', 1); else if(typeof goToDate===\'function\') goToDate(\'' + date + '\');" style="background: var(--primary); color: #ffffff; border: none; border-radius: 6px; padding: 6px 12px; font-size: 0.78rem; font-weight: 700; cursor: pointer;">➕ Записаться на этот день</button>' +
+        '</div>';
+    } else {
+      bookingsHTML += '<div style="margin-top: 6px; text-align: right;">' +
+        '<button type="button" onclick="SyncCore._closeDayEditor(); if(typeof goToDate===\'function\') goToDate(\'' + date + '\');" style="background: rgba(37,99,235,0.1); color: var(--primary); border: 1px solid rgba(37,99,235,0.2); border-radius: 6px; padding: 4px 10px; font-size: 0.75rem; font-weight: 700; cursor: pointer;">📅 В график недели</button>' +
+        '</div>';
     }
-    var listEl = document.getElementById("dayEditorBookingsList");
-    if (listEl) listEl.innerHTML = bookingsHTML;
+    if (bookingsList) bookingsList.innerHTML = bookingsHTML;
 
-    var gotoBtn = document.getElementById("btnGoToDateFromModal");
     if (gotoBtn) {
       gotoBtn.onclick = function () {
         closeDayEditor();
         if (typeof goToDate === "function") goToDate(date);
       };
     }
+    if (bookBtn) {
+      bookBtn.onclick = function () {
+        closeDayEditor();
+        if (typeof openQuickBookingModal === "function") {
+          openQuickBookingModal('Марбург', date, '09:00 - 11:00', 1);
+        } else if (typeof goToDate === "function") {
+          goToDate(date);
+        }
+      };
+    }
 
-    var dayEditorModalEl = document.getElementById("dayEditorModal");
-    if (dayEditorModalEl) {
-      var presetBtns = dayEditorModalEl.querySelectorAll("#dayEditorPresets .quick-preset-btn");
+    if (modalEl) {
+      var presetBtns = modalEl.querySelectorAll("#dayEditorPresets .quick-preset-btn");
       for (var pi = 0; pi < presetBtns.length; pi++) {
         presetBtns[pi].onclick = function () { applyQuickPreset(this.dataset.preset); };
       }
     }
 
-    var isAdmin = checkIsAdmin();
-    var adminControls = document.getElementById("dayEditorAdminControls");
-    var infoCard = document.getElementById("dayEditorInfoCard");
-    var saveBtn = document.getElementById("dayEditorSave");
-    var editBtn = document.getElementById("dayEditorEdit");
-    var cancelBtn = document.getElementById("dayEditorCancel");
-    var lang = getLang();
+    var isAdmin = isUserAdmin();
 
     if (isAdmin) {
-      if (adminControls) adminControls.style.display = "block";
+      if (adminControls && adminControls.length > 0) adminControls.forEach(el => { el.style.display = "block"; });
       if (infoCard) { infoCard.style.display = "none"; infoCard.innerHTML = ""; }
       if (saveBtn) saveBtn.style.display = "inline-block";
       if (editBtn) editBtn.style.display = "none";
@@ -2108,13 +2236,15 @@ function buildApiUrl() {
         yearMsgField.style.display = "block";
         var messages = (AppState && AppState.yearScheduleMessages) || {};
         var val = (lang === "de") ? (messages["de"] || "") : (messages[lang] || messages["ru"] || messages["ua"] || messages["uk"] || "");
-        document.getElementById("dayEditorYearMessage").value = val;
+        var yearMessageEl = document.getElementById("dayEditorYearMessage");
+        if (yearMessageEl) yearMessageEl.value = val;
       }
     } else {
-      if (adminControls) adminControls.style.display = "none";
+      if (adminControls && adminControls.length > 0) adminControls.forEach(el => { el.style.display = "none"; });
       if (saveBtn) saveBtn.style.display = "none";
       if (editBtn) editBtn.style.display = "none";
       if (cancelBtn) cancelBtn.textContent = (lang === "de" ? "Schließen" : (lang === "uk" || lang === "ua" ? "Закрити" : "Закрыть"));
+      setEditorLock(true);
 
       var infoHTML = "";
       var statusBadges = {
@@ -2150,7 +2280,7 @@ function buildApiUrl() {
       }
     }
 
-    document.getElementById("dayEditorModal").style.display = "flex";
+    if (modalEl) modalEl.style.display = "flex";
   }
 
   function updateDayEditorNoteBadge() {
@@ -2302,13 +2432,17 @@ function buildApiUrl() {
   }
 
   function saveDayFromEditor() {
+    if (!isUserAdmin()) {
+      showResult("error", (getLang() === "de" ? "Sie haben keine Berechtigung für diese Aktion" : ((getLang() === "uk" || getLang() === "ua") ? "У вас немає прав для виконання цієї дії" : "У вас нет прав для выполнения этого действия")));
+      return;
+    }
     var day = {
       date: editorState.date,
       cart1Lang: (editorState.cart1Lang || "").trim().toLowerCase(),
       cart2Lang: (editorState.cart2Lang || "").trim().toLowerCase(),
       status: editorState.status,
-      description: (document.getElementById("dayEditorDesc").value || "").trim(),
-      note: (document.getElementById("dayEditorNote").value || "").trim()
+      description: ((document.getElementById("dayEditorDesc") || {}).value || "").trim(),
+      note: ((document.getElementById("dayEditorNote") || {}).value || "").trim()
     };
     // Гарантия сохранения: сервер отклоняет статус «available» с пустой
     // тележкой, поэтому при наличии заметки/описания и отсутствии языка тележки
@@ -2444,6 +2578,9 @@ function buildApiUrl() {
 
   // Сохранение дня: валидация -> локально -> push на сервер (по тележкам)
   function saveDay(day) {
+    if (!isUserAdmin()) {
+      return Promise.reject(new Error("Access denied: Admin role required"));
+    }
     var err = validateDayForCart(day.cart1Lang, day.cart2Lang, day);
     if (err) return Promise.reject(new Error(err));
 
@@ -2565,6 +2702,10 @@ function buildApiUrl() {
   }
 
   function saveYearMessage() {
+    if (!isUserAdmin()) {
+      showResult("error", (getLang() === "de" ? "Sie haben keine Berechtigung für diese Aktion" : ((getLang() === "uk" || getLang() === "ua") ? "У вас немає прав для виконання цієї дії" : "У вас нет прав для выполнения этого действия")));
+      return;
+    }
     var textEl = document.getElementById("dayEditorYearMessage");
     if (!textEl) return;
     var msg = textEl.value.trim();
