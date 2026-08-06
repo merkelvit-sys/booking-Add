@@ -1143,6 +1143,61 @@ window.addEventListener('DOMContentLoaded', () => {
     });
   };
 
+  window.clearAllCacheAndReload = function() {
+    let confirmMsg = "Вы уверены, что хотите удалить весь кэш сайта и кэш уведомлений OneSignal? Это сбросит авторизацию и перезагрузит страницу.";
+    const lang = (localStorage.getItem("preferredLanguage") || document.documentElement.lang || "ru").toLowerCase();
+    if (lang === "de") {
+      confirmMsg = "Sind Sie sicher, dass Sie den gesamten Website-Cache und den OneSignal-Benachrichtigungs-Cache löschen möchten? Dadurch wird die Autorisierung zurückgesetzt und die Seite neu geladen.";
+    } else if (lang === "ua" || lang === "uk") {
+      confirmMsg = "Ви впевнені, що хочете видалити весь кеш сайту та кеш сповіщень OneSignal? Це скине авторизацію та перезавантажить сторінку.";
+    }
+
+    if (confirm(confirmMsg)) {
+      // 1. Очищаем localStorage и sessionStorage
+      try {
+        localStorage.clear();
+        sessionStorage.clear();
+      } catch (e) {}
+
+      // 2. Удаляем все базы данных IndexedDB (включая базы данных OneSignal)
+      if (window.indexedDB && indexedDB.databases) {
+        indexedDB.databases().then(databases => {
+          databases.forEach(db => {
+            try {
+              indexedDB.deleteDatabase(db.name);
+            } catch (e) {}
+          });
+        }).catch(() => {});
+      } else {
+        // Резервный вариант удаления известных баз OneSignal
+        try { indexedDB.deleteDatabase("OneSignalSDKDatabase"); } catch (e) {}
+        try { indexedDB.deleteDatabase("OneSignal"); } catch (e) {}
+      }
+
+      // 3. Очищаем Cache Storage
+      if (window.caches && caches.keys) {
+        caches.keys().then(keys => {
+          Promise.all(keys.map(key => caches.delete(key))).catch(() => {});
+        }).catch(() => {});
+      }
+
+      // 4. Отключаем Service Workers и перезагружаем страницу
+      if (navigator.serviceWorker) {
+        navigator.serviceWorker.getRegistrations().then(registrations => {
+          Promise.all(registrations.map(reg => reg.unregister())).then(() => {
+            setTimeout(() => { window.location.reload(); }, 300);
+          }).catch(() => {
+            setTimeout(() => { window.location.reload(); }, 300);
+          });
+        }).catch(() => {
+          setTimeout(() => { window.location.reload(); }, 300);
+        });
+      } else {
+        setTimeout(() => { window.location.reload(); }, 300);
+      }
+    }
+  };
+
   function initOneSignalIfAuth() {
     const user = typeof getAuthUser === 'function' ? getAuthUser() : null;
     if (!user || !user.email) {
