@@ -1829,14 +1829,34 @@ function buildApiUrl() {
         '<div class="day-editor-bookings-card" id="dayEditorBookingsCard" style="background: rgba(120,120,120,0.06); border: 1px solid var(--border); border-radius: var(--radius-md); padding: 12px; margin-bottom: 12px;">' +
           '<div style="font-weight: 700; font-size: 0.85rem; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 6px;">' +
             '<span>' + (dict.bookingsTitle || '📋 Записи на этот день:') + '</span>' +
-            '<div style="display: flex; gap: 6px; align-items: center;">' +
-              '<button type="button" id="btnBookForDateFromModal" class="btn-book-date" style="background: var(--primary); color: #ffffff; border: none; border-radius: var(--radius-sm); padding: 4px 10px; font-size: 0.75rem; font-weight: 700; cursor: pointer; display: inline-flex; align-items: center; gap: 4px;">➕ Записаться</button>' +
-              '<button type="button" id="btnGoToDateFromModal" class="btn-goto-date" style="background: var(--primary-container); color: var(--primary); border: 1px solid var(--primary); border-radius: var(--radius-sm); padding: 4px 8px; font-size: 0.75rem; font-weight: 700; cursor: pointer;">' + (dict.goToSchedule || '📅 В график') + '</button>' +
-            '</div>' +
+            '<button type="button" id="btnGoToDateFromModal" class="btn-goto-date" style="background: var(--primary-container); color: var(--primary); border: 1px solid var(--primary); border-radius: var(--radius-sm); padding: 4px 8px; font-size: 0.75rem; font-weight: 700; cursor: pointer;">' + (dict.goToSchedule || '📅 В график') + '</button>' +
           '</div>' +
           '<div id="dayEditorBookingsList" style="font-size: 0.8rem; display: flex; flex-direction: column; gap: 6px;"></div>' +
         '</div>' +
         '<div id="dayEditorAdminControls">' +
+          '<div class="editor-field" id="dayEditorCartLangsField">' +
+            '<label id="dayEditorCartLangsLabel" style="font-weight: 700;">📦 ' + (getLang() === "uk" ? "Мови візків (бейджі дня)" : (getLang() === "de" ? "Trolley-Sprachen (Tages-Badges)" : "Языки тележек (бейджи дня)")) + '</label>' +
+            '<div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 6px;">' +
+              '<div>' +
+                '<div style="font-size: 0.75rem; font-weight: 700; margin-bottom: 4px; color: var(--text-muted);">' + (dict.cart1Name || "Тележка №1") + '</div>' +
+                '<div class="status-options" id="dayEditorCart1LangOptions">' +
+                  '<button type="button" class="status-option cart-lang-btn" data-cart="1" data-lang="">—</button>' +
+                  '<button type="button" class="status-option cart-lang-btn" data-cart="1" data-lang="ru">RU</button>' +
+                  '<button type="button" class="status-option cart-lang-btn" data-cart="1" data-lang="ua">UA</button>' +
+                  '<button type="button" class="status-option cart-lang-btn" data-cart="1" data-lang="de">DE</button>' +
+                '</div>' +
+              '</div>' +
+              '<div>' +
+                '<div style="font-size: 0.75rem; font-weight: 700; margin-bottom: 4px; color: var(--text-muted);">' + (dict.cart2Name || "Тележка №2") + '</div>' +
+                '<div class="status-options" id="dayEditorCart2LangOptions">' +
+                  '<button type="button" class="status-option cart-lang-btn" data-cart="2" data-lang="">—</button>' +
+                  '<button type="button" class="status-option cart-lang-btn" data-cart="2" data-lang="ru">RU</button>' +
+                  '<button type="button" class="status-option cart-lang-btn" data-cart="2" data-lang="ua">UA</button>' +
+                  '<button type="button" class="status-option cart-lang-btn" data-cart="2" data-lang="de">DE</button>' +
+                '</div>' +
+              '</div>' +
+            '</div>' +
+          '</div>' +
           '<div class="editor-field"><label id="dayEditorStatusLabel">' + dict.statusLabel + '</label><div class="status-options" id="dayEditorStatus" data-lockable></div></div>' +
           '<div class="editor-field" data-lockable><label id="dayEditorDescLabel">' + dict.descLabel + '</label><textarea id="dayEditorDesc" maxlength="500"></textarea></div>' +
           '<div class="editor-field" data-lockable>' +
@@ -1892,64 +1912,114 @@ function buildApiUrl() {
     addDayTip("dayEditorNoteLabel", "note");
   }
 
-  function checkIsAdmin() {
-    if (window.currentUserRole === 'admin') return true;
-    if (window.AppState && AppState.authUser && AppState.authUser.role === 'admin') return true;
+  function isUserAdmin() {
+    if (window.currentUser && window.currentUser.role === 'admin') return true;
+    if (window.AppState && window.AppState.authUser && window.AppState.authUser.role === 'admin') return true;
     try {
       var stored = JSON.parse(localStorage.getItem("authUser"));
-      if (stored && stored.role === 'admin') return true;
+      if (stored && stored.role === 'admin') {
+        window.currentUser = stored;
+        if (window.AppState && !window.AppState.authUser) window.AppState.authUser = stored;
+        return true;
+      }
     } catch (e) {}
     return false;
+  }
+  window.isUserAdmin = isUserAdmin;
+
+  function checkIsAdmin() {
+    return isUserAdmin();
   }
 
   // Блокирует/разблокирует все поля редактирования дня (режим просмотра/редактирования)
   function setEditorLock(locked) {
     var modal = document.getElementById("dayEditorModal");
     if (!modal) return;
-    var isAdmin = checkIsAdmin();
+    var isAdmin = isUserAdmin();
+    var shouldLock = locked || !isAdmin;
 
-    var descEl = document.getElementById("dayEditorDesc");
-    var noteEl = document.getElementById("dayEditorNote");
-    if (descEl) {
-      descEl.disabled = locked || !isAdmin;
-      descEl.readOnly = locked || !isAdmin;
-    }
-    if (noteEl) {
-      noteEl.disabled = locked || !isAdmin;
-      noteEl.readOnly = locked || !isAdmin;
+    var textareas = [
+      document.getElementById("dayEditorDesc"),
+      document.getElementById("dayEditorNote"),
+      document.getElementById("dayEditorYearMessage")
+    ];
+
+    textareas.forEach(function (el) {
+      if (!el) return;
+      if (shouldLock) {
+        el.disabled = true;
+        el.readOnly = true;
+        el.setAttribute("disabled", "true");
+        el.setAttribute("readonly", "true");
+        el.style.pointerEvents = "none";
+        el.style.opacity = "0.65";
+        el.style.cursor = "not-allowed";
+      } else {
+        el.disabled = false;
+        el.readOnly = false;
+        el.removeAttribute("disabled");
+        el.removeAttribute("readonly");
+        el.style.pointerEvents = "auto";
+        el.style.opacity = "1";
+        el.style.cursor = "text";
+        el.style.backgroundColor = "var(--card-bg, #ffffff)";
+        el.style.color = "var(--text, #1e293b)";
+      }
+    });
+
+    var presetBtns = modal.querySelectorAll(".quick-preset-btn");
+    for (var pb = 0; pb < presetBtns.length; pb++) {
+      if (shouldLock) {
+        presetBtns[pb].setAttribute("disabled", "true");
+        presetBtns[pb].style.pointerEvents = "none";
+        presetBtns[pb].style.opacity = "0.65";
+      } else {
+        presetBtns[pb].removeAttribute("disabled");
+        presetBtns[pb].style.pointerEvents = "auto";
+        presetBtns[pb].style.opacity = "1";
+        presetBtns[pb].style.cursor = "pointer";
+      }
     }
 
     var statusBox = document.getElementById("dayEditorStatus");
     if (statusBox) {
       var statusBtns = statusBox.querySelectorAll(".status-option");
-      var shouldLockStatus = locked || !isAdmin;
       for (var sb = 0; sb < statusBtns.length; sb++) {
-        if (shouldLockStatus) {
+        if (shouldLock) {
           statusBtns[sb].setAttribute("disabled", "true");
           statusBtns[sb].style.pointerEvents = "none";
           statusBtns[sb].style.opacity = "0.7";
           statusBtns[sb].style.cursor = "default";
         } else {
           statusBtns[sb].removeAttribute("disabled");
-          statusBtns[sb].style.pointerEvents = "";
-          statusBtns[sb].style.opacity = "";
-          statusBtns[sb].style.cursor = "";
+          statusBtns[sb].style.pointerEvents = "auto";
+          statusBtns[sb].style.opacity = "1";
+          statusBtns[sb].style.cursor = "pointer";
         }
       }
     }
 
     var editBtn = document.getElementById("dayEditorEdit");
     var saveBtn = document.getElementById("dayEditorSave");
+    var adminControls = document.querySelectorAll("#dayEditorAdminControls, .admin-only-control, .admin-only");
+
     if (editBtn) editBtn.style.display = "none";
     if (saveBtn) saveBtn.style.display = isAdmin ? "inline-block" : "none";
+
+    if (adminControls && adminControls.length > 0) {
+      adminControls.forEach(function(el) {
+        el.style.display = isAdmin ? "block" : "none";
+      });
+    }
   }
 
   function enterEditMode() {
-    if (!checkIsAdmin()) return;
+    if (!isUserAdmin()) return;
     setEditorLock(false);
   }
 
   function applyQuickPreset(text) {
+    if (!isUserAdmin()) return;
     var note = document.getElementById("dayEditorNote");
     if (!note) return;
     if (note.disabled) enterEditMode();
@@ -1988,7 +2058,7 @@ function buildApiUrl() {
     const bookingsList = document.getElementById("dayEditorBookingsList");
     const gotoBtn = document.getElementById("btnGoToDateFromModal");
     const bookBtn = document.getElementById("btnBookForDateFromModal");
-    const adminControls = document.querySelectorAll('.admin-only-control, .admin-only');
+    const adminControls = document.querySelectorAll('#dayEditorAdminControls, .admin-only-control, .admin-only');
     var rows = scheduleIndex[date] || [];
     var cart1Rows = rows.filter(function (r) { return (parseInt(r.cartNumber, 10) || 1) === 1; });
     var cart2Rows = rows.filter(function (r) { return (parseInt(r.cartNumber, 10) || 1) === 2; });
@@ -2048,7 +2118,7 @@ function buildApiUrl() {
 
     if (dayEditorStatusEl) dayEditorStatusEl.innerHTML = "";
     var dict = I18N[getLang()];
-    var isAdminStatus = checkIsAdmin();
+    var isAdminStatus = isUserAdmin();
     ALLOWED.forEach(function (st) {
       var b = document.createElement("button");
       b.type = "button";
@@ -2071,13 +2141,47 @@ function buildApiUrl() {
       dayEditorStatusEl.appendChild(b);
     });
 
+    // Обновление и привязка кнопок выбора языковых бейджей для Тележки 1 и Тележки 2
+    [1, 2].forEach(function (cn) {
+      var optContainer = document.getElementById("dayEditorCart" + cn + "LangOptions");
+      if (!optContainer) return;
+      var curLang = (cn === 1 ? editorState.cart1Lang : editorState.cart2Lang) || "";
+      var btns = optContainer.querySelectorAll(".cart-lang-btn");
+      for (var i = 0; i < btns.length; i++) {
+        var b = btns[i];
+        var langVal = (b.dataset.lang || "").toLowerCase();
+        b.classList.toggle("active", langVal === (curLang || "").toLowerCase());
+        if (isAdminStatus) {
+          b.removeAttribute("disabled");
+          b.style.pointerEvents = "";
+          b.style.opacity = "";
+          b.style.cursor = "pointer";
+          b.onclick = (function (cartNum, langSetting) {
+            return function () {
+              if (cartNum === 1) editorState.cart1Lang = langSetting;
+              else editorState.cart2Lang = langSetting;
+              var siblings = optContainer.querySelectorAll(".cart-lang-btn");
+              for (var k = 0; k < siblings.length; k++) {
+                siblings[k].classList.toggle("active", (siblings[k].dataset.lang || "").toLowerCase() === langSetting.toLowerCase());
+              }
+            };
+          })(cn, langVal);
+        } else {
+          b.setAttribute("disabled", "true");
+          b.style.pointerEvents = "none";
+          b.style.opacity = "0.75";
+          b.style.cursor = "default";
+        }
+      }
+    });
+
     if (descInput) descInput.value = effectiveDesc;
     if (noteInput) noteInput.value = effectiveNote;
     updateDayEditorNoteBadge();
 
     // Заполнение подробного списка записей дня
     var dayBookings = (AppState.bookings || []).filter(function (b) { return b.date === date; });
-    var isAdminBooking = checkIsAdmin();
+    var isAdminBooking = isUserAdmin();
     var bookingsHTML = "";
     if (dayBookings.length > 0) {
       dayBookings.forEach(function (b) {
@@ -2114,29 +2218,19 @@ function buildApiUrl() {
     if (!bookingsHTML) {
       bookingsHTML = '<div style="color: var(--text-muted); font-style: italic; padding: 6px 0; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px;">' +
         '<span>' + (dict.noBookings || 'Записей на этот день нет (свободно)') + '</span>' +
-        '<button type="button" onclick="SyncCore._closeDayEditor(); if(typeof openQuickBookingModal===\'function\') openQuickBookingModal(\'Марбург\', \'' + date + '\', \'09:00 - 11:00\', 1); else if(typeof goToDate===\'function\') goToDate(\'' + date + '\');" style="background: var(--primary); color: #ffffff; border: none; border-radius: 6px; padding: 6px 12px; font-size: 0.78rem; font-weight: 700; cursor: pointer;">➕ Записаться на этот день</button>' +
+        '<button type="button" onclick="SyncCore._closeDayEditor(); if(typeof openQuickBookingModal===\'function\') openQuickBookingModal(\'Марбург\', \'' + date + '\', \'09:00 - 11:00\', 1); else if(typeof goToDate===\'function\') goToDate(\'' + date + '\');" style="background: var(--primary); color: #ffffff; border: none; border-radius: 6px; padding: 6px 12px; font-size: 0.78rem; font-weight: 700; cursor: pointer;">➕ ' + (getLang() === 'uk' ? 'Записатися' : (getLang() === 'de' ? 'Eintragen' : 'Записаться')) + '</button>' +
         '</div>';
     } else {
-      bookingsHTML += '<div style="margin-top: 6px; text-align: right;">' +
-        '<button type="button" onclick="SyncCore._closeDayEditor(); if(typeof goToDate===\'function\') goToDate(\'' + date + '\');" style="background: rgba(37,99,235,0.1); color: var(--primary); border: 1px solid rgba(37,99,235,0.2); border-radius: 6px; padding: 4px 10px; font-size: 0.75rem; font-weight: 700; cursor: pointer;">📅 В график недели</button>' +
+      bookingsHTML += '<div style="margin-top: 8px; text-align: left;">' +
+        '<button type="button" onclick="SyncCore._closeDayEditor(); if(typeof openQuickBookingModal===\'function\') openQuickBookingModal(\'Марбург\', \'' + date + '\', \'09:00 - 11:00\', 1); else if(typeof goToDate===\'function\') goToDate(\'' + date + '\');" style="background: var(--primary); color: #ffffff; border: none; border-radius: 6px; padding: 6px 12px; font-size: 0.78rem; font-weight: 700; cursor: pointer;">➕ ' + (getLang() === 'uk' ? 'Додати ще один запис' : (getLang() === 'de' ? 'Weitere Buchung hinzufügen' : 'Добавить еще запись')) + '</button>' +
         '</div>';
     }
     if (bookingsList) bookingsList.innerHTML = bookingsHTML;
 
     if (gotoBtn) {
       gotoBtn.onclick = function () {
-        closeDayEditor();
+        SyncCore._closeDayEditor();
         if (typeof goToDate === "function") goToDate(date);
-      };
-    }
-    if (bookBtn) {
-      bookBtn.onclick = function () {
-        closeDayEditor();
-        if (typeof openQuickBookingModal === "function") {
-          openQuickBookingModal('Марбург', date, '09:00 - 11:00', 1);
-        } else if (typeof goToDate === "function") {
-          goToDate(date);
-        }
       };
     }
 
@@ -2147,7 +2241,7 @@ function buildApiUrl() {
       }
     }
 
-    var isAdmin = checkIsAdmin();
+    var isAdmin = isUserAdmin();
 
     if (isAdmin) {
       if (adminControls && adminControls.length > 0) adminControls.forEach(el => { el.style.display = "block"; });
@@ -2357,6 +2451,10 @@ function buildApiUrl() {
   }
 
   function saveDayFromEditor() {
+    if (!isUserAdmin()) {
+      showResult("error", (getLang() === "de" ? "Sie haben keine Berechtigung für diese Aktion" : ((getLang() === "uk" || getLang() === "ua") ? "У вас немає прав для виконання цієї дії" : "У вас нет прав для выполнения этого действия")));
+      return;
+    }
     var day = {
       date: editorState.date,
       cart1Lang: (editorState.cart1Lang || "").trim().toLowerCase(),
@@ -2499,6 +2597,9 @@ function buildApiUrl() {
 
   // Сохранение дня: валидация -> локально -> push на сервер (по тележкам)
   function saveDay(day) {
+    if (!isUserAdmin()) {
+      return Promise.reject(new Error("Access denied: Admin role required"));
+    }
     var err = validateDayForCart(day.cart1Lang, day.cart2Lang, day);
     if (err) return Promise.reject(new Error(err));
 
@@ -2620,6 +2721,10 @@ function buildApiUrl() {
   }
 
   function saveYearMessage() {
+    if (!isUserAdmin()) {
+      showResult("error", (getLang() === "de" ? "Sie haben keine Berechtigung für diese Aktion" : ((getLang() === "uk" || getLang() === "ua") ? "У вас немає прав для виконання цієї дії" : "У вас нет прав для выполнения этого действия")));
+      return;
+    }
     var textEl = document.getElementById("dayEditorYearMessage");
     if (!textEl) return;
     var msg = textEl.value.trim();

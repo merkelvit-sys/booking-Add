@@ -10,17 +10,17 @@ try {
   console.warn('[SW] OneSignal import skipped/failed:', e);
 }
 
-const CACHE_VER = 'v75';
-const CACHE_NAME = 'service-schedule-v75';
+const CACHE_VER = 'v79';
+const CACHE_NAME = 'service-schedule-v79';
 const ASSETS = [
   './',
   './index.html',
   './index_ua.html',
   './index_de.html',
-  './app.js?v=77',
+  './app.js?v=79',
   './trolley.js',
-  './app-sync.js?v=77',
-  './app-sync.css?v=77',
+  './app-sync.js?v=79',
+  './app-sync.css?v=79',
   './icon.svg',
   './icon-192.png',
   './icon-512.png',
@@ -32,7 +32,6 @@ const ASSETS = [
 ];
 
 self.addEventListener('install', (event) => {
-  self.skipWaiting();
   event.waitUntil(
     caches.open(CACHE_NAME).then((cache) => {
       return Promise.allSettled(
