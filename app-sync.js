@@ -1975,6 +1975,20 @@ function buildApiUrl() {
       tooltip.removeAttribute("data-active-date");
     }
     ensureDayEditor();
+    const dayEditorDateEl = document.getElementById("dayEditorDate");
+    const holidayNoticeEl = document.getElementById("dayEditorHolidayNotice");
+    const dayEditorStatusEl = document.getElementById("dayEditorStatus");
+    const descInput = document.getElementById("dayEditorDesc");
+    const noteInput = document.getElementById("dayEditorNote");
+    const saveBtn = document.getElementById("dayEditorSave");
+    const editBtn = document.getElementById("dayEditorEdit");
+    const cancelBtn = document.getElementById("dayEditorCancel");
+    const infoCard = document.getElementById("dayEditorInfoCard");
+    const modalEl = document.getElementById("dayEditorModal");
+    const bookingsList = document.getElementById("dayEditorBookingsList");
+    const gotoBtn = document.getElementById("btnGoToDateFromModal");
+    const bookBtn = document.getElementById("btnBookForDateFromModal");
+    const adminControls = document.querySelectorAll('.admin-only-control, .admin-only');
     var rows = scheduleIndex[date] || [];
     var cart1Rows = rows.filter(function (r) { return (parseInt(r.cartNumber, 10) || 1) === 1; });
     var cart2Rows = rows.filter(function (r) { return (parseInt(r.cartNumber, 10) || 1) === 2; });
@@ -2005,12 +2019,11 @@ function buildApiUrl() {
       if (!effectiveNote && rows[rj].note) effectiveNote = rows[rj].note;
     }
 
-    document.getElementById("dayEditorDate").textContent = formatDateHuman(date);
+    if (dayEditorDateEl) dayEditorDateEl.textContent = formatDateHuman(date);
 
     var yearNum = parseInt(date.split("-")[0], 10);
     var yearHolidays = getHolidaysForYear(yearNum);
     var holidayInfo = yearHolidays[date];
-    var holidayNoticeEl = document.getElementById("dayEditorHolidayNotice");
     if (holidayNoticeEl) {
       if (holidayInfo) {
         var lang = getLang();
@@ -2033,8 +2046,7 @@ function buildApiUrl() {
       }
     }
 
-    var opts = document.getElementById("dayEditorStatus");
-    opts.innerHTML = "";
+    if (dayEditorStatusEl) dayEditorStatusEl.innerHTML = "";
     var dict = I18N[getLang()];
     var isAdminStatus = checkIsAdmin();
     ALLOWED.forEach(function (st) {
@@ -2046,7 +2058,7 @@ function buildApiUrl() {
       if (isAdminStatus) {
         b.onclick = function () {
           editorState.status = st;
-          var all = opts.querySelectorAll(".status-option");
+          var all = dayEditorStatusEl.querySelectorAll(".status-option");
           for (var i = 0; i < all.length; i++) all[i].classList.toggle("active", all[i].dataset.status === st);
         };
       } else {
@@ -2056,11 +2068,11 @@ function buildApiUrl() {
         b.style.opacity = "0.75";
         b.style.cursor = "default";
       }
-      opts.appendChild(b);
+      dayEditorStatusEl.appendChild(b);
     });
 
-    document.getElementById("dayEditorDesc").value = effectiveDesc;
-    document.getElementById("dayEditorNote").value = effectiveNote;
+    if (descInput) descInput.value = effectiveDesc;
+    if (noteInput) noteInput.value = effectiveNote;
     updateDayEditorNoteBadge();
 
     // Заполнение подробного списка записей дня
@@ -2109,17 +2121,14 @@ function buildApiUrl() {
         '<button type="button" onclick="SyncCore._closeDayEditor(); if(typeof goToDate===\'function\') goToDate(\'' + date + '\');" style="background: rgba(37,99,235,0.1); color: var(--primary); border: 1px solid rgba(37,99,235,0.2); border-radius: 6px; padding: 4px 10px; font-size: 0.75rem; font-weight: 700; cursor: pointer;">📅 В график недели</button>' +
         '</div>';
     }
-    var listEl = document.getElementById("dayEditorBookingsList");
-    if (listEl) listEl.innerHTML = bookingsHTML;
+    if (bookingsList) bookingsList.innerHTML = bookingsHTML;
 
-    var gotoBtn = document.getElementById("btnGoToDateFromModal");
     if (gotoBtn) {
       gotoBtn.onclick = function () {
         closeDayEditor();
         if (typeof goToDate === "function") goToDate(date);
       };
     }
-    var bookBtn = document.getElementById("btnBookForDateFromModal");
     if (bookBtn) {
       bookBtn.onclick = function () {
         closeDayEditor();
@@ -2131,17 +2140,14 @@ function buildApiUrl() {
       };
     }
 
-    var dayEditorModalEl = document.getElementById("dayEditorModal");
-    if (dayEditorModalEl) {
-      var presetBtns = dayEditorModalEl.querySelectorAll("#dayEditorPresets .quick-preset-btn");
+    if (modalEl) {
+      var presetBtns = modalEl.querySelectorAll("#dayEditorPresets .quick-preset-btn");
       for (var pi = 0; pi < presetBtns.length; pi++) {
         presetBtns[pi].onclick = function () { applyQuickPreset(this.dataset.preset); };
       }
     }
 
     var isAdmin = checkIsAdmin();
-
-    const adminControls = document.querySelectorAll('.admin-only-control, .admin-only');
 
     if (isAdmin) {
       if (adminControls && adminControls.length > 0) adminControls.forEach(el => { el.style.display = "block"; });
@@ -2155,7 +2161,8 @@ function buildApiUrl() {
         yearMsgField.style.display = "block";
         var messages = (AppState && AppState.yearScheduleMessages) || {};
         var val = (lang === "de") ? (messages["de"] || "") : (messages[lang] || messages["ru"] || messages["ua"] || messages["uk"] || "");
-        document.getElementById("dayEditorYearMessage").value = val;
+        var yearMessageEl = document.getElementById("dayEditorYearMessage");
+        if (yearMessageEl) yearMessageEl.value = val;
       }
     } else {
       if (adminControls && adminControls.length > 0) adminControls.forEach(el => { el.style.display = "none"; });
@@ -2198,7 +2205,7 @@ function buildApiUrl() {
       }
     }
 
-    document.getElementById("dayEditorModal").style.display = "flex";
+    if (modalEl) modalEl.style.display = "flex";
   }
 
   function updateDayEditorNoteBadge() {
@@ -2355,8 +2362,8 @@ function buildApiUrl() {
       cart1Lang: (editorState.cart1Lang || "").trim().toLowerCase(),
       cart2Lang: (editorState.cart2Lang || "").trim().toLowerCase(),
       status: editorState.status,
-      description: (document.getElementById("dayEditorDesc").value || "").trim(),
-      note: (document.getElementById("dayEditorNote").value || "").trim()
+      description: ((document.getElementById("dayEditorDesc") || {}).value || "").trim(),
+      note: ((document.getElementById("dayEditorNote") || {}).value || "").trim()
     };
     // Гарантия сохранения: сервер отклоняет статус «available» с пустой
     // тележкой, поэтому при наличии заметки/описания и отсутствии языка тележки
