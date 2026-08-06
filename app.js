@@ -2969,7 +2969,7 @@ async function handleFormSubmit(e) {
       body: JSON.stringify({
         action: 'create',
         key: 'jw_144000',
-        language: (window.SyncCore && SyncCore.getLang) ? SyncCore.getLang() : (document.documentElement.lang || 'ru'),
+        language: (window.SyncCore && SyncCore.getApiLang) ? SyncCore.getApiLang() : ((document.documentElement.lang || 'ru') === 'uk' ? 'ua' : (document.documentElement.lang || 'ru')),
         sendPush: false,
         bookings: bookingRecords
       })
@@ -3200,7 +3200,7 @@ async function deleteBooking(location, date, time, cartNumber) {
         date: date,
         time: time,
         cartNumber: String(cartNumber),
-        language: (window.SyncCore && SyncCore.getLang) ? SyncCore.getLang() : (document.documentElement.lang || 'ru'),
+        language: (window.SyncCore && SyncCore.getApiLang) ? SyncCore.getApiLang() : ((document.documentElement.lang || 'ru') === 'uk' ? 'ua' : (document.documentElement.lang || 'ru')),
         key: "jw_144000"
       });
       const _fetchDel = (window.SyncCore && SyncCore.fetchWithRetry) ? SyncCore.fetchWithRetry : fetch;
@@ -4529,7 +4529,7 @@ async function submitQuickBooking(e) {
         body: JSON.stringify({
           action: 'create',
           key: 'jw_144000',
-          language: (window.SyncCore && SyncCore.getLang) ? SyncCore.getLang() : (document.documentElement.lang || 'ru'),
+          language: (window.SyncCore && SyncCore.getApiLang) ? SyncCore.getApiLang() : ((document.documentElement.lang || 'ru') === 'uk' ? 'ua' : (document.documentElement.lang || 'ru')),
           sendPush: sendPush,
           bookings: [record]
         })
