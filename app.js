@@ -5119,3 +5119,26 @@ function hapticFeedback(pattern = 40) {
   }
 }
 window.hapticFeedback = hapticFeedback;
+
+// ----- Collapsible Header Settings Menu -----
+function toggleHeaderMenu() {
+  const dropdown = document.getElementById('headerMenuDropdown');
+  const btn = document.getElementById('btnToggleHeaderMenu');
+  if (dropdown && btn) {
+    const isOpen = dropdown.classList.toggle('open');
+    btn.classList.toggle('active', isOpen);
+    localStorage.setItem('headerMenuOpen', isOpen ? '1' : '0');
+    hapticFeedback(15);
+  }
+}
+window.toggleHeaderMenu = toggleHeaderMenu;
+
+document.addEventListener('DOMContentLoaded', () => {
+  const isOpen = localStorage.getItem('headerMenuOpen') === '1';
+  const dropdown = document.getElementById('headerMenuDropdown');
+  const btn = document.getElementById('btnToggleHeaderMenu');
+  if (dropdown && btn && isOpen) {
+    dropdown.classList.add('open');
+    btn.classList.add('active');
+  }
+});
