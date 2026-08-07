@@ -371,16 +371,21 @@ const I18N = {
           "Зазвичай із візком проповідники служать удвох. Проповідникам слід завжди бути насторожі, оскільки умови в зазвичай безпечному районі можуть раптово змінитися (<span class='bible-ref'>Прип. 22:3; Еккл. 4:10, 12</span>). З міркувань безпеки краще розміщувати візки та столи так, щоб до проповідників не можна було підійти ззаду. Наприклад, у деяких місцях можна стояти спиною до стіни або направити візки спинами один до одного, щоб проповідники дивилися в протилежні боки. Проповідники, що служать неподалік від візків, повинні стежити за тим, що відбувається довкола в районі. Якщо ви служите поблизу проїжджої частини, за можливості розташуйте візки та столи за бетонним або іншим огородженням. Зверніть увагу: якщо поліція просить проповідників піти, вони повинні підкоритися й повідомити про це одному зі старійшин."
         ]
       },
-      {
+            {
         icon: "⚠️",
         title: "5. Особливі ситуації (Порушники, Виключені, ЗМІ)",
         items: [
-          "Особи, що порушують порядок: Не сперечайтеся з тим, хто порушує порядок. Залишайтеся спокійними й дружелюбними й намагайтеся закінчити розмову доброзичливо. Якщо людина й далі поводиться неподобаюче або стає агресивною, залиште цю місцевість. Якщо людина становить загрозу, можливо, доведеться піти, залишивши на час обладнання для служіння. У надзвичайних ситуаціях звертайтеся по допомогу до місцевої влади.",
+          "Особи, що порушують порядок: Не сперечайтеся з тим, хто порушує порядок. Залишайтеся спокійними й дружелюбними й намагайтеся закінчити розмову доброзичливо. Якщо людина й далі поводиться неналежно або стає агресивною, залишіть цю місцевість. Якщо людина становить загрозу, можливо, доведеться піти, залишивши на час обладнання для служіння. У надзвичайних ситуаціях звертайтеся по допомогу до місцевої влади.",
           "Виключені: Якщо підійде виключений, який бажає повернутися до зібрання, ви можете просто показати йому сторінку «Знайти зустрічі» на сайті jw.org, щоб він міг відвідати найближче до нього зібрання.",
           "ЗМІ: Як правило, вам не слід погоджуватися на пропозицію представника засобів масової інформації про особисте інтерв'ю. Натомість зверніть їхню увагу на розділи «Новини» та «Про нас» на сайті jw.org, де вони можуть отримати інформацію про діяльність Свідків Єгови. Якщо представник ЗМІ наполягає на своєму проханні, йому можна запропонувати залишити свої контактні дані та короткий опис своїх запитань, згідно із законом про захист персональних даних. Після цього відразу повідомте одному зі старійшин про прохання представника ЗМІ."
         ]
       }
-    ]
+    ],
+    addCalendarPrompt: "Бажаєте додати цю зміну до свого календаря?",
+    calendarTitle: "Служіння з візком",
+    calendarLocation: "Місце",
+    calendarTime: "Час",
+    calendarPublishers: "Вісники"
   },
 
   de: {
@@ -566,7 +571,12 @@ const I18N = {
           "Medien: Im Allgemeinen solltest du dem Angebot eines Medienvertreters auf ein persönliches Interview nicht zustimmen. Weise sie stattdessen auf die Bereiche „Nachrichten“ und „Über uns“ auf jw.org hin, wo sie Informationen über die Tätigkeit der Zeugen Jehovas erhalten können. Besteht der Medienvertreter auf seinem Ersuchen, kann man ihm anbieten, seine Kontaktdaten und eine kurze Beschreibung seiner Fragen zu hinterlassen, im Einklang mit dem Datenschutzgesetz. Teile danach sofort einem der Ältesten das Ersuchen des Medienvertreters mit."
         ]
       }
-    ]
+    ],
+    addCalendarPrompt: "Möchten Sie diese Schicht in Ihren Kalender eintragen?",
+    calendarTitle: "Trolley-Dienst",
+    calendarLocation: "Ort",
+    calendarTime: "Zeit",
+    calendarPublishers: "Verkündiger"
   }
 };
 
@@ -635,7 +645,7 @@ function bookingMatchesGroup(b, g) {
 // ----------------------------------------------------------------------------
 // Константы и состояние
 // ----------------------------------------------------------------------------
-const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwsBLJvAwCZCc2IGZ2M6XBOODm_YsXxgnKl2RllYOMg0Vi-eDq4AKspqIUtZJbbdj7Y/exec";
+const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwV6YsBIC2XhuugMp_qTd2kHd55MP0ZJAJhXf93YiWqs66k90zeULNhooVXs03o2DaH/exec";
 // Вы можете указать прямую постоянную ссылку на ваше приложение ниже, чтобы кнопка «Поделиться» отправляла именно её.
 // Если оставить пустым "", ссылка будет определяться автоматически на основе текущего адреса страницы с очисткой preview-адресов.
 const SHARE_APP_URL = "";
@@ -918,15 +928,12 @@ function getBookings() {
   if (!src || !src.length) src = databaseBookings;
   return (src || []).map(function (b) {
     let d = b.date;
-    if (d && typeof d === 'string') {
-      const cleanD = d.replace(' ', 'T');
-      if (cleanD.indexOf('T') > -1) {
-        const dt = new Date(cleanD);
-        if (!isNaN(dt.getTime())) {
-          d = dt.getFullYear() + '-' +
-              String(dt.getMonth() + 1).padStart(2, '0') + '-' +
-              String(dt.getDate()).padStart(2, '0');
-        }
+    if (d && (d.indexOf(' ') > -1 || d.indexOf('T') > -1)) {
+      const dt = new Date(d);
+      if (!isNaN(dt.getTime())) {
+        d = dt.getFullYear() + '-' +
+            String(dt.getMonth() + 1).padStart(2, '0') + '-' +
+            String(dt.getDate()).padStart(2, '0');
       }
     }
     return Object.assign({}, b, { date: d });
@@ -979,7 +986,7 @@ window.addEventListener('beforeinstallprompt', (e) => {
 // On iOS and Android — show header install button if not already installed
 window.addEventListener('DOMContentLoaded', () => {
   const ua = navigator.userAgent.toLowerCase();
-  const isIOS = (/ipad|iphone|ipod/.test(ua) && !window.MSStream) || (navigator.maxTouchPoints && navigator.maxTouchPoints > 2 && /macintosh/.test(ua));
+  const isIOS = /ipad|iphone|ipod/.test(ua) && !window.MSStream;
   const isAndroid = /android/.test(ua);
   const isStandalone = window.navigator.standalone || window.matchMedia('(display-mode: standalone)').matches;
   if ((isIOS || isAndroid) && !isStandalone) {
@@ -1005,7 +1012,7 @@ function checkPWAInstallation() {
   if (!banner || !bodyText) return;
 
   const userAgent = navigator.userAgent.toLowerCase();
-  const isIOS = (/ipad|iphone|ipod/.test(userAgent) && !window.MSStream) || (navigator.maxTouchPoints && navigator.maxTouchPoints > 2 && /macintosh/.test(userAgent));
+  const isIOS = /ipad|iphone|ipod/.test(userAgent) && !window.MSStream;
 
   if (isIOS) {
     bodyText.innerHTML = S('pwaIos');
@@ -1144,61 +1151,6 @@ window.addEventListener('DOMContentLoaded', () => {
         if (typeof showToast === 'function') showToast(latestMsg, "info");
       });
     });
-  };
-
-  window.clearAllCacheAndReload = function() {
-    let confirmMsg = "Вы уверены, что хотите удалить весь кэш сайта и кэш уведомлений OneSignal? Это сбросит авторизацию и перезагрузит страницу.";
-    const lang = (localStorage.getItem("preferredLanguage") || document.documentElement.lang || "ru").toLowerCase();
-    if (lang === "de") {
-      confirmMsg = "Sind Sie sicher, dass Sie den gesamten Website-Cache und den OneSignal-Benachrichtigungs-Cache löschen möchten? Dadurch wird die Autorisierung zurückgesetzt und die Seite neu geladen.";
-    } else if (lang === "ua" || lang === "uk") {
-      confirmMsg = "Ви впевнені, що хочете видалити весь кеш сайту та кеш сповіщень OneSignal? Це скине авторизацію та перезавантажить сторінку.";
-    }
-
-    if (confirm(confirmMsg)) {
-      // 1. Очищаем localStorage и sessionStorage
-      try {
-        localStorage.clear();
-        sessionStorage.clear();
-      } catch (e) {}
-
-      // 2. Удаляем все базы данных IndexedDB (включая базы данных OneSignal)
-      if (window.indexedDB && indexedDB.databases) {
-        indexedDB.databases().then(databases => {
-          databases.forEach(db => {
-            try {
-              indexedDB.deleteDatabase(db.name);
-            } catch (e) {}
-          });
-        }).catch(() => {});
-      } else {
-        // Резервный вариант удаления известных баз OneSignal
-        try { indexedDB.deleteDatabase("OneSignalSDKDatabase"); } catch (e) {}
-        try { indexedDB.deleteDatabase("OneSignal"); } catch (e) {}
-      }
-
-      // 3. Очищаем Cache Storage
-      if (window.caches && caches.keys) {
-        caches.keys().then(keys => {
-          Promise.all(keys.map(key => caches.delete(key))).catch(() => {});
-        }).catch(() => {});
-      }
-
-      // 4. Отключаем Service Workers и перезагружаем страницу
-      if (navigator.serviceWorker) {
-        navigator.serviceWorker.getRegistrations().then(registrations => {
-          Promise.all(registrations.map(reg => reg.unregister())).then(() => {
-            setTimeout(() => { window.location.reload(); }, 300);
-          }).catch(() => {
-            setTimeout(() => { window.location.reload(); }, 300);
-          });
-        }).catch(() => {
-          setTimeout(() => { window.location.reload(); }, 300);
-        });
-      } else {
-        setTimeout(() => { window.location.reload(); }, 300);
-      }
-    }
   };
 
   function initOneSignalIfAuth() {
@@ -1484,8 +1436,7 @@ function selectDate(dateISO) {
 
 function goToNextDay() {
   if (!selectedDateISO) return;
-  const parts = selectedDateISO.split('-');
-  const current = new Date(parseInt(parts[0], 10), parseInt(parts[1], 10) - 1, parseInt(parts[2], 10));
+  const current = new Date(selectedDateISO + "T00:00:00");
   current.setDate(current.getDate() + 1);
   const year = current.getFullYear();
   const month = String(current.getMonth() + 1).padStart(2, '0');
@@ -1514,8 +1465,7 @@ function goToNextDay() {
 
 function goToPrevDay() {
   if (!selectedDateISO) return;
-  const parts = selectedDateISO.split('-');
-  const current = new Date(parseInt(parts[0], 10), parseInt(parts[1], 10) - 1, parseInt(parts[2], 10));
+  const current = new Date(selectedDateISO + "T00:00:00");
   current.setDate(current.getDate() - 1);
   const year = current.getFullYear();
   const month = String(current.getMonth() + 1).padStart(2, '0');
@@ -1717,8 +1667,7 @@ async function updateScheduleWeatherWidget(isoDate) {
 
   const todayObj = new Date();
   todayObj.setHours(0, 0, 0, 0);
-  const parts = targetISO.split('-');
-  const targetObj = new Date(parseInt(parts[0], 10), parseInt(parts[1], 10) - 1, parseInt(parts[2], 10));
+  const targetObj = new Date(targetISO + 'T00:00:00');
   const diffDays = Math.round((targetObj - todayObj) / 86400000);
 
   const outOfRangeMsg = {
@@ -1777,8 +1726,7 @@ window.updateScheduleWeatherWidget = updateScheduleWeatherWidget;
 function goToDate(dateISO) {
   if (!dateISO) return;
   // Неделя, содержащая выбранную дату (понедельник = начало).
-  const parts = dateISO.split('-');
-  const target = new Date(parseInt(parts[0], 10), parseInt(parts[1], 10) - 1, parseInt(parts[2], 10));
+  const target = new Date(dateISO + "T00:00:00");
   if (isNaN(target.getTime())) return;
   const today = new Date();
   today.setHours(0, 0, 0, 0);
@@ -3031,7 +2979,7 @@ async function handleFormSubmit(e) {
       body: JSON.stringify({
         action: 'create',
         key: 'jw_144000',
-        language: (window.SyncCore && SyncCore.getApiLang) ? SyncCore.getApiLang() : ((document.documentElement.lang || 'ru') === 'uk' ? 'ua' : (document.documentElement.lang || 'ru')),
+        language: (window.SyncCore && SyncCore.getLang) ? SyncCore.getLang() : (document.documentElement.lang || 'ru'),
         sendPush: false,
         bookings: bookingRecords
       })
@@ -3229,68 +3177,11 @@ async function verifyBookingSaved(clientRecords, providedServerBookings) {
 }
 
 async function deleteBooking(location, date, time, cartNumber) {
-  const isAdminUser = (typeof checkIsAdmin === 'function') ? checkIsAdmin() : (typeof isUserAdmin === 'function' ? isUserAdmin() : false);
-  
   const todayObj = new Date();
   const todayStr = `${todayObj.getFullYear()}-${String(todayObj.getMonth() + 1).padStart(2, '0')}-${String(todayObj.getDate()).padStart(2, '0')}`;
-  
-  if (date < todayStr && !isAdminUser) {
-    showToast(getLang() === 'uk' ? "Не можна видаляти записи за минулі дні" : (getLang() === 'de' ? "Buchungen für vergangene Tage können nicht gelöscht werden" : "Нельзя удалять записи за прошлые дни"), "error");
+  if (date < todayStr) {
+    showToast("Нельзя удалять записи за прошлые дни", "error");
     return;
-  }
-
-  if (!isAdminUser) {
-    // Получаем все записи и ищем нужную
-    const allBookings = getBookings();
-    const booking = allBookings.find(b => b.date === date && b.location === location && b.time === time);
-    let nameA = "";
-    let nameB = "";
-    if (booking) {
-      if (cartNumber === 1) {
-        nameA = booking.name1 || "";
-        nameB = booking.name2 || "";
-      } else if (cartNumber === 2) {
-        nameA = booking.name3 || "";
-        nameB = booking.name4 || "";
-      }
-    }
-
-    const normalizeName = (name) => {
-      return (name || "")
-        .toLowerCase()
-        .replace(/[\s\.,•\-]+/g, '')
-        .trim();
-    };
-
-    const curUser = (typeof getAuthUser === 'function') ? getAuthUser() : null;
-    const curUserName = curUser ? curUser.name : "";
-    const curUserEmail = curUser ? curUser.email : "";
-
-    const namesToCheck = [
-      curUserName,
-      curUserEmail ? curUserEmail.split("@")[0] : "",
-      localStorage.getItem('myPreacherName1'),
-      localStorage.getItem('myPreacherName2'),
-      localStorage.getItem('pwaName1'),
-      localStorage.getItem('pwaName2'),
-      localStorage.getItem('pwaName3'),
-      localStorage.getItem('pwaName4')
-    ].map(normalizeName).filter(Boolean);
-
-    const bNames = [nameA, nameB].map(normalizeName).filter(Boolean);
-    const isOwn = bNames.some(bName => {
-      return namesToCheck.some(checkName => {
-        if (bName === checkName) return true;
-        if (checkName.length >= 4 && bName.includes(checkName)) return true;
-        if (bName.length >= 4 && checkName.includes(bName)) return true;
-        return false;
-      });
-    });
-
-    if (!isOwn) {
-      showToast(getLang() === 'uk' ? "Ви можете видаляти лише свої власні записи" : (getLang() === 'de' ? "Sie können nur Ihre eigenen Buchungen löschen" : "Вы можете удалять только свои собственные записи"), "error");
-      return;
-    }
   }
 
   if (!(await SyncCore.confirmDelete(S('confirmDelete')))) {
@@ -4674,6 +4565,8 @@ async function submitQuickBooking(e) {
           // Re-render BOTH tabs so the new booking is visible immediately
           if (window.SyncCore && SyncCore.renderAllTabs) SyncCore.renderAllTabs();
           else renderScheduleBoard();
+
+          promptAddCalendar(record);
         }, 300);
       }, 1500);
     }, 1000);
@@ -4764,6 +4657,7 @@ async function submitQuickBooking(e) {
       if (window.SyncCore && SyncCore.refreshSilently) {
         SyncCore.refreshSilently();
       }
+      promptAddCalendar(record);
     }, 1500);
 
   } catch (err) {
@@ -4786,6 +4680,7 @@ async function submitQuickBooking(e) {
         justAddedSlot = null;
         if (window.SyncCore && SyncCore.renderAllTabs) SyncCore.renderAllTabs();
         else renderScheduleBoard();
+        promptAddCalendar(record);
       }, 1500);
     } else {
       // Unexpected JS error — revert booking to avoid inconsistent state
@@ -5247,3 +5142,89 @@ document.addEventListener('DOMContentLoaded', () => {
     btn.classList.add('active');
   }
 });
+
+// ----- Add to Calendar Integration -----
+function downloadCalendarEvent(record) {
+  try {
+    const dateStr = record.date; // "YYYY-MM-DD"
+    const timeRange = record.time; // "HH:MM - HH:MM"
+    
+    const timeParts = timeRange.split("-").map(t => t.trim());
+    if (timeParts.length < 2) return;
+    
+    const startTimeStr = timeParts[0];
+    const endTimeStr = timeParts[1];
+    
+    const cleanDate = dateStr.replace(/-/g, "");
+    const startHourMin = startTimeStr.replace(/:/g, "");
+    const endHourMin = endTimeStr.replace(/:/g, "");
+    
+    const dtStart = cleanDate + "T" + startHourMin + "00";
+    const dtEnd = cleanDate + "T" + endHourMin + "00";
+    
+    const summary = S('calendarTitle');
+    const location = record.location || "";
+    
+    const publishersLabel = S('calendarPublishers');
+    const namesList = (record.names || []).filter(n => n && n.trim() !== "").join(", ");
+    const description = publishersLabel + ": " + namesList;
+    
+    const escapeICS = (str) => {
+      if (!str) return "";
+      return str
+        .replace(/\\/g, "\\\\")
+        .replace(/;/g, "\\;")
+        .replace(/,/g, "\\,")
+        .replace(/\n/g, "\\\n")
+        .replace(/\r/g, "")
+        .replace(/\n/g, "\\n");
+    };
+    
+    const icsLines = [
+      "BEGIN:VCALENDAR",
+      "VERSION:2.0",
+      "PRODID:-//Trolley Booking//NONSGML Calendar Event//EN",
+      "CALSCALE:GREGORIAN",
+      "BEGIN:VEVENT",
+      "DTSTART:" + dtStart,
+      "DTEND:" + dtEnd,
+      "SUMMARY:" + escapeICS(summary),
+      "LOCATION:" + escapeICS(location),
+      "DESCRIPTION:" + escapeICS(description),
+      "STATUS:CONFIRMED",
+      "SEQUENCE:0",
+      "END:VEVENT",
+      "END:VCALENDAR"
+    ];
+    
+    const icsContent = icsLines.join("\r\n");
+    const blob = new Blob([icsContent], { type: "text/calendar;charset=utf-8;" });
+    const fileName = "trolleydienst-" + dateStr + "-" + startHourMin + ".ics";
+    
+    if (window.navigator && window.navigator.msSaveOrOpenBlob) {
+      window.navigator.msSaveOrOpenBlob(blob, fileName);
+    } else {
+      const link = document.createElement("a");
+      const url = URL.createObjectURL(blob);
+      link.href = url;
+      link.download = fileName;
+      link.style.display = "none";
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+    }
+  } catch (err) {
+    console.error("Error generating calendar event:", err);
+  }
+}
+window.downloadCalendarEvent = downloadCalendarEvent;
+
+function promptAddCalendar(record) {
+  setTimeout(() => {
+    if (confirm(S('addCalendarPrompt'))) {
+      downloadCalendarEvent(record);
+    }
+  }, 400);
+}
+window.promptAddCalendar = promptAddCalendar;
